@@ -42,6 +42,12 @@ if ! curl --fail --silent --unix-socket "$proxy_socket" \
   done
 fi
 
+development_url_socket=/tmp/dim-development-url/controller.sock
+if ! curl --fail --silent --unix-socket "$development_url_socket" \
+  http://dim-controller/api >/dev/null 2>&1; then
+  rm -f "$development_url_socket" "$development_url_socket.managed.json"
+fi
+
 DIM_DEVELOPMENT_GATEWAY_PORT="$(dim-development-service gateway-port)"
 export DIM_DEVELOPMENT_GATEWAY_PORT
 dim-controller-proxy ensure external-url \

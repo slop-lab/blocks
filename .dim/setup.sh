@@ -53,6 +53,9 @@ dim-controller-proxy ensure external-url \
   --directory-mode 0755 \
   --socket-mode 0666
 
+# Recreate stale nested-Docker service records after an outer restart.
+docker compose \
+  --file .dim/docker-compose.yml rm --force --stop agent agent-dind
 docker compose \
   --file .dim/docker-compose.yml --file "$compose_host_aliases" \
   up --detach --build --force-recreate agent

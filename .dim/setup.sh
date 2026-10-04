@@ -42,6 +42,12 @@ if ! curl --fail --silent --unix-socket "$proxy_socket" \
   done
 fi
 
+development_url_socket=/tmp/dim-development-url/controller.sock
+if ! curl --fail --silent --unix-socket "$development_url_socket" \
+  http://dim-controller/api >/dev/null 2>&1; then
+  rm -f "$development_url_socket" "$development_url_socket.managed.json"
+fi
+
 DIM_DEVELOPMENT_GATEWAY_PORT="$(dim-development-service gateway-port)"
 export DIM_DEVELOPMENT_GATEWAY_PORT
 dim-controller-proxy ensure external-url \
@@ -53,6 +59,9 @@ dim-controller-proxy ensure external-url \
   --directory-mode 0755 \
   --socket-mode 0666
 
+# Recreate stale nested-Docker service records after an outer restart.
+docker compose \
+  --file .dim/docker-compose.yml rm --force --stop agent agent-dind
 docker compose \
   --file .dim/docker-compose.yml --file "$compose_host_aliases" \
   up --detach --build --force-recreate agent

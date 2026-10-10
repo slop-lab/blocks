@@ -1,9 +1,9 @@
 import {
-  MAX_MARKDOWN_BYTES,
-  MarkdownRequestError,
   listMarkdownFiles,
   listMarkdownTree,
   loadMarkdownFile,
+  MAX_MARKDOWN_BYTES,
+  MarkdownRequestError,
   markdownRoot,
   previewMarkdown,
   saveMarkdownFile,
@@ -28,7 +28,11 @@ const readJson = async (request) => {
   for await (const chunk of request) {
     received += chunk.length
     if (received > MAX_MARKDOWN_BYTES + 65_536) {
-      throw new MarkdownRequestError(413, "request_too_large", "Request body exceeds the size limit")
+      throw new MarkdownRequestError(
+        413,
+        "request_too_large",
+        "Request body exceeds the size limit",
+      )
     }
     chunks.push(chunk)
   }
@@ -83,11 +87,18 @@ export const handleMarkdown = async (request, response) => {
       writeJson(response, 200, await previewMarkdown(root, previewInput(await readJson(request))))
       return true
     }
-    writeJson(response, 405, { error: "method_not_allowed", message: "Unsupported Markdown API operation" })
+    writeJson(response, 405, {
+      error: "method_not_allowed",
+      message: "Unsupported Markdown API operation",
+    })
     return true
   } catch (error) {
     if (error instanceof MarkdownRequestError) {
-      writeJson(response, error.status, { error: error.code, message: error.message, ...error.details })
+      writeJson(response, error.status, {
+        error: error.code,
+        message: error.message,
+        ...error.details,
+      })
       return true
     }
     throw error

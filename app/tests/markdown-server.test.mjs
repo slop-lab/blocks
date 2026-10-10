@@ -51,7 +51,9 @@ describe("Markdown file API", () => {
     await writeFile(join(root, "프로젝트", "회의", "결정.md"), "# 결정\n", "utf8")
 
     const listed = await request("/api/markdown")
-    const loaded = await request(`/api/markdown/file?name=${encodeURIComponent("프로젝트/회의/결정.md")}`)
+    const loaded = await request(
+      `/api/markdown/file?name=${encodeURIComponent("프로젝트/회의/결정.md")}`,
+    )
 
     expect(listed.payload.files).toContain("프로젝트/회의/결정.md")
     expect(listed.payload.tree[0]).toMatchObject({ kind: "file", path: "README.md" })
@@ -66,7 +68,9 @@ describe("Markdown file API", () => {
 
     const listed = await request("/api/markdown")
     const linked = await request("/api/markdown/file?name=linked.md")
-    const escaped = await request(`/api/markdown/file?name=${encodeURIComponent("nested/../../secret.md")}`)
+    const escaped = await request(
+      `/api/markdown/file?name=${encodeURIComponent("nested/../../secret.md")}`,
+    )
 
     expect(listed.payload.files).not.toContain("linked.md")
     expect(linked.response.status).toBe(404)

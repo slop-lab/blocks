@@ -5,7 +5,8 @@ import MarkdownIt from "markdown-it"
 
 export const MAX_MARKDOWN_BYTES = 2_000_000
 const SAMPLE_NAME = "README.md"
-const SAMPLE_CONTENT = "# Markdown 작업 공간\n\n왼쪽에서 파일을 선택하고 실제 Markdown 원문을 편집하세요.\n"
+const SAMPLE_CONTENT =
+  "# Markdown 작업 공간\n\n왼쪽에서 파일을 선택하고 실제 Markdown 원문을 편집하세요.\n"
 const parser = new MarkdownIt({ html: true, linkify: true, typographer: false })
 const mappingCache = new Map()
 const mappingEpoch = randomUUID()
@@ -24,8 +25,7 @@ export class MarkdownRequestError extends Error {
 
 export const markdownRoot = () => resolve(process.env.MARKDOWN_ROOT ?? ".runtime/markdown")
 
-export const revisionOf = (content) =>
-  createHash("sha256").update(content, "utf8").digest("hex")
+export const revisionOf = (content) => createHash("sha256").update(content, "utf8").digest("hex")
 
 const filePath = (root, name) => {
   if (
@@ -143,7 +143,8 @@ export const mapMarkdown = (cacheKey, content) => {
 
 const boundedRead = async (path) => {
   const metadata = await stat(path)
-  if (!metadata.isFile()) throw new MarkdownRequestError(404, "file_not_found", "Markdown file is missing")
+  if (!metadata.isFile())
+    throw new MarkdownRequestError(404, "file_not_found", "Markdown file is missing")
   if (metadata.size > MAX_MARKDOWN_BYTES) {
     throw new MarkdownRequestError(413, "file_too_large", "Markdown file exceeds the size limit")
   }

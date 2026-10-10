@@ -1,5 +1,18 @@
 import assert from "node:assert/strict"
+import { once } from "node:events"
 import { chromium } from "playwright"
+import { createApplicationServer } from "../server/application.mjs"
+
+const server = process.env.QA_BASE_URL === undefined ? createApplicationServer() : null
+let baseUrl = process.env.QA_BASE_URL
+if (server !== null) {
+  server.listen(0, "127.0.0.1")
+  await once(server, "listening")
+  const address = server.address()
+  if (address === null || typeof address === "string") throw new TypeError("Missing server address")
+  baseUrl = `http://127.0.0.1:${address.port}`
+}
+if (baseUrl === undefined) throw new TypeError("Missing browser test base URL")
 
 const browser = await chromium.launch({
   headless: true,
@@ -10,7 +23,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
   const errors = []
   page.on("pageerror", (error) => errors.push(error.message))
-  await page.goto(process.env.QA_BASE_URL ?? "http://127.0.0.1:3000", { waitUntil: "networkidle" })
+  await page.goto(baseUrl, { waitUntil: "networkidle" })
   const editor = page.locator(".ProseMirror")
   const button = (name) => page.getByRole("button", { name, exact: true })
   const snapshot = async () => {
@@ -90,7 +103,7 @@ try {
   })
   assert.ok(inspectorScroll.scroll <= inspectorScroll.height || inspectorScroll.top > 0)
   const touch = await browser.newPage({ viewport: { width: 375, height: 900 }, hasTouch: true })
-  await touch.goto(process.env.QA_BASE_URL ?? "http://127.0.0.1:3000", { waitUntil: "networkidle" })
+  await touch.goto(baseUrl, { waitUntil: "networkidle" })
   assert.ok(await touch.getByRole("button", { name: /Markdown 파일/ }).isVisible())
   const targets = await touch
     .locator(".tool, .tabs button, .mini-tabs button")
@@ -111,7 +124,7 @@ try {
       return original.call(this, key, value)
     }
   })
-  await autosave.goto(process.env.QA_BASE_URL ?? "http://127.0.0.1:3000", {
+  await autosave.goto(baseUrl, {
     waitUntil: "networkidle",
   })
   await autosave.locator(".ProseMirror p").first().click()
@@ -158,4 +171,8 @@ try {
   console.log("PASS responsive controls and zero page exceptions")
 } finally {
   await browser.close()
+  if (server !== null) {
+    server.closeAllConnections()
+    await new Promise((resolve) => server.close(resolve))
+  }
 }

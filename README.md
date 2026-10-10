@@ -31,7 +31,7 @@ Markdown·협업·표·대용량 기능은 각각의 진입점을 가져오거�
 | 모듈 | 역할 |
 |---|---|
 | `app/src/model.ts` | JSON codec, 복제, 예산 기반 조회, 출력, 변경 통지, 제안 및 호스트 연결 계약 |
-| `app/src/Viewer.tsx` | 블록 배열을 받는 engine-free React viewer, 사용자 renderer와 overlay |
+| `app/src/Viewer.tsx` | 블록 배열을 받는 engine-free React viewer, 사용자 renderer와 overlay. 정적/읽기 전용 출력의 링크는 `http:`, `https:`, `mailto:`, 해시, 사이트 상대 주소만 활성화합니다. |
 | `app/src/editing.ts` | 로컬 ModelSession과 구조 명령 |
 | `app/src/features/markdown/` | Markdown 파일 연결 및 UI |
 | `app/src/features/collaboration/` | Yjs 연결 및 다중 편집 surface |

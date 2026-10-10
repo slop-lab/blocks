@@ -1,7 +1,8 @@
-import type { BlockDocument } from "@block-editor/model"
+import { type BlockDocument, encodeDocument } from "@block-editor/model"
 import { BlockViewer } from "@block-editor/model/viewer"
-import { useCallback, useState } from "react"
-import { CanonicalBlockEditor } from "./CustomNotesEditor"
+import { useCallback, useRef, useState } from "react"
+import { parseDocumentText } from "../../core/codec"
+import { CanonicalBlockEditor, type CanonicalBlockEditorHandle } from "./CustomNotesEditor"
 import { presentationProfile, presentationRenderers } from "./presentation-profile"
 
 const tasks = [
@@ -26,14 +27,21 @@ const initial: BlockDocument = {
   ],
 }
 const storageKey = "ownership.project-board.presentation"
+const loadSaved = (): BlockDocument => {
+  const stored = localStorage.getItem(storageKey)
+  if (stored === null) return initial
+  try {
+    return parseDocumentText(stored)
+  } catch (error) {
+    if (error instanceof Error) return initial
+    throw error
+  }
+}
 
 export const ProjectBoardScenario = () => {
-  const [saved, setSaved] = useState<BlockDocument>(() => {
-    const stored = localStorage.getItem(storageKey)
-    return stored === null ? initial : JSON.parse(stored)
-  })
+  const [saved, setSaved] = useState<BlockDocument>(loadSaved)
   const [draft, setDraft] = useState(saved)
-  const [editorKey, setEditorKey] = useState(0)
+  const editor = useRef<CanonicalBlockEditorHandle>(null)
   const viewData = new Map(
     draft.blocks.map((block) => [
       block.id,
@@ -42,19 +50,21 @@ export const ProjectBoardScenario = () => {
   )
   const changed = useCallback((next: BlockDocument) => setDraft(next), [])
   const save = () => {
-    localStorage.setItem(storageKey, JSON.stringify(draft))
+    localStorage.setItem(storageKey, encodeDocument(draft))
     setSaved(draft)
   }
   const reload = () => {
     setDraft(saved)
-    setEditorKey((value) => value + 1)
+    editor.current?.reset(saved)
   }
   const duplicate = () => {
     const source = draft.blocks.find((block) => block.type === "ownership.task-card")
-    if (source !== undefined)
-      setDraft({ ...draft, blocks: [...draft.blocks, { ...source, id: crypto.randomUUID() }] })
+    if (source !== undefined) editor.current?.duplicateBlock(source.id)
   }
-  const remove = () => setDraft({ ...draft, blocks: draft.blocks.slice(0, -1) })
+  const remove = () => {
+    const source = draft.blocks.at(-1)
+    if (source !== undefined) editor.current?.deleteBlock(source.id)
+  }
   return (
     <section className="ownership-scenario" aria-labelledby="board-title">
       <header className="ownership-scenario__header">
@@ -76,7 +86,7 @@ export const ProjectBoardScenario = () => {
       </p>
       <BlockViewer content={draft} renderers={presentationRenderers} viewData={viewData} />
       <CanonicalBlockEditor
-        key={editorKey}
+        ref={editor}
         document={draft}
         onChange={changed}
         profile={presentationProfile}

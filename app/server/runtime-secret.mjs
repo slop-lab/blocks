@@ -10,7 +10,8 @@ const validate = (secret) => {
 
 export const loadSessionSecret = (runtimeRoot, configuredSecret) => {
   if (configuredSecret !== undefined) return validate(configuredSecret)
-  if (process.env.DEMO_SESSION_SECRET !== undefined) return validate(process.env.DEMO_SESSION_SECRET)
+  if (process.env.DEMO_SESSION_SECRET !== undefined)
+    return validate(process.env.DEMO_SESSION_SECRET)
   mkdirSync(runtimeRoot, { recursive: true })
   const path = join(runtimeRoot, "demo-session.secret")
   try {

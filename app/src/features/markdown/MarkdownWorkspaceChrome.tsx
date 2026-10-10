@@ -8,28 +8,44 @@ type FileListProps = {
   readonly onOpen: (name: string) => void
 }
 
-const TreeRows = ({ nodes, activeName, dirty, onOpen }: { readonly nodes: readonly MarkdownTreeNode[]; readonly activeName: string | null; readonly dirty: boolean; readonly onOpen: (name: string) => void }) => (
+const TreeRows = ({
+  nodes,
+  activeName,
+  dirty,
+  onOpen,
+}: {
+  readonly nodes: readonly MarkdownTreeNode[]
+  readonly activeName: string | null
+  readonly dirty: boolean
+  readonly onOpen: (name: string) => void
+}) => (
   <>
-    {nodes.map((node) => node.kind === "directory" ? (
-      <div className="markdown-tree" key={node.path}>
-        <strong className="markdown-tree__directory">{node.name}</strong>
-        <TreeRows nodes={node.children} activeName={activeName} dirty={dirty} onOpen={onOpen} />
-      </div>
-    ) : (
-      <button
-        className={activeName === node.path ? "nav-row nav-row--active" : "nav-row"}
-        type="button"
-        key={node.path}
-        aria-current={activeName === node.path ? "page" : undefined}
-        onClick={() => {
-          if (node.path === activeName) return
-          if (!dirty || window.confirm("저장하지 않은 초안을 버리고 다른 파일을 여시겠습니까?")) onOpen(node.path)
-        }}
-      >
-        <FileTextIcon />
-        <span><strong>{node.name}</strong><small>{node.path}</small></span>
-      </button>
-    ))}
+    {nodes.map((node) =>
+      node.kind === "directory" ? (
+        <div className="markdown-tree" key={node.path}>
+          <strong className="markdown-tree__directory">{node.name}</strong>
+          <TreeRows nodes={node.children} activeName={activeName} dirty={dirty} onOpen={onOpen} />
+        </div>
+      ) : (
+        <button
+          className={activeName === node.path ? "nav-row nav-row--active" : "nav-row"}
+          type="button"
+          key={node.path}
+          aria-current={activeName === node.path ? "page" : undefined}
+          onClick={() => {
+            if (node.path === activeName) return
+            if (!dirty || window.confirm("저장하지 않은 초안을 버리고 다른 파일을 여시겠습니까?"))
+              onOpen(node.path)
+          }}
+        >
+          <FileTextIcon />
+          <span>
+            <strong>{node.name}</strong>
+            <small>{node.path}</small>
+          </span>
+        </button>
+      ),
+    )}
   </>
 )
 

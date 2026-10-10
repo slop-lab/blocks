@@ -119,6 +119,12 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 - A compact four-column `content` / `view` / `overlay` / `ui` tab set renders actual channel values, never a static architecture claim.
 - JSON is horizontally scrollable within the panel and uses the mono type token.
 
+### Ownership Examples Workspace
+- A five-tab operational workspace compares notebook, project board, status projection, Markdown file tree, and mixed backlog ownership without presenting implementation progress.
+- Each scenario uses the existing panel, status badge, action button, viewer, editor, and dialog primitives. Ownership labels state the authoritative layer in text and never rely on color.
+- The tab strip wraps below tablet width. Scenario bodies use an overflow-safe sidebar or intrinsic grid and collapse to one column at 375px with the scenario body as the only vertical scroll owner.
+- Read-only domain roots have no native mutation controls. Editable presentation or proposal layers open through an explicit lower-layer panel and preserve stale drafts with a visible dependency warning.
+
 ### Status Badge / Toast
 - Badge is text plus icon where needed. Toast uses `aria-live="polite"`, never steals focus, and offers recovery when actionable.
 - On mobile the status region occupies its own row above the document instead of covering text. Prose uses Korean word-preserving wrapping; long unbroken payloads still wrap inside their containers.

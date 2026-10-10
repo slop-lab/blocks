@@ -39,6 +39,8 @@ Markdown·협업·표·대용량 기능은 각각의 진입점을 가져오거�
 | `app/src/features/large-content/` | 부분 로딩, 블록 캐시, 가상화 및 reveal/focus |
 | `@block-editor/bindings` | 엔진과 무관한 변경 전달, draft/ack 정책, 비동기 외부 액션 target guard, 엄격한 revision schema |
 | `@block-editor/server-bindings` | Node 파일 CAS 저장소, Yjs room 저장소, 서명된 데모 세션과 scope 검사, versioned 승인 workflow |
+| `@block-editor/model` | 엔진과 무관한 문서 계약, codec, 명시적 block registry와 React viewer |
+| `@block-editor/prosemirror` | opt-in ProseMirror schema/snapshot adapter와 block별 leaf export |
 
 두 패키지는 `corepack pnpm build:packages`로 ESM과 선언 파일을 `packages/*/dist`에 생성합니다. 앱은 로컬 노트의 저장 알림, 호스트 폼의 revision bookmark, 수정안의 비동기 target guard, 부분 문서 저장 acknowledgement를 `@block-editor/bindings`에서 직접 사용합니다. 서버는 `.runtime` 아래 durable document/room/workflow 저장소와 권한 검사를 `@block-editor/server-bindings`에서 사용합니다.
 
@@ -46,6 +48,41 @@ Markdown·협업·표·대용량 기능은 각각의 진입점을 가져오거�
 import { ChangeDelivery, PersistenceBaseline } from "@block-editor/bindings"
 import { DemoSessionAuthority, FileCasRepository } from "@block-editor/server-bindings"
 ```
+
+### 사용자 schema와 tree-shaking
+
+core 문서 계약에는 필수 paragraph가 없습니다. ProseMirror를 사용할 때 소비자가 필요한 block leaf만 가져와 schema를 조립합니다. 기존 편집기는 편의를 위해 `@block-editor/prosemirror/preset`을 사용하므로 공개 동작이 유지됩니다.
+
+```tsx
+import { BlockViewer } from "@block-editor/model/viewer"
+import { blockAttrs, createProseMirrorProfile } from "@block-editor/prosemirror"
+
+const notesText = {
+  type: "notes.text",
+  nodeName: "notes_text",
+  text: true,
+  nodeSpec: { group: "block", content: "inline*", attrs: blockAttrs },
+  render: (block) => <p>{block.content.map((item) => item.kind === "text" ? item.text : "")}</p>,
+} as const
+
+const profile = createProseMirrorProfile([notesText], "notes.text")
+const renderers = new Map([[notesText.type, notesText.render]])
+const view = <BlockViewer content={document} renderers={renderers} />
+```
+
+독립 leaf는 `@block-editor/prosemirror/paragraph`, `/heading`, `/quote`, `/code`, `/caption`, `/task-card`입니다. 공통 preset이 필요한 소비자만 `/preset`을 가져옵니다. 모든 package는 ESM과 선언 파일을 만들고 `sideEffects: false`를 선언합니다. `app/tests/tree-shaking.test.ts`는 실제 esbuild metafile의 입력 모듈을 검사하여 custom-text 소비자에 기본 block leaf가 없고 view-only 소비자에 ProseMirror가 없음을 증명합니다.
+
+## 소유권 예제
+
+사이드바의 **소유권 예제**는 하나의 작업 공간 안에서 다음 경계를 실제 mutation과 저장으로 비교합니다.
+
+- `notebook`: `notes.text`가 기본인 custom schema. 블록 문서가 canonical이고 브라우저 저장 후 다시 불러옵니다.
+- `projectboard`: 작업 제목/상태는 분리된 domain data이고 카드 occurrence의 local ID와 캡션만 presentation이 소유합니다. 같은 task 참조를 복제해도 새 local ID를 받으며 카드 삭제는 task를 삭제하지 않습니다.
+- `statusview`: query projection과 server action만 사용하며 editor를 만들지 않는 명시적 renderer viewer입니다.
+- `filetree`: 허용된 Markdown root 아래의 재귀 파일 트리를 표시합니다. 서버는 절대 경로, traversal, 역슬래시, symlink를 거부하고 `.md` 원문에는 block ID를 기록하지 않습니다.
+- `mixedbacklog`: 검색/현재 실행 목록과 workflow 상태는 서버 domain이 소유합니다. 읽기 전용 root 아래의 캡션과 agent proposal만 하위 패널에서 수정하며 proposal은 task dependency version이 바뀌면 거절됩니다. 추가 작업 정보는 Markdown file-tree 서비스로 엽니다.
+
+이 예제의 demo identity cookie는 기존 서명 세션을 재사용합니다. 운영 로그인이나 여러 서비스 사이의 원자성을 주장하지 않습니다.
 
 ### 입력, 변경 통지, 저장
 
@@ -65,7 +102,8 @@ import { DemoSessionAuthority, FileCasRepository } from "@block-editor/server-bi
 
 ## 서버와 저장 위치
 
-- `GET /api/markdown`, `GET/PUT /api/markdown/file`: 파일 목록, 읽기, 조건부 저장.
+- `GET /api/markdown`, `GET/PUT /api/markdown/file`: 재귀 파일 트리, 읽기, 조건부 저장. root 밖 경로와 symlink는 노출하지 않습니다.
+- `GET /api/ownership/mixed`, `POST /api/ownership/mixed/task-status|presentation|proposal`: 혼합 백로그의 domain workflow, 하위 presentation, dependency-guarded 제안.
 - `/collaboration`: schema handshake, room scope 검사, Yjs 동기화 및 재시작 가능한 room snapshot.
 - `/api/large-content`: 페이지 읽기, 블록 조회·수정, 검색 및 전체 내보내기.
 - `POST /api/demo/session?identity=author|reviewer|viewer`: 서명된 opaque 데모 세션 cookie 발급.

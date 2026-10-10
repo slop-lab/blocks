@@ -11,9 +11,18 @@ const documentSchema = z.object({ format: z.literal("block-editor/v0.3"), blocks
 const taskSchema = z.object({ id: z.string().min(1), title: z.string().min(1), status: z.enum(["backlog", "running", "done"]), version: z.number().int().positive() }).strict()
 const proposalSchema = z.object({ id: z.string().min(1), taskId: z.string().min(1), document: documentSchema, dependencyVersion: z.number().int().positive() }).strict()
 const mixedSchema = z.object({
+  schemaVersion: z.literal(2),
   tasks: z.array(taskSchema),
   presentations: z.record(z.string(), documentSchema),
   proposals: z.array(proposalSchema),
+  taskInfoFiles: z.record(z.string(), z.string()),
+}).strict()
+const legacyDocumentSchema = z.union([documentSchema, z.string()])
+const legacyMixedSchema = z.object({
+  schemaVersion: z.literal(1).optional(),
+  tasks: z.array(taskSchema),
+  presentations: z.record(z.string(), legacyDocumentSchema),
+  proposals: z.array(z.object({ id: z.string(), taskId: z.string(), document: legacyDocumentSchema, dependencyVersion: z.number().int().positive() }).strict()),
   taskInfoFiles: z.record(z.string(), z.string()),
 }).strict()
 const revisionSchema = z.object({ expectedRevision: z.number().int().positive() }).strict()
@@ -23,6 +32,7 @@ const proposalInputSchema = documentInputSchema.extend({ id: z.string(), depende
 
 const text = (id, value) => ({ id, type: "ownership.caption", attrs: {}, content: [{ kind: "text", text: value, marks: [] }] })
 const initial = {
+  schemaVersion: 2,
   tasks: [
     { id: "TASK-104", title: "고객 인터뷰 요약", status: "running", version: 1 },
     { id: "TASK-108", title: "검색 결과 정렬", status: "backlog", version: 1 },
@@ -33,6 +43,24 @@ const initial = {
   },
   proposals: [{ id: "proposal-1", taskId: "TASK-104", document: { format: "block-editor/v0.3", blocks: [text("proposal-text-1", "인터뷰 근거를 두 문단으로 정리")] }, dependencyVersion: 1 }],
   taskInfoFiles: { "TASK-104": "tasks/TASK-104.md", "TASK-108": "tasks/TASK-108.md" },
+}
+const documentFromLegacy = (id, value) => typeof value === "string"
+  ? { format: "block-editor/v0.3", blocks: [text(id, value)] }
+  : value
+export const migrateMixedContent = (input) => {
+  const current = mixedSchema.safeParse(input)
+  if (current.success) return { migrated: false, content: current.data }
+  const legacy = legacyMixedSchema.parse(input)
+  return {
+    migrated: true,
+    content: {
+      schemaVersion: 2,
+      tasks: legacy.tasks,
+      presentations: Object.fromEntries(Object.entries(legacy.presentations).map(([taskId, value]) => [taskId, documentFromLegacy(`caption-${taskId}`, value)])),
+      proposals: legacy.proposals.map((proposal) => ({ ...proposal, document: documentFromLegacy(`proposal-${proposal.id}`, proposal.document) })),
+      taskInfoFiles: legacy.taskInfoFiles,
+    },
+  }
 }
 
 const json = (response, status, payload) => {
@@ -57,7 +85,12 @@ export const createOwnershipHandler = ({ root, host }) => {
   const repository = new FileCasRepository({ root })
   const read = async () => {
     const existing = await repository.read("mixed-backlog")
-    if (existing !== null) return existing
+    if (existing !== null) {
+      const parsed = migrateMixedContent(existing.content)
+      if (!parsed.migrated) return existing
+      try { return await repository.update("mixed-backlog", existing.revision, parsed.content, { actorId: "migration-v2" }) }
+      catch (error) { if (!(error instanceof RevisionConflictError)) throw error; const winner = await repository.read("mixed-backlog"); if (winner === null) throw error; return winner }
+    }
     try { await ensureTaskFiles(); return await repository.create({ documentId: "mixed-backlog", content: initial, actorId: "demo" }) }
     catch (error) { if (!(error instanceof RevisionConflictError)) throw error; const winner = await repository.read("mixed-backlog"); if (winner === null) throw error; return winner }
   }

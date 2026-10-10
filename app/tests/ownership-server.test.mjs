@@ -4,6 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, expect, it } from "vitest"
 import { createApplicationServer } from "../server/application.mjs"
+import { migrateMixedContent } from "../server/ownership.mjs"
 
 let server
 let root
@@ -85,4 +86,23 @@ it("rejects an agent proposal after its task dependency changes", async () => {
     error: "stale_dependency",
     actualVersion: task.version + 1,
   })
+})
+
+it("migrates v1 string layers into v2 block documents", () => {
+  const migrated = migrateMixedContent({
+    schemaVersion: 1,
+    tasks: [{ id: "TASK-1", title: "Legacy", status: "running", version: 1 }],
+    presentations: { "TASK-1": "legacy presentation" },
+    proposals: [
+      { id: "proposal-1", taskId: "TASK-1", document: "legacy proposal", dependencyVersion: 1 },
+    ],
+    taskInfoFiles: { "TASK-1": "tasks/TASK-1.md" },
+  })
+
+  expect(migrated.migrated).toBe(true)
+  expect(migrated.content.schemaVersion).toBe(2)
+  expect(migrated.content.presentations["TASK-1"].blocks[0].content[0].text).toBe(
+    "legacy presentation",
+  )
+  expect(migrated.content.proposals[0].document.blocks[0].content[0].text).toBe("legacy proposal")
 })

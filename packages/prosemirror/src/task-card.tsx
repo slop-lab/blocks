@@ -1,6 +1,6 @@
+import { renderInline } from "./render.js"
 import { blockAttrs } from "./schema.js"
 import type { BlockRegistration } from "./types.js"
-import { renderInline } from "./render.js"
 
 export const taskCardBlock: BlockRegistration = {
   type: "task_card",
@@ -18,5 +18,10 @@ export const taskCardBlock: BlockRegistration = {
     },
     toDOM: (node) => ["div", { "data-block-id": node.attrs["id"], "data-task-card": "true" }],
   },
-  render: (block) => <section><strong>{String(block.attrs["title"] ?? "작업")}</strong>{renderInline(block)}</section>,
+  render: (block) => (
+    <section>
+      <strong>{String(block.attrs["title"] ?? "작업")}</strong>
+      {renderInline(block)}
+    </section>
+  ),
 }

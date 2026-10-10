@@ -1,0 +1,274 @@
+.markdown-workspace {
+  --markdown-type-heading: 19px;
+  --markdown-type-small: 13px;
+  --markdown-type-caption: 12px;
+  --markdown-type-mono: 11px;
+  --markdown-control-height: 40px;
+  --markdown-touch-height: 44px;
+  --markdown-wide-measure: 960px;
+  --markdown-line: 1px;
+  --markdown-line-active: 2px;
+  display: grid;
+  grid-template-columns: calc(var(--space-16) * 4) minmax(0, 1fr) calc(var(--space-16) * 4);
+  block-size: 100%;
+  max-block-size: 100%;
+  min-block-size: 0;
+  overflow: hidden;
+  background: var(--canvas);
+}
+
+.markdown-files,
+.markdown-map {
+  min-block-size: 0;
+  overflow: auto;
+  background: var(--surface);
+  padding: var(--space-5) var(--space-3);
+}
+
+.markdown-files {
+  border-inline-end: var(--markdown-line) solid var(--line);
+}
+.markdown-map {
+  border-inline-start: var(--markdown-line) solid var(--line);
+}
+.markdown-files header,
+.markdown-map header {
+  padding: 0 var(--space-2) var(--space-5);
+}
+.markdown-files h2,
+.markdown-map h2,
+.markdown-conflict h2 {
+  margin: var(--space-1) 0 0;
+  font: 620 var(--markdown-type-heading) / 1.4 var(--font-editorial);
+}
+
+.markdown-main {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  min-block-size: 0;
+  min-inline-size: 0;
+  background: var(--paper);
+}
+
+.markdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border-block-end: var(--markdown-line) solid var(--line);
+}
+
+.markdown-header h1 {
+  margin: var(--space-1) 0 0;
+  font: 620 var(--markdown-type-heading) / 1.4 var(--font-ui);
+}
+.markdown-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.markdown-save-mode {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--markdown-type-small);
+  color: var(--ink-muted);
+}
+.markdown-save-mode select {
+  min-block-size: var(--markdown-control-height);
+  border: var(--markdown-line) solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--elevated);
+  color: var(--ink);
+  padding-inline: var(--space-2);
+}
+
+.markdown-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-block-end: var(--markdown-line) solid var(--line);
+}
+.markdown-tabs button {
+  min-block-size: var(--markdown-touch-height);
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.markdown-tabs button[aria-selected="true"] {
+  color: var(--accent);
+  box-shadow: inset 0 calc(-1 * var(--markdown-line-active)) var(--accent);
+}
+.markdown-tabs button:disabled,
+.markdown-map__row:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.markdown-editor-pane {
+  min-block-size: 0;
+  overflow: auto;
+  padding: var(--space-6);
+  background: var(--canvas);
+}
+
+.markdown-source {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--space-2);
+  min-block-size: 100%;
+  block-size: 100%;
+  max-inline-size: var(--markdown-wide-measure);
+  margin-inline: auto;
+  font-size: var(--markdown-type-small);
+  font-weight: 600;
+}
+.markdown-source textarea,
+.markdown-block textarea {
+  inline-size: 100%;
+  border: var(--markdown-line) solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  color: var(--ink);
+  padding: var(--space-4);
+  resize: vertical;
+  font: var(--markdown-type-caption) / 1.55 var(--font-mono);
+  tab-size: 2;
+}
+.markdown-source textarea {
+  min-block-size: 0;
+  block-size: 100%;
+  resize: none;
+}
+
+.markdown-blocks {
+  display: grid;
+  gap: var(--space-3);
+  max-inline-size: var(--markdown-wide-measure);
+  margin-inline: auto;
+}
+.markdown-block {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--markdown-line) solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--paper);
+}
+.markdown-block--selected {
+  border-color: var(--line-strong);
+  background: var(--accent-soft);
+}
+.markdown-block__meta,
+.markdown-map__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: var(--space-2);
+  text-align: start;
+}
+.markdown-block__meta code,
+.markdown-map__row code {
+  color: var(--ink-faint);
+  font: var(--markdown-type-mono) / 1.4 var(--font-mono);
+}
+.markdown-block small {
+  color: var(--locked);
+  font-size: var(--markdown-type-caption);
+}
+.markdown-block textarea[readonly] {
+  background: var(--locked-soft);
+  color: var(--locked);
+}
+.markdown-map__list {
+  display: grid;
+  gap: var(--space-1);
+}
+.markdown-map__row {
+  inline-size: 100%;
+  min-block-size: var(--markdown-control-height);
+  border-radius: var(--radius-control);
+}
+.markdown-map__row:hover,
+.markdown-map__row--selected {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.markdown-map__row:disabled:hover {
+  background: transparent;
+  color: var(--ink-muted);
+}
+
+.markdown-status {
+  padding: var(--space-3) var(--space-6);
+  border-block-start: var(--markdown-line) solid var(--line);
+  color: var(--ink-muted);
+  font-size: var(--markdown-type-caption);
+}
+.markdown-conflict {
+  inline-size: min(calc(var(--space-16) * 9), 100%);
+}
+.markdown-conflict p {
+  color: var(--ink-muted);
+  font-size: var(--markdown-type-small);
+  line-height: 1.55;
+}
+
+@media (max-width: 1099px) {
+  .markdown-workspace {
+    grid-template-columns: calc(var(--space-16) * 3) minmax(0, 1fr);
+    block-size: auto;
+    max-block-size: none;
+    overflow: visible;
+  }
+  .markdown-map {
+    grid-column: 2;
+    border-block-start: var(--markdown-line) solid var(--line);
+    border-inline-start: 0;
+  }
+  .markdown-main {
+    min-block-size: 100dvh;
+  }
+}
+
+@media (max-width: 767px) {
+  .markdown-workspace {
+    display: block;
+  }
+  .markdown-files {
+    border-inline-end: 0;
+    border-block-end: var(--markdown-line) solid var(--line);
+  }
+  .markdown-files nav {
+    display: flex;
+    overflow-x: auto;
+    gap: var(--space-1);
+  }
+  .markdown-files .nav-row {
+    min-inline-size: calc(var(--space-16) * 2);
+  }
+  .markdown-header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: var(--space-3) var(--space-4);
+  }
+  .markdown-editor-pane {
+    padding: var(--space-4);
+  }
+  .markdown-map {
+    border-block-start: var(--markdown-line) solid var(--line);
+  }
+}
+
+@media (pointer: coarse) {
+  .markdown-map__row,
+  .markdown-save-mode select {
+    min-block-size: var(--markdown-touch-height);
+  }
+}

@@ -13,4 +13,18 @@ export type LargeContentRepository = Readonly<{
 }>
 
 export function createLargeContentRepository(count?: number): LargeContentRepository
-export function handleLargeContent(request: IncomingMessage, response: ServerResponse): Promise<boolean>
+export type DurableLargeContentRepository = Readonly<{
+  page(offset: number, limit: number): Promise<Readonly<{ blocks: readonly ServerBlock[]; offset: number; total: number; continuation: number | null }>>
+  block(id: string): Promise<ServerBlock | null>
+  search(query: string, limit?: number): Promise<readonly ServerBlock[]>
+  patch(id: string, expectedRevision: number, text: string): Promise<
+    | Readonly<{ kind: "updated"; block: ServerBlock }>
+    | Readonly<{ kind: "conflict"; current: ServerBlock | null; draft: string }>
+    | Readonly<{ kind: "missing" }>
+  >
+  exportDocument(): Promise<Readonly<{ format: "large-content/v1"; blocks: readonly ServerBlock[] }>>
+}>
+
+export function createDurableLargeContentRepository(options: { readonly root: string; readonly count?: number }): DurableLargeContentRepository
+export function createLargeContentHandler(options: { readonly root: string }):
+  (request: IncomingMessage, response: ServerResponse) => Promise<boolean>

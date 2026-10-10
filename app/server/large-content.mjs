@@ -1,3 +1,5 @@
+import { FileCasRepository, RevisionConflictError } from "@block-editor/server-bindings"
+
 const DEFAULT_COUNT = 1_600
 const MAX_PAGE = 100
 const MAX_BODY_BYTES = 256_000
@@ -66,7 +68,65 @@ export const createLargeContentRepository = (count = DEFAULT_COUNT) => {
   }
 }
 
-const repository = createLargeContentRepository()
+export const createDurableLargeContentRepository = ({ root, count = DEFAULT_COUNT }) => {
+  const records = new FileCasRepository({ root })
+  const indexFor = (id) => {
+    const match = /^paragraph-(\d{4,})$/.exec(id)
+    if (match === null) return null
+    const index = Number(match[1])
+    return Number.isSafeInteger(index) && index >= 0 && index < count ? index : null
+  }
+  const block = async (id) => {
+    const index = indexFor(id)
+    if (index === null) return null
+    const stored = await records.read(id)
+    return stored === null
+      ? { id, index, revision: 1, text: syntheticText(index) }
+      : { id, index, revision: stored.content.revision, text: stored.content.text }
+  }
+  return {
+    async page(offset, limit) {
+      const start = Math.max(0, Math.min(count, Math.trunc(offset)))
+      const size = Math.max(1, Math.min(MAX_PAGE, Math.trunc(limit)))
+      const end = Math.min(count, start + size)
+      const ids = Array.from({ length: end - start }, (_, position) =>
+        `paragraph-${String(start + position).padStart(4, "0")}`)
+      return { blocks: await Promise.all(ids.map(block)), offset: start, total: count, continuation: end < count ? end : null }
+    },
+    block,
+    async search(query, limit = 20) {
+      const needle = query.trim().toLocaleLowerCase()
+      if (needle.length === 0) return []
+      const matches = []
+      for (let index = 0; index < count && matches.length < limit; index += 1) {
+        const candidate = await block(`paragraph-${String(index).padStart(4, "0")}`)
+        if (candidate !== null && (candidate.id.includes(needle) || candidate.text.toLocaleLowerCase().includes(needle))) matches.push(candidate)
+      }
+      return matches
+    },
+    async patch(id, expectedRevision, text) {
+      const current = await block(id)
+      if (current === null) return { kind: "missing" }
+      if (current.revision !== expectedRevision) return { kind: "conflict", current, draft: text }
+      try {
+        const stored = await records.read(id)
+        const content = { revision: current.revision + 1, text }
+        if (stored === null)
+          await records.create({ documentId: id, content, actorId: "large-content" })
+        else await records.update(id, stored.revision, content, { actorId: "large-content" })
+        return { kind: "updated", block: { ...current, ...content } }
+      } catch (error) {
+        if (!(error instanceof RevisionConflictError)) throw error
+        return { kind: "conflict", current: await block(id), draft: text }
+      }
+    },
+    async exportDocument() {
+      const ids = Array.from({ length: count }, (_, index) =>
+        `paragraph-${String(index).padStart(4, "0")}`)
+      return { format: "large-content/v1", blocks: await Promise.all(ids.map(block)) }
+    },
+  }
+}
 
 const send = (response, status, value, headers = {}) => {
   response.writeHead(status, {
@@ -89,22 +149,24 @@ const readJson = async (request) => {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"))
 }
 
-export const handleLargeContent = async (request, response) => {
+export const createLargeContentHandler = ({ root }) => {
+  const repository = createDurableLargeContentRepository({ root })
+  return async (request, response) => {
   const url = new URL(request.url ?? "/", "http://localhost")
   if (!url.pathname.startsWith("/api/large-content")) return false
   if (
     request.method === "GET" &&
     (url.pathname === "/api/large-content" || url.pathname === "/api/large-content/")
   ) {
-    send(response, 200, repository.page(Number(url.searchParams.get("offset") ?? 0), Number(url.searchParams.get("limit") ?? 40)))
+    send(response, 200, await repository.page(Number(url.searchParams.get("offset") ?? 0), Number(url.searchParams.get("limit") ?? 40)))
     return true
   }
   if (request.method === "GET" && url.pathname === "/api/large-content/search") {
-    send(response, 200, { results: repository.search(url.searchParams.get("q") ?? "") })
+    send(response, 200, { results: await repository.search(url.searchParams.get("q") ?? "") })
     return true
   }
   if (request.method === "GET" && url.pathname === "/api/large-content/export") {
-    send(response, 200, repository.exportDocument(), {
+    send(response, 200, await repository.exportDocument(), {
       "content-disposition": 'attachment; filename="large-content.json"',
     })
     return true
@@ -116,7 +178,7 @@ export const handleLargeContent = async (request, response) => {
   }
   const id = decodeURIComponent(match[1] ?? "")
   if (request.method === "GET") {
-    const block = repository.block(id)
+    const block = await repository.block(id)
     send(response, block === null ? 404 : 200, block ?? { error: "Block not found" })
     return true
   }
@@ -135,7 +197,7 @@ export const handleLargeContent = async (request, response) => {
       send(response, 400, { error: "expectedRevision and text are required" })
       return true
     }
-    const result = repository.patch(id, body.expectedRevision, body.text)
+    const result = await repository.patch(id, body.expectedRevision, body.text)
     send(response, result.kind === "updated" ? 200 : result.kind === "conflict" ? 409 : 404, result)
   } catch (error) {
     if (error instanceof SyntaxError || error instanceof RangeError) {
@@ -145,4 +207,5 @@ export const handleLargeContent = async (request, response) => {
     throw error
   }
   return true
+  }
 }

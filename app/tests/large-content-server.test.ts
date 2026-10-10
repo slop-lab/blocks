@@ -1,5 +1,11 @@
+import { mkdtemp, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import { createLargeContentRepository } from "../server/large-content.mjs"
+import {
+  createDurableLargeContentRepository,
+  createLargeContentRepository,
+} from "../server/large-content.mjs"
 
 describe("large content repository", () => {
   it("returns pages without materializing every block in the response", () => {
@@ -31,6 +37,23 @@ describe("large content repository", () => {
     if (conflict.kind === "conflict") {
       expect(conflict.current.text).toBe("First writer")
       expect(conflict.draft).toBe("Second writer draft")
+    }
+  })
+
+  it("retains blocks after restart and serializes concurrent expected revisions", async () => {
+    const root = await mkdtemp(join(tmpdir(), "large-content-"))
+    try {
+      const first = createDurableLargeContentRepository({ root, count: 10 })
+      const second = createDurableLargeContentRepository({ root, count: 10 })
+      const results = await Promise.all([
+        first.patch("paragraph-0004", 1, "first"),
+        second.patch("paragraph-0004", 1, "second"),
+      ])
+      expect(results.map(({ kind }) => kind).sort()).toEqual(["conflict", "updated"])
+      const reopened = createDurableLargeContentRepository({ root, count: 10 })
+      expect(await reopened.block("paragraph-0004")).toMatchObject({ revision: 2 })
+    } finally {
+      await rm(root, { recursive: true, force: true })
     }
   })
 })

@@ -110,6 +110,20 @@ try {
   const relativeLink = editor.locator("a[href='/relative']")
   assert.equal(await relativeLink.count(), 1)
 
+  await page.getByRole("button", { name: "정적 미리보기", exact: true }).click()
+  const previewLink = page.locator(".static-viewer a[href='/relative']")
+  assert.equal(await previewLink.count(), 1)
+  let previewLinkFocused = false
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    await page.keyboard.press("Tab")
+    previewLinkFocused = await previewLink.evaluate(
+      (element) => element.ownerDocument.activeElement === element,
+    )
+    if (previewLinkFocused) break
+  }
+  assert.equal(previewLinkFocused, true)
+  await page.getByRole("button", { name: "편집기", exact: true }).click()
+
   await relativeLink.dblclick()
   await linkButton.click()
   assert.equal(await linkInput.inputValue(), "/relative")

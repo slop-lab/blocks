@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { Component, createElement } from "react"
+import { safeLinkHref } from "./core/links"
 import type { BlockDocument, BlockSnapshot } from "./core/types"
 
 export type ViewerOverlay = {
@@ -55,6 +56,13 @@ const RenderBlock = ({
       if (mark.type === "strong") text = <strong>{text}</strong>
       if (mark.type === "em") text = <em>{text}</em>
       if (mark.type === "code") text = <code>{text}</code>
+      if (mark.type === "link" && "attrs" in mark) {
+        const attrs = mark.attrs
+        if (typeof attrs === "object" && attrs !== null && "href" in attrs) {
+          const href = typeof attrs.href === "string" ? safeLinkHref(attrs.href) : null
+          if (href !== null) text = <a href={href}>{text}</a>
+        }
+      }
     }
     return <span key={key}>{text}</span>
   })

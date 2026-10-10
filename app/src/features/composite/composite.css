@@ -1,0 +1,247 @@
+.composite-workspace {
+  --composite-measure: 720px;
+  --composite-code-measure: 320px;
+  --composite-cell-min: 120px;
+  min-block-size: 100%;
+  color: var(--ink);
+  background: var(--canvas);
+}
+
+.composite-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-8) clamp(var(--space-4), 5vw, var(--space-16));
+  background: var(--paper);
+  border-block-end: 1px solid var(--line);
+}
+
+.composite-header h1 {
+  margin: var(--space-2) 0 var(--space-3);
+  font: 650 30px / 1.25 var(--font-editorial);
+  letter-spacing: -0.025em;
+  word-break: keep-all;
+}
+
+.composite-header p,
+.composite-slot__description {
+  max-inline-size: 68ch;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 14px;
+  line-height: 1.45;
+  word-break: keep-all;
+}
+
+.composite-toolbar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 10;
+}
+
+.composite-layout {
+  display: grid;
+  grid-template-columns: minmax(0, var(--composite-measure)) minmax(
+      0,
+      var(--composite-code-measure)
+    );
+  justify-content: center;
+  align-items: start;
+  gap: var(--space-5);
+  padding: var(--space-10) clamp(var(--space-4), 5vw, var(--space-16));
+}
+
+.composite-slot {
+  min-inline-size: 0;
+  overflow: hidden;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  transition:
+    transform 120ms ease-out,
+    border-color 120ms ease-out;
+}
+
+.composite-slot--active {
+  border-color: var(--accent);
+}
+
+.composite-slot__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface);
+  border-block-end: 1px solid var(--line);
+}
+
+.composite-slot__header h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+  font: 620 19px / 1.4 var(--font-editorial);
+}
+
+.composite-slot__description {
+  padding: var(--space-4) var(--space-4) 0;
+  font-size: 13px;
+}
+
+.composite-prose-frame {
+  padding: var(--space-8);
+}
+
+.composite-prose {
+  outline: none;
+  font-size: 16px;
+  line-height: 1.72;
+  word-break: keep-all;
+}
+
+.composite-prose > * {
+  margin: 0 0 var(--space-5);
+}
+
+.composite-prose h1 {
+  font: 650 30px / 1.25 var(--font-editorial);
+  letter-spacing: -0.025em;
+}
+
+.composite-prose figcaption {
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+
+.composite-prose .tableWrapper {
+  overflow-x: auto;
+}
+
+.composite-prose table {
+  inline-size: 100%;
+  min-inline-size: calc(var(--composite-cell-min) * 2);
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.composite-prose th,
+.composite-prose td {
+  position: relative;
+  min-inline-size: var(--composite-cell-min);
+  vertical-align: top;
+  border: 1px solid var(--line-strong);
+  padding: var(--space-3);
+}
+
+.composite-prose th {
+  background: var(--surface);
+  text-align: start;
+  font-weight: 620;
+}
+
+.composite-prose td.selectedCell,
+.composite-prose th.selectedCell {
+  background: var(--accent-soft);
+}
+
+.composite-prose .column-resize-handle {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: calc(var(--space-1) / -2);
+  inline-size: var(--space-1);
+  background: var(--accent);
+}
+
+.composite-code {
+  margin: var(--space-4);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.composite-code .cm-editor {
+  min-block-size: calc(var(--space-16) * 4);
+  color: var(--ink);
+  background: transparent;
+  font: 12px / 1.55 var(--font-mono);
+}
+
+.composite-code .cm-editor.cm-focused {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.composite-code .cm-content,
+.composite-code .cm-gutters {
+  padding-block: var(--space-3);
+}
+
+.composite-code .cm-gutters {
+  color: var(--ink-faint);
+  background: var(--surface);
+  border-inline-end: 1px solid var(--line);
+}
+
+.composite-code .cm-activeLine,
+.composite-code .cm-activeLineGutter,
+.composite-code .cm-selectionBackground,
+.composite-code .cm-content ::selection {
+  background: var(--accent-soft);
+}
+
+.composite-code-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-4);
+  font-size: 12px;
+}
+
+.composite-status {
+  margin: 0;
+  padding: var(--space-3) clamp(var(--space-4), 5vw, var(--space-16));
+  color: var(--ink-muted);
+  background: var(--surface);
+  border-block-start: 1px solid var(--line);
+  font-size: 12px;
+}
+
+@media (max-width: 1099px) {
+  .composite-layout {
+    grid-template-columns: minmax(0, var(--composite-measure));
+  }
+}
+
+@media (max-width: 767px) {
+  .composite-header {
+    flex-direction: column;
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .composite-header h1 {
+    font-size: 24px;
+  }
+
+  .composite-layout {
+    padding: var(--space-4);
+  }
+
+  .composite-slot__header {
+    flex-direction: column;
+  }
+
+  .composite-prose-frame {
+    padding: var(--space-5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composite-slot {
+    transition-duration: 0.01ms;
+  }
+}

@@ -12,7 +12,8 @@ export const createBlockRegistry = (
 ): BlockRegistry => {
   const entries = new Map<string, BlockDefinition>()
   for (const definition of definitions) {
-    if (entries.has(definition.type)) throw new TypeError(`Duplicate block type: ${definition.type}`)
+    if (entries.has(definition.type))
+      throw new TypeError(`Duplicate block type: ${definition.type}`)
     entries.set(definition.type, definition)
   }
   const defaultText = entries.get(defaultTextType)

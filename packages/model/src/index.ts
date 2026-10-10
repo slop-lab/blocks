@@ -1,3 +1,6 @@
+export { DocumentCodecError, decodeDocument, encodeDocument } from "./codec.js"
+export type { BlockRegistry } from "./registry.js"
+export { createBlockRegistry } from "./registry.js"
 export type {
   BlockDefinition,
   BlockDocument,
@@ -7,6 +10,3 @@ export type {
   OpaqueInline,
   TextInline,
 } from "./types.js"
-export { decodeDocument, DocumentCodecError, encodeDocument } from "./codec.js"
-export type { BlockRegistry } from "./registry.js"
-export { createBlockRegistry } from "./registry.js"

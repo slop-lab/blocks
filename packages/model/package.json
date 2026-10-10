@@ -3,19 +3,37 @@
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-    "./codec": { "types": "./dist/codec.d.ts", "import": "./dist/codec.js" },
-    "./registry": { "types": "./dist/registry.d.ts", "import": "./dist/registry.js" },
-    "./viewer": { "types": "./dist/viewer.d.ts", "import": "./dist/viewer.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./codec": {
+      "types": "./dist/codec.d.ts",
+      "import": "./dist/codec.js"
+    },
+    "./registry": {
+      "types": "./dist/registry.d.ts",
+      "import": "./dist/registry.js"
+    },
+    "./viewer": {
+      "types": "./dist/viewer.d.ts",
+      "import": "./dist/viewer.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": { "zod": "^4.1.11" },
-  "peerDependencies": { "react": "^19.2.0" },
+  "dependencies": {
+    "zod": "^4.1.11"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0"
+  },
   "devDependencies": {
     "@types/react": "^19.2.0",
     "react": "^19.2.0",

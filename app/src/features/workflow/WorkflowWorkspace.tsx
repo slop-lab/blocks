@@ -16,6 +16,7 @@ const workflowSchema = z
     revision: z.number().int().positive(),
     state: z.enum(["draft", "submitted", "approved"]),
     authorId: z.string(),
+    submittedDocumentRevision: z.number().int().positive().nullable(),
     audit: z.array(auditSchema),
   })
   .strict()

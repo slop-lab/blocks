@@ -5,8 +5,20 @@ import {
   FileCasRepository,
   RevisionConflictError,
   WorkflowRepository,
+  WorkflowService,
   WorkflowStateError,
 } from "@block-editor/server-bindings"
+import { z } from "zod"
+
+const MAX_BODY_BYTES = 2 * 1024 * 1024
+const expectedRevision = z.number().int().positive()
+const content = z.json().refine((value) => value !== null && value !== "", "content must not be empty")
+const documentInput = z.object({
+  content,
+  expectedRevision: expectedRevision.optional(),
+  metadata: z.record(z.string(), z.json()).optional(),
+}).strict()
+const transitionInput = z.object({ expectedRevision }).strict()
 
 const identities = {
   author: { subject: "author", role: "editor", rooms: ["*"] },
@@ -31,30 +43,38 @@ const send = (response, status, value, headers = {}) => {
 }
 
 const readJson = async (request) => {
+  const declared = Number(request.headers["content-length"] ?? 0)
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) throw new RangeError("Request body is too large")
   const chunks = []
-  for await (const chunk of request) chunks.push(chunk)
+  let size = 0
+  for await (const chunk of request) {
+    size += chunk.length
+    if (size > MAX_BODY_BYTES) throw new RangeError("Request body is too large")
+    chunks.push(chunk)
+  }
   return JSON.parse(Buffer.concat(chunks).toString("utf8"))
 }
 
-export const createHostDomain = ({ root, secret }) => {
+export const createHostDomain = ({ root, secret, secureCookies = false }) => {
   const authority = new DemoSessionAuthority({ secret, issuer: "block-editor-demo" })
   const documents = new FileCasRepository({ root: join(root, "documents") })
   const workflows = new WorkflowRepository({ root: join(root, "workflows") })
+  const workflowService = new WorkflowService({ documents, workflows })
   const sessionFor = (request) => {
     const token = cookieValue(request)
     return token === null ? null : authority.verify(token)
   }
   const issue = (identity) => {
-    const selected = identities[identity] ?? identities.author
+    const selected = Object.hasOwn(identities, identity) ? identities[identity] : identities.author
     return authority.issue(selected)
   }
-  const cookie = (token) => `demo_session=${token}; Path=/; HttpOnly; SameSite=Lax`
+  const cookie = (token) => `demo_session=${token}; Path=/; HttpOnly; SameSite=Lax${secureCookies ? "; Secure" : ""}`
 
   const handle = async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost")
     if (url.pathname === "/api/demo/session" && request.method === "POST") {
       const identity = url.searchParams.get("identity") ?? "author"
-      if (!(identity in identities)) { send(response, 400, { error: "Unknown demo identity" }); return true }
+      if (!Object.hasOwn(identities, identity)) { send(response, 400, { error: "Unknown demo identity" }); return true }
       const token = issue(identity)
       send(response, 200, { identity, role: identities[identity].role }, { "set-cookie": cookie(token) })
       return true
@@ -75,12 +95,15 @@ export const createHostDomain = ({ root, secret }) => {
           return true
         }
         if (request.method !== "PUT") { send(response, 405, { error: "Method not allowed" }); return true }
-        const body = await readJson(request)
+        const body = documentInput.parse(await readJson(request))
         const current = await documents.read(documentId)
-        const record = current === null
-          ? await documents.create({ documentId, content: body.content, metadata: body.metadata ?? {}, actorId: session.subject })
-          : await documents.update(documentId, body.expectedRevision, body.content, { actorId: session.subject })
-        if ((await workflows.read(documentId)) === null) await workflows.create(documentId, session.subject)
+        const record = await workflowService.save({
+          documentId,
+          content: body.content,
+          metadata: body.metadata,
+          expectedRevision: body.expectedRevision,
+          actorId: session.subject,
+        })
         send(response, current === null ? 201 : 200, record)
         return true
       }
@@ -94,17 +117,17 @@ export const createHostDomain = ({ root, secret }) => {
       const documentId = workflowMatch[1]
       const action = workflowMatch[2]
       authority.require(session, documentId, action === "approve" ? "approve" : "write")
-      const body = await readJson(request)
+      const body = transitionInput.parse(await readJson(request))
       const record = action === "approve"
-        ? await workflows.approve(documentId, body.expectedRevision, session.subject)
-        : await workflows.submit(documentId, body.expectedRevision, session.subject)
+        ? await workflowService.approve(documentId, body.expectedRevision, session.subject)
+        : await workflowService.submit(documentId, body.expectedRevision, session.subject)
       send(response, 200, record)
       return true
     } catch (error) {
       if (error instanceof AccessDeniedError) { send(response, 403, { error: error.message }); return true }
       if (error instanceof RevisionConflictError) { send(response, 409, { error: error.message, actualRevision: error.actual }); return true }
       if (error instanceof WorkflowStateError) { send(response, 409, { error: error.message }); return true }
-      if (error instanceof SyntaxError || error instanceof TypeError) { send(response, 400, { error: error.message }); return true }
+      if (error instanceof SyntaxError || error instanceof TypeError || error instanceof RangeError || error instanceof z.ZodError) { send(response, error instanceof RangeError ? 413 : 400, { error: error.message }); return true }
       throw error
     }
   }

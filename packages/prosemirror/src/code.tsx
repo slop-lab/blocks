@@ -1,0 +1,18 @@
+import { blockAttrs } from "./schema.js"
+import type { BlockRegistration } from "./types.js"
+import { renderInline } from "./render.js"
+
+export const codeBlock: BlockRegistration = {
+  type: "code",
+  nodeName: "code_block",
+  text: true,
+  nodeSpec: {
+    group: "block",
+    content: "text*",
+    marks: "",
+    code: true,
+    attrs: blockAttrs,
+    toDOM: (node) => ["pre", { "data-block-id": node.attrs["id"] }, ["code", 0]],
+  },
+  render: (block) => <pre><code>{renderInline(block)}</code></pre>,
+}

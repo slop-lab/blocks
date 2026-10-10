@@ -1,0 +1,31 @@
+{
+  "name": "@block-editor/prosemirror",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./paragraph": { "types": "./dist/paragraph.d.ts", "import": "./dist/paragraph.js" },
+    "./heading": { "types": "./dist/heading.d.ts", "import": "./dist/heading.js" },
+    "./quote": { "types": "./dist/quote.d.ts", "import": "./dist/quote.js" },
+    "./code": { "types": "./dist/code.d.ts", "import": "./dist/code.js" },
+    "./caption": { "types": "./dist/caption.d.ts", "import": "./dist/caption.js" },
+    "./task-card": { "types": "./dist/task-card.d.ts", "import": "./dist/task-card.js" },
+    "./preset": { "types": "./dist/preset.d.ts", "import": "./dist/preset.js" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@block-editor/model": "workspace:*",
+    "prosemirror-model": "^1.25.4"
+  },
+  "peerDependencies": { "react": "^19.2.0" },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "react": "^19.2.0",
+    "typescript": "^5.9.3"
+  }
+}

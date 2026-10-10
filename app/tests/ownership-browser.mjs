@@ -29,7 +29,12 @@ try {
     const board = page.getByLabel("프로젝트 보드 표현 편집기")
     await board.locator("article").first().click()
     await page.keyboard.press("End")
-    await page.keyboard.insertText(" 편집됨")
+    await page.keyboard.type(" 연속입력검증")
+    assert.match(await board.textContent(), /연속입력검증/)
+    await page.keyboard.press("Control+z")
+    assert.doesNotMatch(await board.textContent(), /연속입력검증/)
+    await page.keyboard.press("Control+Shift+z")
+    assert.match(await board.textContent(), /연속입력검증/)
     const blocksBeforeAdd = await board.locator("[data-block-id]").count()
     await board.locator("[data-block-id]").first().hover()
     await page.getByRole("button", { name: "이 블록 뒤에 문단 추가", exact: true }).click()
@@ -41,14 +46,34 @@ try {
       await page.getByLabel("프로젝트 보드 표현 편집기").locator("article").count(),
       before + 1,
     )
+    await page.keyboard.press("Control+z")
+    assert.equal(
+      await page.getByLabel("프로젝트 보드 표현 편집기").locator("article").count(),
+      before,
+    )
     await page.getByRole("button", { name: "혼합 백로그", exact: true }).click()
     await page.getByRole("button", { name: "표현 편집", exact: true }).click()
     await page.getByLabel("혼합 표현 편집기").locator("p").first().click()
     await page.keyboard.press("End")
     await page.keyboard.insertText(" 수정")
-    await page.getByRole("button", { name: "하위 문서 저장", exact: true }).click()
+    await page.getByRole("button", { name: /TASK-108 ·/ }).click()
+    const saveButton = page.getByRole("button", { name: "하위 문서 저장", exact: true })
+    assert.equal(await saveButton.isEnabled(), true)
+    const saveRequest = page.waitForRequest((request) =>
+      request.url().includes("/api/ownership/mixed/presentation"),
+    )
+    await saveButton.click()
+    const request = await saveRequest
+    assert.equal(request.method(), "POST")
+    const saveResponse = await request.response()
+    assert.equal(saveResponse?.status(), 200)
+    const savedState = await page.evaluate(
+      async () => await fetch("/api/ownership/mixed").then((response) => response.json()),
+    )
+    assert.match(JSON.stringify(savedState.presentations["TASK-104"]), /수정/)
+    assert.doesNotMatch(JSON.stringify(savedState.presentations["TASK-108"]), /수정/)
     await page.getByRole("button", { name: "작업 Markdown 열기", exact: true }).click()
-    await page.getByRole("heading", { name: "tasks/TASK-104.md" }).waitFor()
+    await page.getByRole("heading", { name: "tasks/TASK-108.md" }).waitFor()
     assert.equal(errors.length, 0)
     await page.close()
   }

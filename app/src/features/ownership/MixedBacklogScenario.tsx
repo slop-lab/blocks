@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { CanonicalBlockEditor } from "./CustomNotesEditor"
 import {
   changeTaskStatus,
+  type LowerDraft,
   loadMixed,
   type MixedState,
   savePresentation,
@@ -16,9 +17,7 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
   const [state, setState] = useState<MixedState | null>(null)
   const [selected, setSelected] = useState("TASK-104")
   const [query, setQuery] = useState("")
-  const [layer, setLayer] = useState<"presentation" | "proposal" | null>(null)
-  const [draft, setDraft] = useState<BlockDocument | null>(null)
-  const [dirty, setDirty] = useState(false)
+  const [draft, setDraft] = useState<LowerDraft | null>(null)
   const [message, setMessage] = useState("서버 상태를 불러오는 중입니다.")
   const generation = useRef(0)
   const refresh = useCallback(() => {
@@ -49,11 +48,12 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
       ) ?? [],
     [query, state],
   )
-  const run = (operation: Promise<MixedState>, success: string) =>
+  const mergeState = (next: MixedState) =>
+    setState((current) => (current === null || next.revision > current.revision ? next : current))
+  const runDomain = (operation: Promise<MixedState>, success: string) =>
     void operation
       .then((next) => {
-        setState(next)
-        setDirty(false)
+        mergeState(next)
         setMessage(success)
       })
       .catch((error: unknown) =>
@@ -66,15 +66,67 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
         ? state.presentations[task.id]
         : state.proposals.find((item) => item.taskId === task.id)?.document
     if (document !== undefined) {
-      setLayer(kind)
-      setDraft(document)
-      setDirty(false)
+      const proposal = state.proposals.find((item) => item.taskId === task.id)
+      setDraft({
+        target: {
+          taskId: task.id,
+          layer: kind,
+          proposalId: kind === "proposal" ? (proposal?.id ?? null) : null,
+          expectedRevision: state.revision,
+          dependencyVersion: kind === "proposal" ? (proposal?.dependencyVersion ?? null) : null,
+        },
+        document,
+        editVersion: 0,
+      })
     }
   }
   const changed = useCallback((document: BlockDocument) => {
-    setDraft(document)
-    setDirty(true)
+    setDraft((current) =>
+      current === null ? null : { ...current, document, editVersion: current.editVersion + 1 },
+    )
   }, [])
+  const saveDraft = () => {
+    if (draft === null || draft.editVersion === 0) return
+    const submitted = draft
+    const operation =
+      submitted.target.layer === "presentation"
+        ? savePresentation(
+            submitted.target.expectedRevision,
+            submitted.target.taskId,
+            submitted.document,
+          )
+        : submitted.target.proposalId !== null && submitted.target.dependencyVersion !== null
+          ? saveProposal(
+              submitted.target.expectedRevision,
+              submitted.target.proposalId,
+              submitted.target.taskId,
+              submitted.target.dependencyVersion,
+              submitted.document,
+            )
+          : null
+    if (operation === null) return
+    void operation
+      .then((next) => {
+        mergeState(next)
+        setDraft((current) =>
+          current?.target === submitted.target && current.editVersion === submitted.editVersion
+            ? {
+                ...current,
+                editVersion: 0,
+                target: { ...current.target, expectedRevision: next.revision },
+              }
+            : current,
+        )
+        setMessage(
+          submitted.target.layer === "presentation"
+            ? "presentation BlockDocument를 저장했습니다."
+            : "의존 버전을 확인하고 proposal BlockDocument를 저장했습니다.",
+        )
+      })
+      .catch((error: unknown) =>
+        setMessage(error instanceof Error ? error.message : "요청이 거절되었습니다."),
+      )
+  }
   if (state === null || task === undefined)
     return (
       <div>
@@ -84,17 +136,8 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
         </button>
       </div>
     )
-  const root = {
-    format: "block-editor/v0.3" as const,
-    blocks: [
-      {
-        id: `root-${task.id}`,
-        type: "ownership.task-card",
-        attrs: { taskId: task.id },
-        content: [{ kind: "text" as const, text: "서버 query가 선택한 읽기 전용 root", marks: [] }],
-      },
-    ],
-  }
+  const presentation = state.presentations[task.id]
+  const proposals = state.proposals.filter((item) => item.taskId === task.id)
   return (
     <section className="ownership-scenario" aria-labelledby="mixed-title">
       <header className="ownership-scenario__header">
@@ -132,16 +175,23 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
             ))}
         </aside>
         <div>
-          <BlockViewer
-            content={root}
-            renderers={presentationRenderers}
-            viewData={new Map([[`root-${task.id}`, task]])}
-          />
+          {presentation !== undefined && (
+            <BlockViewer
+              content={presentation}
+              renderers={presentationRenderers}
+              viewData={new Map(presentation.blocks.map((block) => [block.id, task]))}
+            />
+          )}
+          {proposals.map((proposal) => (
+            <section key={proposal.id} aria-label={`제안 ${proposal.id}`}>
+              <BlockViewer content={proposal.document} renderers={presentationRenderers} />
+            </section>
+          ))}
           <button
             className="button button--secondary"
             type="button"
             onClick={() =>
-              run(changeTaskStatus(state, task), "도메인 workflow 상태를 변경했습니다.")
+              runDomain(changeTaskStatus(state, task), "도메인 workflow 상태를 변경했습니다.")
             }
           >
             서버 workflow 전환
@@ -163,30 +213,25 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
           >
             제안 편집
           </button>
-          {layer !== null && draft !== null && (
+          {draft !== null && (
             <>
               <CanonicalBlockEditor
-                key={`${layer}-${task.id}`}
-                document={draft}
+                key={`${draft.target.layer}-${draft.target.taskId}`}
+                document={draft.document}
                 onChange={changed}
                 profile={presentationProfile}
-                modelId={`mixed-${layer}-${task.id}`}
-                label={layer === "presentation" ? "혼합 표현 편집기" : "에이전트 제안 편집기"}
+                modelId={`mixed-${draft.target.layer}-${draft.target.taskId}`}
+                label={
+                  draft.target.layer === "presentation"
+                    ? "혼합 표현 편집기"
+                    : "에이전트 제안 편집기"
+                }
               />
               <button
                 className="button button--primary"
-                disabled={!dirty}
+                disabled={draft.editVersion === 0}
                 type="button"
-                onClick={() =>
-                  run(
-                    layer === "presentation"
-                      ? savePresentation(state, task.id, draft)
-                      : saveProposal(state, "proposal-1", draft),
-                    layer === "presentation"
-                      ? "presentation BlockDocument를 저장했습니다."
-                      : "의존 버전을 확인하고 proposal BlockDocument를 저장했습니다.",
-                  )
-                }
+                onClick={saveDraft}
               >
                 하위 문서 저장
               </button>

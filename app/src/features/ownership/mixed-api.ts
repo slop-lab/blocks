@@ -34,6 +34,7 @@ const proposalSchema = z
   .strict()
 const stateSchema = z
   .object({
+    schemaVersion: z.literal(2),
     revision: z.number().int().positive(),
     tasks: z.array(taskSchema),
     presentations: z.record(z.string(), documentSchema),
@@ -43,6 +44,18 @@ const stateSchema = z
   .strict()
 export type MixedState = z.infer<typeof stateSchema>
 export type MixedTask = z.infer<typeof taskSchema>
+export type DraftTarget = {
+  readonly taskId: string
+  readonly layer: "presentation" | "proposal"
+  readonly proposalId: string | null
+  readonly expectedRevision: number
+  readonly dependencyVersion: number | null
+}
+export type LowerDraft = {
+  readonly target: DraftTarget
+  readonly document: BlockDocument
+  readonly editVersion: number
+}
 
 export const loadMixed = async (): Promise<MixedState> =>
   stateSchema.parse(await ky.get("/api/ownership/mixed").json())
@@ -59,35 +72,34 @@ export const changeTaskStatus = async (state: MixedState, task: MixedTask): Prom
       .json(),
   )
 export const savePresentation = async (
-  state: MixedState,
+  expectedRevision: number,
   taskId: string,
   document: BlockDocument,
 ): Promise<MixedState> =>
   stateSchema.parse(
     await ky
       .post("/api/ownership/mixed/presentation", {
-        json: { expectedRevision: state.revision, taskId, document },
+        json: { expectedRevision, taskId, document },
       })
       .json(),
   )
 export const saveProposal = async (
-  state: MixedState,
+  expectedRevision: number,
   proposalId: string,
+  taskId: string,
+  dependencyVersion: number,
   document: BlockDocument,
-): Promise<MixedState> => {
-  const proposal = state.proposals.find((item) => item.id === proposalId)
-  if (proposal === undefined) throw new TypeError("Proposal is missing")
-  return stateSchema.parse(
+): Promise<MixedState> =>
+  stateSchema.parse(
     await ky
       .post("/api/ownership/mixed/proposal", {
         json: {
-          expectedRevision: state.revision,
-          id: proposal.id,
-          taskId: proposal.taskId,
+          expectedRevision,
+          id: proposalId,
+          taskId,
           document,
-          dependencyVersion: proposal.dependencyVersion,
+          dependencyVersion,
         },
       })
       .json(),
   )
-}

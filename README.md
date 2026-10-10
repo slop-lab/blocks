@@ -21,7 +21,7 @@ corepack pnpm start
 - **Markdown 파일**: 서버 파일을 읽고 편집합니다. `MARKDOWN_ROOT`로 폴더를 지정하며 기본 폴더는 `.runtime/markdown`입니다. 파일 해시를 기준으로 저장 충돌을 검사하고, 블록 ID와 1-based 원본 줄 범위는 서버 메모리에서 임시로 추적합니다. 파일에는 에디터 ID를 삽입하지 않습니다.
 - **함께 쓰기**: 두 편집 창 또는 여러 브라우저에서 같은 방을 편집합니다. Yjs의 선택적 Undo가 로컬 편집을 관리하고 WebSocket이 변경 및 presence를 전달합니다.
 - **표와 코드**: 셀 선택, 붙여넣기, 행·열 변경, 병합·분할과 독립 CodeMirror 입력 영역을 사용합니다. 공유 도구 모음은 활성 입력 영역에만 적용됩니다.
-- **문서 보관함**: 문서 일부를 서버에서 가져와 가상화하여 표시합니다. 저장은 개별 블록의 revision을 확인하는 patch이며 아직 읽지 않은 부분을 교체하지 않습니다.
+- **문서 보관함**: 문서 일부를 서버에서 가져와 가상화하여 표시합니다. 저장은 개별 블록의 revision을 확인하는 durable patch이며 아직 읽지 않은 부분을 교체하지 않습니다.
 - **수정안 비교**: 원본과 분리된 후보를 비교하고 변경을 선택하여 수락합니다. 연결된 변경의 의존성과 원본 기준을 확인합니다. 스트림 제공자를 취소하거나 교체해도 이전 결과를 새 후보에 섞지 않습니다.
 
 Markdown·협업·표·대용량 기능은 각각의 진입점을 가져오거나 해당 예제로 이동할 때 사용합니다. 기본 viewer에서 해당 런타임을 초기화할 필요는 없습니다.
@@ -70,12 +70,12 @@ import { DemoSessionAuthority, FileCasRepository } from "@block-editor/server-bi
 - `/api/large-content`: 페이지 읽기, 블록 조회·수정, 검색 및 전체 내보내기.
 - `POST /api/demo/session?identity=author|reviewer|viewer`: 서명된 opaque 데모 세션 cookie 발급.
 - `GET/PUT /api/documents/:id`: room scope와 role을 검사하는 durable CAS 문서.
-- `POST /api/workflows/:id/submit|approve`: 명시적인 versioned 제출/승인과 audit history.
+- `POST /api/workflows/:id/submit|approve`: 제출한 콘텐츠 revision을 고정하는 versioned 제출/승인과 audit history. 제출·승인된 문서는 이 예제 API에서 수정할 수 없습니다.
 - `.runtime/`은 실행 데이터이며 Git에서 제외합니다.
 
-Markdown은 실제 파일에 저장되고 로컬 노트·표와 코드는 브라우저에 저장됩니다. 협업 방, 일반 문서와 승인 workflow는 `.runtime`의 원자적 파일 교체를 사용합니다. 협업 클라이언트는 연결이 끊겨도 현재 replica를 유지하며 재연결 시 합치고, 서버는 debounce한 Yjs snapshot을 재시작 후 다시 엽니다. 보관함의 기본 1,600개 synthetic 원문과 수정본은 아직 해당 서버 프로세스의 메모리에 유지됩니다.
+Markdown은 실제 파일에 저장되고 로컬 노트·표와 코드는 브라우저에 저장됩니다. 협업 방, 일반 문서, 문서 보관함의 수정 블록과 승인 workflow는 `.runtime`의 원자적 파일 교체를 사용합니다. 협업 클라이언트는 연결이 끊겨도 현재 replica를 유지하며 재연결 시 합치고, 서버는 종료 전에 마지막 Yjs snapshot을 저장하여 재시작 후 다시 엽니다. 보관함의 기본 1,600개 원문은 synthetic이며 수정본만 저장합니다.
 
-데모 세션은 역할과 room scope를 서버에서 확인하지만 운영 인증을 주장하지 않습니다. `DEMO_SESSION_SECRET`을 배포 환경에서 제공해야 하며, 공개 서비스에서는 호스트의 실제 identity provider와 session rotation으로 교체해야 합니다. 표시용 사용자 이름이나 에디터의 입력 제한은 권한 증명이 아닙니다. 외부 AI 자격 증명과 서비스 간 원자성은 호스트가 소유합니다.
+데모 세션은 화면에서 공개적으로 선택할 수 있는 예제 identity의 역할과 room scope만 확인하며 운영 인증이 아닙니다. `DEMO_SESSION_SECRET`을 지정하지 않으면 서버는 mode 0600의 random secret을 `.runtime/demo-session.secret`에 생성해 재시작 때 재사용합니다. HTTPS를 직접 사용하거나 신뢰한 proxy에서 HTTPS를 종료하는 호스트는 `createApplicationServer({ secureCookies: true })`로 Secure cookie를 설정해야 합니다. 공개 서비스에서는 실제 identity provider와 session rotation으로 교체해야 합니다. 표시용 사용자 이름이나 에디터의 입력 제한은 권한 증명이 아닙니다. 외부 AI 자격 증명과 여러 프로세스·서비스 간 원자성은 호스트가 소유합니다.
 
 ## 검사 실행
 

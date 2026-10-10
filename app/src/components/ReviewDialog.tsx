@@ -33,7 +33,7 @@ export const ReviewDialog = ({
   readonly before: BlockDocument
   readonly candidate: BlockDocument
   readonly onClose: () => void
-  readonly onAccept: (candidate: BlockDocument) => boolean | void
+  readonly onAccept: (candidate: BlockDocument) => boolean | undefined
   readonly provider?: SuggestionProvider
 }) => {
   const [candidateText, setCandidateText] = useState(() => JSON.stringify(candidate, null, 2))

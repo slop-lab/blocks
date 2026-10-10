@@ -7,6 +7,7 @@ import * as Y from "yjs"
 import {
   createCollaborationRoom,
   encodeCollaborationMessage,
+  flushCollaborationRoom,
   sendCollaborationMessage,
   wireCollaborationRoom,
 } from "./collaboration-room.mjs"
@@ -48,6 +49,13 @@ export const attachCollaboration = (server, options = {}) => {
     room.awareness.destroy()
     room.doc.destroy()
     rooms.delete(roomName)
+  }
+
+  webSocketServer.flushPersistence = async () => {
+    await Promise.all(
+      [...rooms].map(([roomName, room]) =>
+        flushCollaborationRoom({ room, roomName, store: options.store })),
+    )
   }
 
   server.once("close", () => {

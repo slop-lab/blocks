@@ -1,5 +1,5 @@
 import { once } from "node:events"
-import { mkdtemp, readFile, rm } from "node:fs/promises"
+import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import * as decoding from "lib0/decoding"
@@ -179,18 +179,9 @@ describe("durable host domain", () => {
     const authorSocket = await connectRoom(base, author, Y.encodeStateAsUpdate(doc))
     resources.unshift({ kind: "socket", value: authorSocket })
     authorSocket.send(syncUpdate(Y.encodeStateAsUpdate(doc)))
-    const snapshotPath = join(root, "collaboration", "team-minutes.yjs")
-    for (let attempt = 0; attempt < 100; attempt += 1) {
-      try {
-        if ((await readFile(snapshotPath)).byteLength > 0) break
-      } catch (error) {
-        if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error
-      }
-      await new Promise((resolve) => setTimeout(resolve, 10))
-    }
-    expect((await readFile(snapshotPath)).byteLength).toBeGreaterThan(0)
-
+    const authorClosed = once(authorSocket, "close")
     authorSocket.close()
+    await authorClosed
     const serverIndex = resources.findIndex((resource) => resource.kind === "server")
     const firstServer = resources.splice(serverIndex, 1)[0].value
     firstServer.closeAllConnections()

@@ -50,7 +50,8 @@ export const wireCollaborationRoom = ({ room, roomName, store }) => {
       clearTimeout(room.saveTimer)
       room.saveTimer = setTimeout(() => {
         room.saveTimer = null
-        room.saving = store.save(roomName, Y.encodeStateAsUpdate(room.doc))
+        const snapshot = Y.encodeStateAsUpdate(room.doc)
+        room.saving = room.saving.then(() => store.save(roomName, snapshot))
       }, 50)
       room.saveTimer.unref()
     }
@@ -70,4 +71,13 @@ export const wireCollaborationRoom = ({ room, roomName, store }) => {
     )
     broadcast(room, payload, origin)
   })
+}
+
+export const flushCollaborationRoom = async ({ room, roomName, store }) => {
+  if (room.saveTimer !== null) {
+    clearTimeout(room.saveTimer)
+    room.saveTimer = null
+  }
+  await room.saving
+  if (store !== undefined) await store.save(roomName, Y.encodeStateAsUpdate(room.doc))
 }

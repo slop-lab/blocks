@@ -35,7 +35,7 @@ export const MarkdownWorkspace = () => {
   return (
     <section className="markdown-workspace" aria-label="Markdown 파일 작업 공간">
       <MarkdownFileList
-        files={workspace.files}
+        tree={workspace.tree}
         activeName={workspace.disk?.name ?? null}
         dirty={workspace.dirty}
         onOpen={(name) => void workspace.openFile(name)}

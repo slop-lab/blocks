@@ -2,6 +2,7 @@ import {
   MAX_MARKDOWN_BYTES,
   MarkdownRequestError,
   listMarkdownFiles,
+  listMarkdownTree,
   loadMarkdownFile,
   markdownRoot,
   previewMarkdown,
@@ -66,7 +67,8 @@ export const handleMarkdown = async (request, response) => {
   try {
     const root = markdownRoot()
     if (requestUrl.pathname === "/api/markdown" && request.method === "GET") {
-      writeJson(response, 200, { files: await listMarkdownFiles(root) })
+      const [files, tree] = await Promise.all([listMarkdownFiles(root), listMarkdownTree(root)])
+      writeJson(response, 200, { files, tree })
       return true
     }
     if (requestUrl.pathname === "/api/markdown/file" && request.method === "GET") {

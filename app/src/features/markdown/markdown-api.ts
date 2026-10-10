@@ -15,7 +15,13 @@ const fileSchema = z.object({
   mappings: z.array(mappingSchema),
 })
 
-const listSchema = z.object({ files: z.array(z.string()) })
+const treeNodeSchema: z.ZodType<MarkdownTreeNode> = z.lazy(() =>
+  z.union([
+    z.object({ kind: z.literal("file"), name: z.string(), path: z.string() }),
+    z.object({ kind: z.literal("directory"), name: z.string(), path: z.string(), children: z.array(treeNodeSchema) }),
+  ]),
+)
+const listSchema = z.object({ files: z.array(z.string()), tree: z.array(treeNodeSchema) })
 const previewSchema = z.object({ mappings: z.array(mappingSchema) })
 const conflictSchema = fileSchema.extend({
   error: z.literal("stale_revision"),
@@ -24,13 +30,17 @@ const conflictSchema = fileSchema.extend({
 
 export type MarkdownMapping = z.infer<typeof mappingSchema>
 export type MarkdownFile = z.infer<typeof fileSchema>
+export type MarkdownTreeNode =
+  | { readonly kind: "file"; readonly name: string; readonly path: string }
+  | { readonly kind: "directory"; readonly name: string; readonly path: string; readonly children: readonly MarkdownTreeNode[] }
+export type MarkdownInventory = { readonly files: readonly string[]; readonly tree: readonly MarkdownTreeNode[] }
 export type SaveResult =
   | { readonly kind: "saved"; readonly file: MarkdownFile }
   | { readonly kind: "conflict"; readonly disk: MarkdownFile }
 
-export const listMarkdown = async (): Promise<readonly string[]> => {
+export const listMarkdown = async (): Promise<MarkdownInventory> => {
   const payload: unknown = await ky.get("/api/markdown", { timeout: 10_000 }).json()
-  return listSchema.parse(payload).files
+  return listSchema.parse(payload)
 }
 
 export const loadMarkdown = async (name: string): Promise<MarkdownFile> => {

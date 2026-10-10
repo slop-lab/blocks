@@ -5,6 +5,7 @@ import {
   loadMarkdown,
   type MarkdownFile,
   type MarkdownMapping,
+  type MarkdownTreeNode,
   previewMarkdown,
   saveMarkdown,
 } from "./markdown-api"
@@ -18,6 +19,7 @@ const errorMessage = (error: unknown) =>
 
 export const useMarkdownWorkspace = () => {
   const [files, setFiles] = useState<readonly string[]>([])
+  const [tree, setTree] = useState<readonly MarkdownTreeNode[]>([])
   const [disk, setDisk] = useState<MarkdownFile | null>(null)
   const [draft, setDraft] = useState("")
   const [mappings, setMappings] = useState<readonly MarkdownMapping[]>([])
@@ -87,10 +89,11 @@ export const useMarkdownWorkspace = () => {
   useEffect(() => {
     let active = true
     void listMarkdown()
-      .then((names) => {
+      .then((inventory) => {
         if (!active) return
-        setFiles(names)
-        const first = names[0]
+        setFiles(inventory.files)
+        setTree(inventory.tree)
+        const first = inventory.files[0]
         if (first === undefined) setStatus("편집할 Markdown 파일이 없습니다.")
         else void openFile(first)
       })
@@ -204,6 +207,7 @@ export const useMarkdownWorkspace = () => {
 
   return {
     files,
+    tree,
     disk,
     draft,
     mappings,

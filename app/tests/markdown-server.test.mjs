@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises"
 import { createServer } from "node:http"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -44,6 +44,34 @@ describe("Markdown file API", () => {
     await writeFile(join(root, "ignore.txt"), "not markdown", "utf8")
     const second = await request("/api/markdown")
     expect(second.payload.files).toEqual(["notes.md", "README.md"])
+  })
+
+  it("lists nested Markdown files as a tree and opens their relative paths", async () => {
+    await mkdir(join(root, "프로젝트", "회의"), { recursive: true })
+    await writeFile(join(root, "프로젝트", "회의", "결정.md"), "# 결정\n", "utf8")
+
+    const listed = await request("/api/markdown")
+    const loaded = await request(`/api/markdown/file?name=${encodeURIComponent("프로젝트/회의/결정.md")}`)
+
+    expect(listed.payload.files).toContain("프로젝트/회의/결정.md")
+    expect(listed.payload.tree[0]).toMatchObject({ kind: "file", path: "README.md" })
+    expect(JSON.stringify(listed.payload.tree)).toContain("프로젝트/회의/결정.md")
+    expect(loaded.payload.content).toBe("# 결정\n")
+  })
+
+  it("rejects symlinked Markdown files and traversal paths", async () => {
+    const outside = join(root, "..", `outside-${crypto.randomUUID()}.md`)
+    await writeFile(outside, "secret\n", "utf8")
+    await symlink(outside, join(root, "linked.md"))
+
+    const listed = await request("/api/markdown")
+    const linked = await request("/api/markdown/file?name=linked.md")
+    const escaped = await request(`/api/markdown/file?name=${encodeURIComponent("nested/../../secret.md")}`)
+
+    expect(listed.payload.files).not.toContain("linked.md")
+    expect(linked.response.status).toBe(404)
+    expect(escaped.response.status).toBe(400)
+    await rm(outside, { force: true })
   })
 
   it("roundtrips exact source, maps blocks, and keeps IDs for unchanged spans", async () => {

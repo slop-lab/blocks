@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto"
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises"
-import { basename, join, resolve, sep } from "node:path"
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
 import MarkdownIt from "markdown-it"
 
 export const MAX_MARKDOWN_BYTES = 2_000_000
@@ -8,6 +8,7 @@ const SAMPLE_NAME = "README.md"
 const SAMPLE_CONTENT = "# Markdown 작업 공간\n\n왼쪽에서 파일을 선택하고 실제 Markdown 원문을 편집하세요.\n"
 const parser = new MarkdownIt({ html: true, linkify: true, typographer: false })
 const mappingCache = new Map()
+const mappingEpoch = randomUUID()
 // Serializes this server process; external editors are detected by the hash reread but not locked.
 const processWriteQueues = new Map()
 
@@ -27,14 +28,45 @@ export const revisionOf = (content) =>
   createHash("sha256").update(content, "utf8").digest("hex")
 
 const filePath = (root, name) => {
-  if (typeof name !== "string" || name !== basename(name) || !name.toLowerCase().endsWith(".md")) {
+  if (
+    typeof name !== "string" ||
+    isAbsolute(name) ||
+    name.includes("\\") ||
+    !name.toLowerCase().endsWith(".md") ||
+    name.split("/").some((segment) => segment.length === 0 || segment === "." || segment === "..")
+  ) {
     throw new MarkdownRequestError(400, "invalid_name", "Markdown file name is invalid")
   }
   const candidate = resolve(root, name)
-  if (!candidate.startsWith(`${root}${sep}`)) {
+  const fromRoot = relative(root, candidate)
+  if (fromRoot.startsWith(`..${sep}`) || fromRoot === ".." || isAbsolute(fromRoot)) {
     throw new MarkdownRequestError(400, "invalid_name", "Markdown file must stay inside the root")
   }
   return candidate
+}
+
+const markdownInventory = async (root) => {
+  const walk = async (directory, prefix = "") => {
+    const entries = await readdir(directory, { withFileTypes: true })
+    const tree = []
+    const files = []
+    for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+      if (entry.isSymbolicLink()) continue
+      const path = prefix.length === 0 ? entry.name : `${prefix}/${entry.name}`
+      if (entry.isDirectory()) {
+        const nested = await walk(join(directory, entry.name), path)
+        if (nested.files.length > 0) {
+          tree.push({ kind: "directory", name: entry.name, path, children: nested.tree })
+          files.push(...nested.files)
+        }
+      } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+        tree.push({ kind: "file", name: entry.name, path })
+        files.push(path)
+      }
+    }
+    return { files, tree }
+  }
+  return walk(root)
 }
 
 export const listMarkdownFiles = async (root) => {
@@ -46,11 +78,12 @@ export const listMarkdownFiles = async (root) => {
     if (!(error instanceof Error) || !Object.hasOwn(error, "code") || error.code !== "EEXIST")
       throw error
   }
-  const entries = await readdir(root, { withFileTypes: true })
-  return entries
-    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".md"))
-    .map((entry) => entry.name)
-    .sort((left, right) => left.localeCompare(right))
+  return (await markdownInventory(root)).files
+}
+
+export const listMarkdownTree = async (root) => {
+  await listMarkdownFiles(root)
+  return (await markdownInventory(root)).tree
 }
 
 const requireAllowlistedPath = async (root, name) => {
@@ -124,7 +157,7 @@ export const loadMarkdownFile = async (root, name) => {
     name,
     content,
     revision: revisionOf(content),
-    mappings: mapMarkdown(`${root}:${name}`, content),
+    mappings: mapMarkdown(`${mappingEpoch}:${root}:${name}`, content),
   }
 }
 
@@ -133,7 +166,7 @@ export const previewMarkdown = async (root, input) => {
   if (Buffer.byteLength(input.content, "utf8") > MAX_MARKDOWN_BYTES) {
     throw new MarkdownRequestError(413, "file_too_large", "Markdown draft exceeds the size limit")
   }
-  return { mappings: mapMarkdown(`${root}:${input.name}`, input.content) }
+  return { mappings: mapMarkdown(`${mappingEpoch}:${root}:${input.name}`, input.content) }
 }
 
 export const saveMarkdownFile = async (root, input) => {
@@ -157,10 +190,10 @@ export const saveMarkdownFile = async (root, input) => {
         name: input.name,
         content: diskContent,
         revision: diskRevision,
-        mappings: mapMarkdown(`${root}:${input.name}`, diskContent),
+        mappings: mapMarkdown(`${mappingEpoch}:${root}:${input.name}`, diskContent),
       })
     }
-    const temporary = join(root, `.${input.name}.${randomUUID()}.tmp`)
+    const temporary = join(dirname(path), `.${basename(path)}.${randomUUID()}.tmp`)
     let renamed = false
     try {
       await writeFile(temporary, input.content, { encoding: "utf8", flag: "wx" })
@@ -173,7 +206,7 @@ export const saveMarkdownFile = async (root, input) => {
       name: input.name,
       content: input.content,
       revision: revisionOf(input.content),
-      mappings: mapMarkdown(`${root}:${input.name}`, input.content),
+      mappings: mapMarkdown(`${mappingEpoch}:${root}:${input.name}`, input.content),
     }
   } finally {
     release()

@@ -52,7 +52,10 @@ const button = (label: string) =>
   )
 
 beforeEach(async () => {
-  api.list.mockReset().mockResolvedValue(["notes.md", "slow.md", "fast.md"])
+  api.list.mockReset().mockResolvedValue({
+    files: ["notes.md", "slow.md", "fast.md"],
+    tree: ["notes.md", "slow.md", "fast.md"].map((name) => ({ kind: "file", name, path: name })),
+  })
   api.load.mockReset().mockResolvedValue(initialFile)
   api.preview.mockReset().mockImplementation(async (_name: string, content: string) => {
     const headingLine = content.startsWith("Preface") ? 3 : 1
@@ -102,18 +105,19 @@ describe("Markdown workspace draft integrity", () => {
   })
   it("ignores the discarded StrictMode bootstrap after the active view has edits", async () => {
     await act(async () => root.unmount())
-    let finishOld: (names: string[]) => void = () => {
+    const inventory = { files: ["notes.md"], tree: [{ kind: "file" as const, name: "notes.md", path: "notes.md" }] }
+    let finishOld: (value: typeof inventory) => void = () => {
       throw new Error("Bootstrap not started")
     }
     api.list
       .mockReset()
       .mockImplementationOnce(
         () =>
-          new Promise<string[]>((resolve) => {
+          new Promise<typeof inventory>((resolve) => {
             finishOld = resolve
           }),
       )
-      .mockResolvedValue(["notes.md"])
+      .mockResolvedValue(inventory)
     api.load.mockClear()
     root = createRoot(host)
     await act(async () => {
@@ -127,7 +131,7 @@ describe("Markdown workspace draft integrity", () => {
     if (source === null) throw new TypeError("Active source did not mount")
     await changeTextarea(source, "# New draft\n")
     await act(async () => {
-      finishOld(["notes.md"])
+      finishOld(inventory)
       await Promise.resolve()
     })
     expect(source.value).toBe("# New draft\n")

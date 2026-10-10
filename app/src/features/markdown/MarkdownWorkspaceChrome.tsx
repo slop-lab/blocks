@@ -1,39 +1,46 @@
 import { DownloadIcon, FileTextIcon, ReloadIcon } from "@radix-ui/react-icons"
-import type { MarkdownFile, MarkdownMapping } from "./markdown-api"
+import type { MarkdownFile, MarkdownMapping, MarkdownTreeNode } from "./markdown-api"
 
 type FileListProps = {
-  readonly files: readonly string[]
+  readonly tree: readonly MarkdownTreeNode[]
   readonly activeName: string | null
   readonly dirty: boolean
   readonly onOpen: (name: string) => void
 }
 
-export const MarkdownFileList = ({ files, activeName, dirty, onOpen }: FileListProps) => (
+const TreeRows = ({ nodes, activeName, dirty, onOpen }: { readonly nodes: readonly MarkdownTreeNode[]; readonly activeName: string | null; readonly dirty: boolean; readonly onOpen: (name: string) => void }) => (
+  <>
+    {nodes.map((node) => node.kind === "directory" ? (
+      <div className="markdown-tree" key={node.path}>
+        <strong className="markdown-tree__directory">{node.name}</strong>
+        <TreeRows nodes={node.children} activeName={activeName} dirty={dirty} onOpen={onOpen} />
+      </div>
+    ) : (
+      <button
+        className={activeName === node.path ? "nav-row nav-row--active" : "nav-row"}
+        type="button"
+        key={node.path}
+        aria-current={activeName === node.path ? "page" : undefined}
+        onClick={() => {
+          if (node.path === activeName) return
+          if (!dirty || window.confirm("저장하지 않은 초안을 버리고 다른 파일을 여시겠습니까?")) onOpen(node.path)
+        }}
+      >
+        <FileTextIcon />
+        <span><strong>{node.name}</strong><small>{node.path}</small></span>
+      </button>
+    ))}
+  </>
+)
+
+export const MarkdownFileList = ({ tree, activeName, dirty, onOpen }: FileListProps) => (
   <aside className="markdown-files">
     <header>
       <span className="eyebrow">MARKDOWN ROOT</span>
       <h2>파일</h2>
     </header>
     <nav aria-label="Markdown 파일 목록">
-      {files.map((name) => (
-        <button
-          className={activeName === name ? "nav-row nav-row--active" : "nav-row"}
-          type="button"
-          key={name}
-          aria-current={activeName === name ? "page" : undefined}
-          onClick={() => {
-            if (name === activeName) return
-            if (!dirty || window.confirm("저장하지 않은 초안을 버리고 다른 파일을 여시겠습니까?"))
-              onOpen(name)
-          }}
-        >
-          <FileTextIcon />
-          <span>
-            <strong>{name}</strong>
-            <small>실제 파일</small>
-          </span>
-        </button>
-      ))}
+      <TreeRows nodes={tree} activeName={activeName} dirty={dirty} onOpen={onOpen} />
     </nav>
   </aside>
 )

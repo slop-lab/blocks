@@ -4,7 +4,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "suspicious": { "noExplicitAny": "error" },
       "style": {
         "noDefaultExport": "off",
@@ -12,10 +12,16 @@
         "noNonNullAssertion": "error",
         "noParameterAssign": "error"
       },
-      "correctness": { "noUnusedVariables": "error", "noUnusedImports": "error" }
+      "correctness": { "noUnusedVariables": "error", "noUnusedImports": "error" },
+      "complexity": {
+        // TypeScript's noPropertyAccessFromIndexSignature requires bracket access for these keys.
+        "useLiteralKeys": "off"
+      }
     }
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
   "javascript": { "formatter": { "quoteStyle": "double", "semicolons": "asNeeded" } },
-  "files": { "includes": ["app/src/**", "app/tests/**", "vite.config.ts"] }
+  "files": {
+    "includes": ["**", "!**/dist", "!**/node_modules", "!**/.runtime", "!**/coverage"]
+  }
 }

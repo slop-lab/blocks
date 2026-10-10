@@ -1,6 +1,6 @@
+import { renderInline } from "./render.js"
 import { blockAttrs } from "./schema.js"
 import type { BlockRegistration } from "./types.js"
-import { renderInline } from "./render.js"
 
 export const codeBlock: BlockRegistration = {
   type: "code",
@@ -14,5 +14,9 @@ export const codeBlock: BlockRegistration = {
     attrs: blockAttrs,
     toDOM: (node) => ["pre", { "data-block-id": node.attrs["id"] }, ["code", 0]],
   },
-  render: (block) => <pre><code>{renderInline(block)}</code></pre>,
+  render: (block) => (
+    <pre>
+      <code>{renderInline(block)}</code>
+    </pre>
+  ),
 }

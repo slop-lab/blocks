@@ -1,6 +1,6 @@
+import { renderInline } from "./render.js"
 import { blockAttrs } from "./schema.js"
 import type { BlockRegistration } from "./types.js"
-import { renderInline } from "./render.js"
 
 export const captionBlock: BlockRegistration = {
   type: "caption",

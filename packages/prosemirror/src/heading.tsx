@@ -1,7 +1,7 @@
 import { createElement } from "react"
+import { renderInline } from "./render.js"
 import { blockAttrs } from "./schema.js"
 import type { BlockRegistration } from "./types.js"
-import { renderInline } from "./render.js"
 
 export const headingBlock: BlockRegistration = {
   type: "heading",

@@ -43,7 +43,8 @@ export const attachCollaboration = (server, options = {}) => {
     if (room.saveTimer !== null) {
       clearTimeout(room.saveTimer)
       room.saveTimer = null
-      if (options.store !== undefined) room.saving = options.store.save(roomName, Y.encodeStateAsUpdate(room.doc))
+      if (options.store !== undefined)
+        room.saving = options.store.save(roomName, Y.encodeStateAsUpdate(room.doc))
     }
     room.saving.catch(() => undefined)
     room.awareness.destroy()
@@ -54,7 +55,8 @@ export const attachCollaboration = (server, options = {}) => {
   webSocketServer.flushPersistence = async () => {
     await Promise.all(
       [...rooms].map(([roomName, room]) =>
-        flushCollaborationRoom({ room, roomName, store: options.store })),
+        flushCollaborationRoom({ room, roomName, store: options.store }),
+      ),
     )
   }
 
@@ -76,7 +78,8 @@ export const attachCollaboration = (server, options = {}) => {
       socket.destroy()
       return
     }
-    const canWrite = options.authorize === undefined || options.authorize(request, roomName, "write")
+    const canWrite =
+      options.authorize === undefined || options.authorize(request, roomName, "write")
     webSocketServer.handleUpgrade(request, socket, head, (webSocket) => {
       webSocketServer.emit("connection", webSocket, request, roomName, canWrite)
     })
@@ -133,7 +136,8 @@ export const attachCollaboration = (server, options = {}) => {
         return
       }
       try {
-        const persistedUpdate = options.store === undefined ? null : await options.store.load(roomName)
+        const persistedUpdate =
+          options.store === undefined ? null : await options.store.load(roomName)
         room = rooms.get(roomName) ?? createCollaborationRoom(initialUpdate, persistedUpdate)
       } catch {
         socket.close(1008, "Invalid initial document")
@@ -150,10 +154,15 @@ export const attachCollaboration = (server, options = {}) => {
         room.cleanupTimer = null
       }
       room.connections.set(socket, new Set())
-      sendCollaborationMessage(socket, JSON.stringify({ type: "ready", schemaVersion: SCHEMA_VERSION }))
       sendCollaborationMessage(
         socket,
-        encodeCollaborationMessage(MESSAGE_SYNC, (encoder) => syncProtocol.writeSyncStep1(encoder, room.doc)),
+        JSON.stringify({ type: "ready", schemaVersion: SCHEMA_VERSION }),
+      )
+      sendCollaborationMessage(
+        socket,
+        encodeCollaborationMessage(MESSAGE_SYNC, (encoder) =>
+          syncProtocol.writeSyncStep1(encoder, room.doc),
+        ),
       )
       const presentClients = [...room.awareness.getStates().keys()]
       if (presentClients.length > 0) {

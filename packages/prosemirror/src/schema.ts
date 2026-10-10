@@ -1,4 +1,4 @@
-import { Schema, type MarkSpec, type NodeSpec } from "prosemirror-model"
+import { type MarkSpec, type NodeSpec, Schema } from "prosemirror-model"
 import type { BlockRegistration, ProseMirrorProfile } from "./types.js"
 
 export const blockAttrs = {

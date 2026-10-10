@@ -24,7 +24,14 @@ export const renderInline = (block: BlockSnapshot): ReactNode => {
       if (mark.type === "strong") text = <strong>{text}</strong>
       if (mark.type === "em") text = <em>{text}</em>
       if (mark.type === "code") text = <code>{text}</code>
-      if (mark.type === "link" && "attrs" in mark && typeof mark.attrs === "object" && mark.attrs !== null && "href" in mark.attrs && typeof mark.attrs.href === "string") {
+      if (
+        mark.type === "link" &&
+        "attrs" in mark &&
+        typeof mark.attrs === "object" &&
+        mark.attrs !== null &&
+        "href" in mark.attrs &&
+        typeof mark.attrs.href === "string"
+      ) {
         const href = safeHref(mark.attrs.href)
         if (href !== null) text = <a href={href}>{text}</a>
       }

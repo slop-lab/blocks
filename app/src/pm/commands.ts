@@ -67,10 +67,7 @@ export const moveBlock =
       )
     })
 
-export const setType = (
-  name: string,
-  attrs?: Readonly<Record<string, unknown>>,
-): Command => {
+export const setType = (name: string, attrs?: Readonly<Record<string, unknown>>): Command => {
   return (state, dispatch) =>
     withBlock(state, dispatch, (position) => {
       const type = state.schema.nodes[name]

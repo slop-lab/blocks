@@ -10,9 +10,9 @@ import {
   setBlockTypeById,
 } from "./block-interaction-commands"
 import { createBlockMenu, type MenuItem } from "./block-menu"
+import { profileForState } from "./profile-plugin"
 import { attachSelectionToolbar } from "./selection-toolbar"
 import { attachSlashMenu } from "./slash-menu"
-import { profileForState } from "./profile-plugin"
 
 export type BlockInteractionOptions = {
   readonly readOnly: boolean

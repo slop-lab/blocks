@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.pnpm-store/
+.codegraph/
+*.log
+.omo/
+.runtime/
+playwright-report/
+test-results/

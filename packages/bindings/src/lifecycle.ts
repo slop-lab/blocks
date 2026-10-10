@@ -27,7 +27,11 @@ export class ActionRequests {
   request(
     input: Omit<HostActionRequest, "requestId" | "signal">,
     handler: (request: HostActionRequest) => Promise<HostActionResult>,
-  ): { readonly requestId: string; readonly settled: Promise<HostActionResult>; readonly cancel: () => void } {
+  ): {
+    readonly requestId: string
+    readonly settled: Promise<HostActionResult>
+    readonly cancel: () => void
+  } {
     const requestId = crypto.randomUUID()
     const controller = new AbortController()
     this.pending.set(requestId, controller)
@@ -39,7 +43,10 @@ export class ActionRequests {
           ? { status: "stale" }
           : result
       } catch (error) {
-        return { status: "failed", message: error instanceof Error ? error.message : "Host action failed" }
+        return {
+          status: "failed",
+          message: error instanceof Error ? error.message : "Host action failed",
+        }
       } finally {
         this.pending.delete(requestId)
       }

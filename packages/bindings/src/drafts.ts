@@ -43,7 +43,9 @@ type SaveAcknowledgementInput = Readonly<{
 
 export type SaveAcknowledgement = "close" | "preserve" | "stale"
 
-export const resolveSaveAcknowledgement = (input: SaveAcknowledgementInput): SaveAcknowledgement => {
+export const resolveSaveAcknowledgement = (
+  input: SaveAcknowledgementInput,
+): SaveAcknowledgement => {
   if (!input.mounted || !input.latestRequest || input.requestTargetId !== input.currentTargetId)
     return "stale"
   return input.submittedDraft === input.currentDraft ? "close" : "preserve"

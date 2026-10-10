@@ -38,6 +38,21 @@ it("keeps built-in block leaves out of a custom text consumer", async () => {
   expect(inputs.some((path) => path.endsWith("/paragraph.js"))).toBe(false)
   expect(inputs.some((path) => path.endsWith("/task-card.js"))).toBe(false)
   expect(inputs.some((path) => path.endsWith("/heading.js"))).toBe(false)
+  expect(inputs.some((path) => path.endsWith("/quote.js"))).toBe(false)
+  expect(inputs.some((path) => path.endsWith("/code.js"))).toBe(false)
+  expect(inputs.some((path) => path.endsWith("/caption.js"))).toBe(false)
+})
+
+it("keeps ProseMirror and unused leaves out of a paragraph renderer consumer", async () => {
+  const result = await bundle(`
+    import { paragraphRenderer } from "@block-editor/prosemirror/paragraph-renderer";
+    console.log(paragraphRenderer({ id: "p", type: "paragraph", attrs: {}, content: [] }, undefined));
+  `)
+  const inputs = Object.keys(result.metafile.inputs)
+  expect(inputs.some((path) => path.includes("prosemirror-model"))).toBe(false)
+  expect(inputs.some((path) => /\/(heading|task-card|quote|code|caption)\.js$/.test(path))).toBe(
+    false,
+  )
 })
 
 it("keeps ProseMirror out of a view-only consumer", async () => {

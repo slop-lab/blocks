@@ -100,9 +100,6 @@ select {
   word-break: keep-all;
   overflow-wrap: break-word;
 }
-.document-panel .inspector__body {
-  align-content: start;
-}
 .document-panel h3 {
   font-size: 16px;
   margin: 0;
@@ -294,8 +291,8 @@ input:focus-visible,
   font-weight: 560;
   cursor: pointer;
   transition:
-    transform 120ms ease-out,
-    background 120ms ease-out;
+    transform var(--motion-fast),
+    background var(--motion-fast);
 }
 .button:active,
 .icon-button:active,
@@ -509,6 +506,9 @@ input:focus-visible,
   overflow: auto;
   padding: var(--space-4);
 }
+.document-panel .inspector__body {
+  align-content: start;
+}
 .panel-stack {
   display: grid;
   gap: var(--space-3);
@@ -611,10 +611,6 @@ input:focus-visible,
   color: var(--ink-muted);
   font-size: 12px;
 }
-.capability--off {
-  color: var(--danger);
-  background: var(--danger-soft) !important;
-}
 .toast {
   position: absolute;
   inset: auto var(--space-5) var(--space-5) auto;
@@ -716,9 +712,6 @@ input:focus-visible,
   padding: var(--space-4);
   box-shadow: none;
 }
-.review-documents .static-viewer h1 {
-  font-size: 24px;
-}
 .review-changes {
   border: 1px solid var(--line);
   margin-block: var(--space-3);
@@ -784,6 +777,9 @@ input:focus-visible,
   font: 650 clamp(40px, 6vw, 72px) / 1.02 var(--font-editorial);
   letter-spacing: -0.04em;
   margin: var(--space-3) 0 var(--space-5);
+}
+.review-documents .static-viewer h1 {
+  font-size: 24px;
 }
 .showcase h1 em {
   color: var(--accent);
@@ -919,12 +915,13 @@ input:focus-visible,
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
+  :root {
+    --motion-fast: 0.01ms;
+    --motion-standard: 0.01ms;
+    --motion-emphasis: 0.01ms;
+  }
+  html {
+    scroll-behavior: auto;
   }
 }
 @media (pointer: coarse) {

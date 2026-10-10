@@ -59,8 +59,8 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
   transition:
-    transform 120ms ease-out,
-    border-color 120ms ease-out;
+    transform var(--motion-fast),
+    border-color var(--motion-fast);
 }
 
 .composite-slot--active {

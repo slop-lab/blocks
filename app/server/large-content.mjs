@@ -53,8 +53,7 @@ export const createLargeContentRepository = (count = DEFAULT_COUNT) => {
       const index = indexFor(id)
       if (index === null) return { kind: "missing" }
       const current = makeBlock(index)
-      if (current.revision !== expectedRevision)
-        return { kind: "conflict", current, draft: text }
+      if (current.revision !== expectedRevision) return { kind: "conflict", current, draft: text }
       revisions.set(index, current.revision + 1)
       edits.set(index, text)
       return { kind: "updated", block: makeBlock(index) }
@@ -89,9 +88,16 @@ export const createDurableLargeContentRepository = ({ root, count = DEFAULT_COUN
       const start = Math.max(0, Math.min(count, Math.trunc(offset)))
       const size = Math.max(1, Math.min(MAX_PAGE, Math.trunc(limit)))
       const end = Math.min(count, start + size)
-      const ids = Array.from({ length: end - start }, (_, position) =>
-        `paragraph-${String(start + position).padStart(4, "0")}`)
-      return { blocks: await Promise.all(ids.map(block)), offset: start, total: count, continuation: end < count ? end : null }
+      const ids = Array.from(
+        { length: end - start },
+        (_, position) => `paragraph-${String(start + position).padStart(4, "0")}`,
+      )
+      return {
+        blocks: await Promise.all(ids.map(block)),
+        offset: start,
+        total: count,
+        continuation: end < count ? end : null,
+      }
     },
     block,
     async search(query, limit = 20) {
@@ -100,7 +106,11 @@ export const createDurableLargeContentRepository = ({ root, count = DEFAULT_COUN
       const matches = []
       for (let index = 0; index < count && matches.length < limit; index += 1) {
         const candidate = await block(`paragraph-${String(index).padStart(4, "0")}`)
-        if (candidate !== null && (candidate.id.includes(needle) || candidate.text.toLocaleLowerCase().includes(needle))) matches.push(candidate)
+        if (
+          candidate !== null &&
+          (candidate.id.includes(needle) || candidate.text.toLocaleLowerCase().includes(needle))
+        )
+          matches.push(candidate)
       }
       return matches
     },
@@ -121,8 +131,10 @@ export const createDurableLargeContentRepository = ({ root, count = DEFAULT_COUN
       }
     },
     async exportDocument() {
-      const ids = Array.from({ length: count }, (_, index) =>
-        `paragraph-${String(index).padStart(4, "0")}`)
+      const ids = Array.from(
+        { length: count },
+        (_, index) => `paragraph-${String(index).padStart(4, "0")}`,
+      )
       return { format: "large-content/v1", blocks: await Promise.all(ids.map(block)) }
     },
   }
@@ -152,60 +164,71 @@ const readJson = async (request) => {
 export const createLargeContentHandler = ({ root }) => {
   const repository = createDurableLargeContentRepository({ root })
   return async (request, response) => {
-  const url = new URL(request.url ?? "/", "http://localhost")
-  if (!url.pathname.startsWith("/api/large-content")) return false
-  if (
-    request.method === "GET" &&
-    (url.pathname === "/api/large-content" || url.pathname === "/api/large-content/")
-  ) {
-    send(response, 200, await repository.page(Number(url.searchParams.get("offset") ?? 0), Number(url.searchParams.get("limit") ?? 40)))
-    return true
-  }
-  if (request.method === "GET" && url.pathname === "/api/large-content/search") {
-    send(response, 200, { results: await repository.search(url.searchParams.get("q") ?? "") })
-    return true
-  }
-  if (request.method === "GET" && url.pathname === "/api/large-content/export") {
-    send(response, 200, await repository.exportDocument(), {
-      "content-disposition": 'attachment; filename="large-content.json"',
-    })
-    return true
-  }
-  const match = /^\/api\/large-content\/block\/([^/]+)$/.exec(url.pathname)
-  if (match === null) {
-    send(response, 404, { error: "Large-content endpoint not found" })
-    return true
-  }
-  const id = decodeURIComponent(match[1] ?? "")
-  if (request.method === "GET") {
-    const block = await repository.block(id)
-    send(response, block === null ? 404 : 200, block ?? { error: "Block not found" })
-    return true
-  }
-  if (request.method !== "PATCH") {
-    send(response, 405, { error: "Method not allowed" }, { allow: "GET, PATCH" })
-    return true
-  }
-  try {
-    const body = await readJson(request)
+    const url = new URL(request.url ?? "/", "http://localhost")
+    if (!url.pathname.startsWith("/api/large-content")) return false
     if (
-      typeof body !== "object" ||
-      body === null ||
-      typeof body.expectedRevision !== "number" ||
-      typeof body.text !== "string"
+      request.method === "GET" &&
+      (url.pathname === "/api/large-content" || url.pathname === "/api/large-content/")
     ) {
-      send(response, 400, { error: "expectedRevision and text are required" })
+      send(
+        response,
+        200,
+        await repository.page(
+          Number(url.searchParams.get("offset") ?? 0),
+          Number(url.searchParams.get("limit") ?? 40),
+        ),
+      )
       return true
     }
-    const result = await repository.patch(id, body.expectedRevision, body.text)
-    send(response, result.kind === "updated" ? 200 : result.kind === "conflict" ? 409 : 404, result)
-  } catch (error) {
-    if (error instanceof SyntaxError || error instanceof RangeError) {
-      send(response, 400, { error: error.message })
+    if (request.method === "GET" && url.pathname === "/api/large-content/search") {
+      send(response, 200, { results: await repository.search(url.searchParams.get("q") ?? "") })
       return true
     }
-    throw error
-  }
-  return true
+    if (request.method === "GET" && url.pathname === "/api/large-content/export") {
+      send(response, 200, await repository.exportDocument(), {
+        "content-disposition": 'attachment; filename="large-content.json"',
+      })
+      return true
+    }
+    const match = /^\/api\/large-content\/block\/([^/]+)$/.exec(url.pathname)
+    if (match === null) {
+      send(response, 404, { error: "Large-content endpoint not found" })
+      return true
+    }
+    const id = decodeURIComponent(match[1] ?? "")
+    if (request.method === "GET") {
+      const block = await repository.block(id)
+      send(response, block === null ? 404 : 200, block ?? { error: "Block not found" })
+      return true
+    }
+    if (request.method !== "PATCH") {
+      send(response, 405, { error: "Method not allowed" }, { allow: "GET, PATCH" })
+      return true
+    }
+    try {
+      const body = await readJson(request)
+      if (
+        typeof body !== "object" ||
+        body === null ||
+        typeof body.expectedRevision !== "number" ||
+        typeof body.text !== "string"
+      ) {
+        send(response, 400, { error: "expectedRevision and text are required" })
+        return true
+      }
+      const result = await repository.patch(id, body.expectedRevision, body.text)
+      send(
+        response,
+        result.kind === "updated" ? 200 : result.kind === "conflict" ? 409 : 404,
+        result,
+      )
+    } catch (error) {
+      if (error instanceof SyntaxError || error instanceof RangeError) {
+        send(response, 400, { error: error.message })
+        return true
+      }
+      throw error
+    }
+    return true
   }
 }

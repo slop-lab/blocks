@@ -93,8 +93,10 @@ export const snapshotToPm = (document: BlockDocument): ProseMirrorNode => {
 
 const markSnapshot = (mark: Mark): unknown => {
   const snapshot = mark.attrs["snapshot"]
-  return typeof snapshot === "object" && snapshot !== null
-    ? structuredClone(snapshot)
+  if (typeof snapshot === "object" && snapshot !== null) return structuredClone(snapshot)
+  const href = mark.attrs["href"]
+  return mark.type.name === "link" && typeof href === "string"
+    ? { type: "link", attrs: { href } }
     : { type: mark.type.name }
 }
 

@@ -156,6 +156,21 @@ describe("clipboard and event metadata", () => {
     expect(changeEventFrom(history, 3, 1).origin).toBe("history")
   })
 
+  it("serializes a link mark created by the editor with its href", () => {
+    // Given
+    const state = createEditorState({ document: snapshotToPm(textDocument()), readonly: false })
+    const link = state.schema.marks["link"]
+    if (link === undefined) throw new TypeError("Link mark is missing")
+
+    // When
+    const linked = state.apply(state.tr.addMark(1, 5, link.create({ href: "/relative" })))
+
+    // Then
+    expect(pmToSnapshot(linked.doc).blocks[0]?.content[0]).toMatchObject({
+      marks: [{ type: "link", attrs: { href: "/relative" } }],
+    })
+  })
+
   it("reports only modified IDs and retains IDs removed by a transaction", () => {
     const document: BlockDocument = {
       format: "block-editor/v0.3",

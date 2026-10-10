@@ -32,6 +32,11 @@ const LargeContentWorkspace = lazy(() =>
     default: module.LargeContentWorkspace,
   })),
 )
+const WorkflowWorkspace = lazy(() =>
+  import("./features/workflow/WorkflowWorkspace").then((module) => ({
+    default: module.WorkflowWorkspace,
+  })),
+)
 
 export const App = () => {
   const workspace = useWorkspace()
@@ -121,6 +126,9 @@ export const App = () => {
           </div>
           <div hidden={workspace.route !== "large-content"}>
             {visited.has("large-content") && <LargeContentWorkspace />}
+          </div>
+          <div hidden={workspace.route !== "workflow"}>
+            {visited.has("workflow") && <WorkflowWorkspace />}
           </div>
         </Suspense>
       </main>

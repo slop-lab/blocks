@@ -1,4 +1,5 @@
 import {
+  CheckCircledIcon,
   FileIcon,
   FileTextIcon,
   PersonIcon,
@@ -16,6 +17,7 @@ export type RouteId =
   | "collaboration"
   | "composite"
   | "large-content"
+  | "workflow"
 
 const routes = [
   { id: "note", label: "A · 로컬 노트", note: "편집 + 저장", icon: FileTextIcon },
@@ -25,6 +27,7 @@ const routes = [
   { id: "collaboration", label: "함께 쓰기", note: "실시간 공동 편집", icon: PersonIcon },
   { id: "composite", label: "표와 코드", note: "표 · 캡션 · 코드 편집", icon: TableIcon },
   { id: "large-content", label: "문서 보관함", note: "긴 문서 · 필요한 부분 읽기", icon: RowsIcon },
+  { id: "workflow", label: "공유 회의록", note: "작성 · 검토 요청 · 승인", icon: CheckCircledIcon },
 ] as const
 
 export const Sidebar = ({

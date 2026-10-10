@@ -43,10 +43,22 @@ it("protects workflow status from presentation mutations", async () => {
   const changed = await request(base, cookie, "/presentation", {
     expectedRevision: initial.payload.revision,
     taskId: "TASK-104",
-    caption: "사용자 배치 메모",
+    document: {
+      format: "block-editor/v0.3",
+      blocks: [
+        {
+          id: "caption",
+          type: "ownership.caption",
+          attrs: {},
+          content: [{ kind: "text", text: "사용자 배치 메모", marks: [] }],
+        },
+      ],
+    },
   })
 
-  expect(changed.payload.presentation["TASK-104"]).toBe("사용자 배치 메모")
+  expect(changed.payload.presentations["TASK-104"].blocks[0].content[0].text).toBe(
+    "사용자 배치 메모",
+  )
   expect(changed.payload.tasks.find((task) => task.id === "TASK-104").status).toBe("running")
 })
 
@@ -64,10 +76,13 @@ it("rejects an agent proposal after its task dependency changes", async () => {
     expectedRevision: status.payload.revision,
     id: "proposal-1",
     taskId: task.id,
-    draft: "오래된 제안",
+    document: initial.payload.proposals[0].document,
     dependencyVersion: task.version,
   })
 
   expect(stale.response.status).toBe(409)
-  expect(stale.payload).toMatchObject({ error: "stale_dependency", actualVersion: task.version + 1 })
+  expect(stale.payload).toMatchObject({
+    error: "stale_dependency",
+    actualVersion: task.version + 1,
+  })
 })

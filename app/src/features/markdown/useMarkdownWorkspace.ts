@@ -17,7 +17,7 @@ export type MarkdownSaveMode = "manual" | "auto"
 const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "Markdown 작업 공간을 불러오지 못했습니다."
 
-export const useMarkdownWorkspace = () => {
+export const useMarkdownWorkspace = (initialFile: string | null = null) => {
   const [files, setFiles] = useState<readonly string[]>([])
   const [tree, setTree] = useState<readonly MarkdownTreeNode[]>([])
   const [disk, setDisk] = useState<MarkdownFile | null>(null)
@@ -93,7 +93,7 @@ export const useMarkdownWorkspace = () => {
         if (!active) return
         setFiles(inventory.files)
         setTree(inventory.tree)
-        const first = inventory.files[0]
+        const first = initialFile !== null && inventory.files.includes(initialFile) ? initialFile : inventory.files[0]
         if (first === undefined) setStatus("편집할 Markdown 파일이 없습니다.")
         else void openFile(first)
       })
@@ -105,7 +105,7 @@ export const useMarkdownWorkspace = () => {
       fileGenerationRef.current += 1
       mappingRequestRef.current += 1
     }
-  }, [openFile])
+  }, [initialFile, openFile])
 
   const persist = useCallback(async () => {
     if (disk === null || !dirty || saving || composingRef.current) return

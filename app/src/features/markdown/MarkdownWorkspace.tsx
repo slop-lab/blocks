@@ -6,8 +6,8 @@ import type { MarkdownMapping } from "./markdown-api"
 import { useMarkdownWorkspace } from "./useMarkdownWorkspace"
 import "./markdown-workspace.css"
 
-export const MarkdownWorkspace = () => {
-  const workspace = useMarkdownWorkspace()
+export const MarkdownWorkspace = ({ initialFile = null }: { readonly initialFile?: string | null }) => {
+  const workspace = useMarkdownWorkspace(initialFile)
   const sourceRef = useRef<HTMLTextAreaElement>(null)
 
   const selectMapping = (mapping: MarkdownMapping) => {

@@ -37,6 +37,11 @@ const WorkflowWorkspace = lazy(() =>
     default: module.WorkflowWorkspace,
   })),
 )
+const OwnershipExamplesWorkspace = lazy(() =>
+  import("./features/ownership/OwnershipExamplesWorkspace").then((module) => ({
+    default: module.OwnershipExamplesWorkspace,
+  })),
+)
 
 export const App = () => {
   const workspace = useWorkspace()
@@ -129,6 +134,9 @@ export const App = () => {
           </div>
           <div hidden={workspace.route !== "workflow"}>
             {visited.has("workflow") && <WorkflowWorkspace />}
+          </div>
+          <div hidden={workspace.route !== "ownership"}>
+            {visited.has("ownership") && <OwnershipExamplesWorkspace />}
           </div>
         </Suspense>
       </main>

@@ -18,6 +18,7 @@ export type RouteId =
   | "composite"
   | "large-content"
   | "workflow"
+  | "ownership"
 
 const routes = [
   { id: "note", label: "A · 로컬 노트", note: "편집 + 저장", icon: FileTextIcon },
@@ -28,6 +29,7 @@ const routes = [
   { id: "composite", label: "표와 코드", note: "표 · 캡션 · 코드 편집", icon: TableIcon },
   { id: "large-content", label: "문서 보관함", note: "긴 문서 · 필요한 부분 읽기", icon: RowsIcon },
   { id: "workflow", label: "공유 회의록", note: "작성 · 검토 요청 · 승인", icon: CheckCircledIcon },
+  { id: "ownership", label: "소유권 예제", note: "다섯 가지 원본 경계", icon: ViewGridIcon },
 ] as const
 
 export const Sidebar = ({

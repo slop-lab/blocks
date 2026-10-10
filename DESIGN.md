@@ -1,0 +1,155 @@
+# Slate Foundation Design System
+
+## 1. Atmosphere & Identity
+
+A quiet editorial workshop: warm paper in the center, muted utility surfaces around it, and one ink-blue accent reserved for intent. The signature is the **living margin**—block controls and diagnostics stay peripheral until selected, so rich Korean and Latin content remains the visual center.
+
+Primary persona: a keyboard-first knowledge worker authoring mixed Korean/English documents. Secondary persona: a product engineer inspecting event and capability contracts. Stress contexts include 200% zoom, keyboard-only use, reduced motion, narrow mobile widths, temporary motor impairment, and long unbroken payloads.
+
+## 2. Color
+
+| Role | Token | Value | Usage |
+|---|---|---|---|
+| Canvas | `--canvas` | `#ebe9e4` | App surround |
+| Paper | `--paper` | `#fffefa` | Document surface |
+| Surface | `--surface` | `#f5f3ee` | Sidebar and toolbar |
+| Elevated | `--elevated` | `#ffffff` | Dialogs and inspector cards |
+| Ink | `--ink` | `#24231f` | Primary text |
+| Ink muted | `--ink-muted` | `#66625b` | Secondary text |
+| Ink faint | `--ink-faint` | `#918b82` | Metadata and placeholders |
+| Line | `--line` | `#dedbd3` | Whisper dividers |
+| Line strong | `--line-strong` | `#c9c5bc` | Active boundaries |
+| Accent | `--accent` | `#1f5e71` | Primary actions and focus |
+| Accent soft | `--accent-soft` | `#dfecef` | Selected rows and badges |
+| Success | `--success` | `#356a47` | Saved/accepted |
+| Success soft | `--success-soft` | `#e6f0e8` | Status surface |
+| Warning | `--warning` | `#8a5a16` | Deferred/conflict |
+| Warning soft | `--warning-soft` | `#f7ecd6` | Status surface |
+| Danger | `--danger` | `#9b3a32` | Destructive/error |
+| Danger soft | `--danger-soft` | `#f7e5e2` | Status surface |
+| Locked | `--locked` | `#62527a` | Locked content |
+| Locked soft | `--locked-soft` | `#ece7f2` | Locked block surface |
+| Scrim | `--scrim` | `rgba(36, 35, 31, 0.46)` | Dialog backdrop |
+
+Color never carries status alone; pair it with text or a Radix icon. Raw colors are forbidden outside the token declaration.
+
+## 3. Typography
+
+Fonts are local-first to avoid render blocking and to support Korean fully.
+
+- UI/body: `Pretendard Variable`, `Pretendard`, `Apple SD Gothic Neo`, `Noto Sans KR`, sans-serif.
+- Editorial display: `Iowan Old Style`, `Noto Serif KR`, `Batang`, serif.
+- Mono: `SFMono-Regular`, `Consolas`, `Liberation Mono`, monospace.
+
+| Level | Token | Size / line | Weight | Usage |
+|---|---|---|---|---|
+| Display | `--type-display` | `40px / 1.15` | 650 | Document title |
+| H1 | `--type-h1` | `30px / 1.25` | 650 | Major heading |
+| H2 | `--type-h2` | `24px / 1.32` | 620 | Section heading |
+| H3 | `--type-h3` | `19px / 1.4` | 620 | Card heading |
+| Body | `--type-body` | `16px / 1.72` | 400 | Editor prose |
+| UI | `--type-ui` | `14px / 1.45` | 520 | Controls |
+| Small | `--type-small` | `13px / 1.45` | 450 | Metadata |
+| Caption | `--type-caption` | `12px / 1.4` | 560 | Status and diagnostics |
+| Mono | `--type-mono` | `12px / 1.55` | 450 | IDs and event payloads |
+
+## 4. Spacing & Layout
+
+4px base: `--space-1` 4px, `--space-2` 8px, `--space-3` 12px, `--space-4` 16px, `--space-5` 20px, `--space-6` 24px, `--space-8` 32px, `--space-10` 40px, `--space-12` 48px, `--space-16` 64px.
+
+Editor interaction dimensions: `--control-size` 32px, `--selection-control-size` 36px, `--touch-target-size` 44px, `--icon-size` 16px, `--drop-rule-size` 2px, `--drop-dot-size` 8px, `--menu-width` 208px, `--menu-row-size` 36px, `--menu-max-height` 416px, `--link-input-width` 208px, and `--link-error-width` 192px. These values are declared once and reused by every ProseMirror surface.
+
+- Desktop shell: `244px minmax(0, 1fr)` plus optional `320px` inspector.
+- Header is fixed in shell flow; workspace body owns vertical scroll via `min-block-size: 0`.
+- Desktop shell has an explicit `100dvh` height so editor and inspector can scroll independently. Toolbar controls do not shrink below their target size and wrap when necessary. Mobile navigation retains the primitive showcase entry; only connection metadata is hidden.
+- Document measure: `720px`; prose measure: `68ch`.
+- Wide comparison dialog measure: `960px`; its before/after panes collapse to one column below tablet width.
+- Below 1100px the inspector moves below the document instead of disappearing, preserving access to host forms and external-update controls. Below 768px navigation is a compact three-column strip, the header stacks title above controls, and the toolbar wraps. At 375px the document is one column with 16px gutters and no horizontal primary-content scroll. Korean labels use word-preserving wrapping.
+- z-index: base 0, sticky 10, popover 30, scrim 40, dialog 50, toast 60.
+
+## 5. Components
+
+### Action Button
+- Structure: semantic `button` with Radix icon and optional label.
+- Variants: primary, secondary, ghost, danger, icon-only.
+- States: default, hover tonal shift, active `scale(.98)`, visible focus, disabled with reason, saving label.
+- Accessibility: 40px desktop and 44px touch target; icon-only requires accessible name.
+
+### Navigation Row / Tab
+- Structure: icon + label + optional status; active state uses accent-soft and a 2px inline indicator.
+- States: hover, active/current, focus, disabled with visible unavailable reason.
+- Layout: cluster; long labels wrap or ellipsize with title.
+
+### Toolbar
+- Groups format, block, history, and document actions with separators; native button semantics and `aria-pressed` for toggles.
+- Scroll owner: none; wraps at tablet and becomes horizontally scrollable only for secondary actions on mobile.
+
+### Editor Block
+- Structure: stable block wrapper + peripheral handle + ProseMirror-rendered native content.
+- Variants: paragraph, three headings, bullet, ordered, quote, code, task card, caption, opaque fallback.
+- States: selected, locked, readonly, review candidate, opaque. Locked/opaque states show a textual badge.
+- Accessibility: content remains in logical DOM order; controls are keyboard reachable; drag is never the only move mechanism.
+
+### Living Margin Controls
+- A reusable `attachBlockInteractions(view, options)` boundary owns ephemeral controls while the `EditorView` remains the only document state owner. It supports local, Yjs, and composite schemas by capability detection rather than simulated block types.
+- Hover or editor focus reveals a compact plus and grip rail beside the current top-level block. Coarse pointers keep the rail discoverable at the focused block with 44px targets. Readonly surfaces omit mutation controls entirely; locked blocks expose identity and status but no destructive actions.
+- The grip is the only drag origin. Its menu opens by click, `Shift+F10`, or the Context Menu key and includes duplicate, delete, move, and supported type changes. Every action resolves the stable block ID against the current document when invoked; menu position is never treated as document identity.
+- Drag shows one accent insertion rule between blocks, supports document-start and document-end gaps, and autoscrolls the nearest editor scroll owner. Cancel, Escape, pointer cancellation, and leaving the same editor clear all transient drag state. Keyboard move actions remain first-class.
+
+### Editor Popover / Command Menu
+- Structure: owner-document portal, anchored to a block control or text caret, with viewport-clamped position, whisper border, paper/elevated surface, and the documented popover shadow.
+- Slash commands appear only for a leading `/query` in an eligible native text block. Arrow keys move the active option, Enter applies it, and Escape closes without changing content. Choosing a command removes only the query before transforming the current block or inserting a sibling.
+- Context and slash rows use roving focus, visible active fill, concise Korean labels, optional keyboard hints, and semantic `menu` / `menuitem` roles. Open/close uses opacity and a short scale transform; reduced motion uses opacity only.
+
+### Selection Format Bar
+- A compact floating toolbar appears above a non-empty text selection and preserves that selection on pointer down. It offers only marks present in the active schema: bold, italic, inline code, and link.
+- Link editing is an anchored labeled form with explicit apply/cancel actions and focus return. Only safe `http:`, `https:`, `mailto:`, hash, and site-relative URLs are accepted; invalid input remains visible with an inline error.
+- The bar is absent for collapsed selections, readonly editors, code blocks, node selections, and inactive composite input contexts.
+
+### Panel / Inspector
+- Structure: labeled tablist, tabpanel, compact cards, key/value rows.
+- States: empty, populated, warning, error. Desktop rail becomes an in-flow panel below content on narrow layouts.
+
+### Dialog / Form
+- Structure: title, description, labeled controls, inline validation, footer actions.
+- States: valid, invalid, saving, saved. Escape closes unless a dirty draft needs explicit save/cancel choice.
+- Review dialogs use an immutable before pane beside an editable candidate pane; host drafts remain outside document content and disclose their captured revision.
+
+### Ownership Channel Panel
+- A compact four-column `content` / `view` / `overlay` / `ui` tab set renders actual channel values, never a static architecture claim.
+- JSON is horizontally scrollable within the panel and uses the mono type token.
+
+### Status Badge / Toast
+- Badge is text plus icon where needed. Toast uses `aria-live="polite"`, never steals focus, and offers recovery when actionable.
+- On mobile the status region occupies its own row above the document instead of covering text. Prose uses Korean word-preserving wrapping; long unbroken payloads still wrap inside their containers.
+
+## 6. Motion & Interaction
+
+- Micro: `--motion-fast` 120ms ease-out for press/focus feedback.
+- Standard: `--motion-standard` 200ms ease-in-out for tabs, menus, and sheets.
+- Emphasis: `--motion-emphasis` 320ms cubic-bezier(.16,1,.3,1) for dialog entry.
+- Only transform, opacity, and filter animate. Reduced-motion removes transforms and shortens opacity transitions to near-instant.
+- Keyboard: Mod-B/I, Mod-Z/Shift-Mod-Z, Enter creates a sibling block, Backspace at an empty block joins/deletes when permitted, Alt-Arrow moves blocks, Mod-Shift-D duplicates.
+- Block controls use `--motion-fast` for hover/focus opacity and a subtle `scale(.98)` press response. Menus use `--motion-standard` opacity plus `translateY(-4px)` entry, adapted from the beui.dev context-menu pattern without adding a motion dependency; movement remains interruptible and all exit paths clean synchronously.
+- Pointer drag has no decorative animation: the insertion rule is immediate feedback and the moved block lands through one ProseMirror transaction so native history, Yjs history, stable IDs, and lock filters remain authoritative.
+
+## 7. Depth & Surface
+
+Mixed restrained strategy: tonal separation and whisper borders at rest; one multi-layer shadow only for dialogs/popovers.
+
+- Paper: `0 1px 2px rgba(36,35,31,.04), 0 12px 36px rgba(36,35,31,.06)`.
+- Popover: `0 2px 6px rgba(36,35,31,.06), 0 18px 48px rgba(36,35,31,.12)`.
+- CSS token `--shadow-popover` carries the Popover recipe; `--type-small-size`, `--type-caption-size`, and `--type-caption` carry compact menu and toolbar typography without one-off values.
+- Cards use no independent shadow; active cards use line-strong or a semantic soft surface.
+- Radius tokens: 4px controls, 8px panels/cards, 12px dialogs, full radius only for status badges.
+
+## 8. Accessibility Constraints & Accepted Debt
+
+Target WCAG 2.2 AA: 4.5:1 normal text, 3:1 large text and controls, visible 2px focus, full keyboard navigation, semantic landmarks, zoom to 200%, no color-only state, reduced motion, Korean line breaking, and minimum 44px touch targets on coarse pointers.
+
+Block interactions additionally require: grip-only drag initiation, `Shift+F10` context access, non-drag reorder commands, selection-preserving format controls, viewport-clamped portals in the editor's `ownerDocument`, and synchronous cleanup on Escape/pointer cancellation. Slash handling must not run during IME composition or in code, caption, locked, readonly, or unsupported schema contexts.
+
+| Item | Location | Why accepted | Owner / Exit |
+|---|---|---|---|
+| Screen-reader announcement depth for every ProseMirror structural command is basic | Editor | Foundation scope provides semantic content and status announcements, not a bespoke SR narration layer | Future accessibility profile |
+| Dark theme | Entire app | The supplied brief prioritizes a restrained editorial workspace; light theme is complete | Add only with independently contrast-tested tokens |

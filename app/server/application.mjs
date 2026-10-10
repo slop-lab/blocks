@@ -2,7 +2,9 @@ import { createReadStream, existsSync, statSync } from "node:fs"
 import { createServer } from "node:http"
 import { extname, join, normalize } from "node:path"
 import { fileURLToPath } from "node:url"
+import { FileRoomStore } from "@block-editor/server-bindings"
 import { attachCollaboration } from "./collaboration.mjs"
+import { createHostDomain } from "./host-domain.mjs"
 import { handleLargeContent } from "./large-content.mjs"
 import { handleMarkdown } from "./markdown.mjs"
 
@@ -12,9 +14,13 @@ const contentTypes = {
   ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".svg": "image/svg+xml",
 }
 
-export const createApplicationServer = () => {
+export const createApplicationServer = (options = {}) => {
+  const runtimeRoot = options.runtimeRoot ?? fileURLToPath(new URL("../../.runtime/", import.meta.url))
+  const sessionSecret = options.sessionSecret ?? process.env.DEMO_SESSION_SECRET ?? "local-demo-session-secret-change-me"
+  const host = createHostDomain({ root: runtimeRoot, secret: sessionSecret })
   const server = createServer(async (request, response) => {
     try {
+      if (await host.handle(request, response)) return
       if (await handleMarkdown(request, response)) return
       if (await handleLargeContent(request, response)) return
       const url = new URL(request.url ?? "/", "http://localhost")
@@ -32,12 +38,14 @@ export const createApplicationServer = () => {
       const path = existsSync(candidate) && statSync(candidate).isFile() ? candidate : join(root, "index.html")
       if (!existsSync(path)) { response.writeHead(503).end("Build with corepack pnpm build first"); return }
       const extension = extname(path)
-      response.writeHead(200, {
+      const headers = {
         "content-type": contentTypes[extension] ?? "application/octet-stream",
         "cache-control": extension === ".html" ? "no-cache" : "public, max-age=31536000, immutable",
         "x-content-type-options": "nosniff",
         "content-security-policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self'",
-      })
+      }
+      if (host.sessionFor(request) === null) headers["set-cookie"] = host.cookie(host.issue(new URL(request.url ?? "/", "http://localhost").searchParams.get("identity") ?? "author"))
+      response.writeHead(200, headers)
       const stream = createReadStream(path)
       stream.on("error", () => response.destroy())
       stream.pipe(response)
@@ -48,7 +56,14 @@ export const createApplicationServer = () => {
         .end(JSON.stringify({ error: badRequest ? "Invalid request" : "The operation could not be completed" }))
     }
   })
-  const collaboration = attachCollaboration(server)
+  const collaboration = attachCollaboration(server, {
+    store: new FileRoomStore({ root: join(runtimeRoot, "collaboration") }),
+    authorize: (request, room, operation) => {
+      const session = host.sessionFor(request)
+      if (session === null) return false
+      try { host.authority.require(session, room, operation); return true } catch { return false }
+    },
+  })
   server.on("close", () => {
     for (const client of collaboration.clients) client.terminate()
     collaboration.close()

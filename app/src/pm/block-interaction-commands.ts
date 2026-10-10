@@ -2,6 +2,8 @@ import type { NodeType, Node as ProseMirrorNode } from "prosemirror-model"
 import type { Command, EditorState } from "prosemirror-state"
 import { TextSelection } from "prosemirror-state"
 
+export { safeLinkHref } from "../core/links"
+
 export type SlashQuery = {
   readonly from: number
   readonly to: number
@@ -152,16 +154,4 @@ export const parseSlashQuery = (state: EditorState, composing = false): SlashQue
   const blockId = block.attrs["id"]
   if (match === null || typeof blockId !== "string" || match[1] === undefined) return null
   return { from: $from.start(), to: $from.pos, query: match[1], blockId }
-}
-
-export const safeLinkHref = (value: string): string | null => {
-  const href = value.trim()
-  if ((href.startsWith("/") && !href.startsWith("//")) || href.startsWith("#")) return href
-  try {
-    const protocol = new URL(href).protocol
-    return protocol === "http:" || protocol === "https:" || protocol === "mailto:" ? href : null
-  } catch (caught) {
-    if (caught instanceof TypeError) return null
-    throw caught
-  }
 }

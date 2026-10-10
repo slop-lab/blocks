@@ -1,11 +1,11 @@
 import {
-  decodeDocument,
-  DocumentCodecError,
-  encodeDocument,
   type BlockDocument,
+  DocumentCodecError,
+  decodeDocument,
+  encodeDocument,
 } from "@block-editor/model"
 
-export { decodeDocument, DocumentCodecError, encodeDocument }
+export { DocumentCodecError, decodeDocument, encodeDocument }
 
 export const parseDocumentText = (text: string): BlockDocument => {
   if (new Blob([text]).size > 2_000_000) throw new DocumentCodecError("Document exceeds 2 MB")

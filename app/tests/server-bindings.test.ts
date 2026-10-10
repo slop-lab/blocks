@@ -7,6 +7,7 @@ import {
   FileCasRepository,
   FileRoomStore,
   WorkflowRepository,
+  WorkflowService,
 } from "@block-editor/server-bindings"
 import { afterEach, describe, expect, it } from "vitest"
 
@@ -45,6 +46,42 @@ describe("server bindings package", () => {
     expect(record?.content).toEqual({ blocks: [{ id: "intro", text: "durable" }] })
   })
 
+  it("allows only one concurrent CAS update across repository instances", async () => {
+    const root = await temporaryRoot()
+    const repositoryRoot = join(root, "documents")
+    const first = new FileCasRepository({ root: repositoryRoot })
+    const second = new FileCasRepository({ root: repositoryRoot })
+    await first.create({ documentId: "minutes", content: "baseline" })
+
+    const results = await Promise.allSettled([
+      first.update("minutes", 1, "first", { actorId: "first" }),
+      second.update("minutes", 1, "second", { actorId: "second" }),
+    ])
+
+    expect(results.filter(({ status }) => status === "fulfilled")).toHaveLength(1)
+    expect(results.filter(({ status }) => status === "rejected")).toHaveLength(1)
+    const reopened = new FileCasRepository({ root: repositoryRoot })
+    expect((await reopened.read("minutes"))?.revision).toBe(2)
+  })
+
+  it("allows only one concurrent workflow transition across repository instances", async () => {
+    const root = await temporaryRoot()
+    const repositoryRoot = join(root, "workflows")
+    const first = new WorkflowRepository({ root: repositoryRoot })
+    const second = new WorkflowRepository({ root: repositoryRoot })
+    await first.create("minutes", "author")
+
+    const results = await Promise.allSettled([
+      first.submit("minutes", 1, "author", 1),
+      second.submit("minutes", 1, "author", 1),
+    ])
+
+    expect(results.filter(({ status }) => status === "fulfilled")).toHaveLength(1)
+    expect(results.filter(({ status }) => status === "rejected")).toHaveLength(1)
+    const reopened = new WorkflowRepository({ root: repositoryRoot })
+    expect(await reopened.read("minutes")).toMatchObject({ revision: 2, state: "submitted" })
+  })
+
   it("persists binary collaboration state across store instances", async () => {
     const root = await temporaryRoot()
     const first = new FileRoomStore({ root: join(root, "rooms") })
@@ -74,7 +111,7 @@ describe("server bindings package", () => {
     const root = await temporaryRoot()
     const workflows = new WorkflowRepository({ root: join(root, "workflows") })
     await workflows.create("team-minutes", "author")
-    const submitted = await workflows.submit("team-minutes", 1, "author")
+    const submitted = await workflows.submit("team-minutes", 1, "author", 1)
 
     await expect(workflows.approve("team-minutes", 1, "reviewer")).rejects.toMatchObject({
       name: "RevisionConflictError",
@@ -87,5 +124,19 @@ describe("server bindings package", () => {
       "submitted",
       "approved",
     ])
+  })
+
+  it("rejects approval when content changed after submission", async () => {
+    const root = await temporaryRoot()
+    const documents = new FileCasRepository({ root: join(root, "documents") })
+    const workflows = new WorkflowRepository({ root: join(root, "workflows") })
+    const service = new WorkflowService({ documents, workflows })
+    await service.save({ documentId: "minutes", content: "submitted", actorId: "author" })
+    await service.submit("minutes", 1, "author")
+    await documents.update("minutes", 1, "changed out of band", { actorId: "intruder" })
+
+    await expect(service.approve("minutes", 2, "reviewer")).rejects.toMatchObject({
+      name: "WorkflowStateError",
+    })
   })
 })

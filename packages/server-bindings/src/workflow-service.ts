@@ -1,6 +1,6 @@
 import type { RevisionedDocument } from "@block-editor/bindings"
-import { FileCasRepository } from "./cas-repository.js"
-import { WorkflowRepository, WorkflowStateError, type WorkflowRecord } from "./workflow.js"
+import type { FileCasRepository } from "./cas-repository.js"
+import { type WorkflowRecord, type WorkflowRepository, WorkflowStateError } from "./workflow.js"
 
 type ServiceOptions = {
   readonly documents: FileCasRepository
@@ -12,7 +12,9 @@ const documentQueues = new Map<string, Promise<void>>()
 const coordinate = async <T>(documentId: string, operation: () => Promise<T>): Promise<T> => {
   const previous = documentQueues.get(documentId) ?? Promise.resolve()
   let release = (): void => undefined
-  const current = new Promise<void>((resolve) => { release = resolve })
+  const current = new Promise<void>((resolve) => {
+    release = resolve
+  })
   const queued = previous.then(() => current)
   documentQueues.set(documentId, queued)
   await previous

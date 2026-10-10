@@ -1,6 +1,7 @@
 import type { NodeType, Node as ProseMirrorNode } from "prosemirror-model"
 import type { Command, EditorState } from "prosemirror-state"
 import { TextSelection } from "prosemirror-state"
+import { defaultNodeForState } from "./profile-plugin"
 
 export { safeLinkHref } from "../core/links"
 
@@ -69,11 +70,11 @@ export const createBlockAfter =
   (blockId: string, type?: NodeType): Command =>
   (state, dispatch) => {
     const target = locateBlock(state.doc, blockId)
-    const paragraph = type ?? state.schema.nodes["paragraph"]
-    if (target === null || target.node.attrs["locked"] === true || paragraph === undefined)
+    const defaultText = type ?? defaultNodeForState(state)
+    if (target === null || target.node.attrs["locked"] === true || defaultText === undefined)
       return false
     if (dispatch !== undefined) {
-      const node = paragraph.create({ id: crypto.randomUUID(), locked: false })
+      const node = defaultText.create({ id: crypto.randomUUID(), locked: false })
       const position = target.position + target.node.nodeSize
       const transaction = state.tr.insert(position, node)
       transaction.setSelection(TextSelection.near(transaction.doc.resolve(position + 1)))

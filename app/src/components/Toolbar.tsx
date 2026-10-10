@@ -97,7 +97,7 @@ export const Toolbar = ({
       <span className="toolbar__divider" />
       <Tool
         label="문단 추가"
-        action={run(insertBlock(editorSchema.nodes.paragraph))}
+        action={run(insertBlock(editorSchema.nodes["paragraph"]))}
         disabled={readOnly}
       >
         <PlusIcon />

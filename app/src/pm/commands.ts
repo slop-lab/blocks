@@ -2,7 +2,7 @@ import { toggleMark } from "prosemirror-commands"
 import type { NodeType } from "prosemirror-model"
 import type { Command, EditorState, Transaction } from "prosemirror-state"
 import { NodeSelection, TextSelection } from "prosemirror-state"
-import { editorSchema } from "./schema"
+import { defaultNodeForState } from "./profile-plugin"
 
 const withBlock = (
   state: EditorState,
@@ -22,9 +22,11 @@ const withBlock = (
 }
 
 export const insertBlock =
-  (type: NodeType = editorSchema.nodes.paragraph): Command =>
+  (type?: NodeType): Command =>
   (state, dispatch) => {
-    const node = type.create({ id: crypto.randomUUID(), locked: false })
+    const resolved = type ?? defaultNodeForState(state)
+    if (resolved === undefined) return false
+    const node = resolved.create({ id: crypto.randomUUID(), locked: false })
     if (dispatch !== undefined) dispatch(state.tr.replaceSelectionWith(node).scrollIntoView())
     return true
   }
@@ -66,13 +68,13 @@ export const moveBlock =
     })
 
 export const setType = (
-  name: "paragraph" | "heading" | "blockquote" | "code_block",
+  name: string,
   attrs?: Readonly<Record<string, unknown>>,
 ): Command => {
-  const type = editorSchema.nodes[name]
-  if (type === undefined) return () => false
   return (state, dispatch) =>
     withBlock(state, dispatch, (position) => {
+      const type = state.schema.nodes[name]
+      if (type === undefined) return state.tr
       const node = state.doc.nodeAt(position)
       if (node === null || !type.validContent(node.content)) return state.tr
       return state.tr.setNodeMarkup(position, type, { ...node.attrs, ...attrs })
@@ -80,6 +82,8 @@ export const setType = (
 }
 
 export const toggleFormat = (name: "strong" | "em" | "code"): Command => {
-  const mark = editorSchema.marks[name]
-  return mark === undefined ? () => false : toggleMark(mark)
+  return (state, dispatch) => {
+    const mark = state.schema.marks[name]
+    return mark === undefined ? false : toggleMark(mark)(state, dispatch)
+  }
 }

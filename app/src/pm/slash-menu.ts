@@ -2,6 +2,7 @@ import type { NodeType } from "prosemirror-model"
 import type { EditorView } from "prosemirror-view"
 import { parseSlashQuery } from "./block-interaction-commands"
 import { createBlockMenu, type MenuController, type MenuItem } from "./block-menu"
+import { profileForState } from "./profile-plugin"
 
 type SlashChoice = {
   readonly label: string
@@ -12,8 +13,14 @@ type SlashChoice = {
 
 const choicesFor = (view: EditorView): readonly SlashChoice[] => {
   const { nodes } = view.state.schema
+  const profile = profileForState(view.state)
+  const defaultRegistration = profile?.registrations.get(profile.defaultTextType)
   const definitions = [
-    { label: "본문", keywords: "문단 paragraph", type: nodes["paragraph"] },
+    {
+      label: "본문",
+      keywords: `문단 text ${profile?.defaultTextType ?? "paragraph"}`,
+      type: defaultRegistration === undefined ? nodes["paragraph"] : nodes[defaultRegistration.nodeName],
+    },
     {
       label: "제목 1",
       keywords: "큰 제목 heading h1",

@@ -5,9 +5,11 @@ import type { Node as ProseMirrorNode } from "prosemirror-model"
 import type { Command, Transaction } from "prosemirror-state"
 import { EditorState, Plugin } from "prosemirror-state"
 import type { ChangeEvent, ChangeOrigin } from "../core/types"
-import { clipboardPlugin } from "./clipboard"
+import type { ProseMirrorProfile } from "@block-editor/prosemirror"
+import { defaultProfile } from "@block-editor/prosemirror/preset"
+import { createClipboardPlugin } from "./clipboard"
 import { deleteBlock, duplicateBlock, moveBlock, toggleFormat } from "./commands"
-import { editorSchema } from "./schema"
+import { createProfilePlugin } from "./profile-plugin"
 
 type LockedNode = { readonly position: number; readonly json: string }
 
@@ -85,20 +87,22 @@ const historyCommand =
 export type EditorSessionOptions = {
   readonly document: ProseMirrorNode
   readonly readonly: boolean
+  readonly profile?: ProseMirrorProfile
 }
 
 export const createEditorState = (options: EditorSessionOptions): EditorState =>
   EditorState.create({
-    schema: editorSchema,
+    schema: options.profile?.schema ?? defaultProfile.schema,
     doc: options.document,
     plugins: [
       history(),
+      createProfilePlugin(options.profile ?? defaultProfile),
       new Plugin({
         filterTransaction: (transaction) => !options.readonly || !transaction.docChanged,
       }),
       lockedBlockPlugin,
       identityPlugin,
-      clipboardPlugin,
+      createClipboardPlugin(options.profile ?? defaultProfile),
       keymap({
         "Mod-b": toggleFormat("strong"),
         "Mod-i": toggleFormat("em"),

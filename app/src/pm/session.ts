@@ -1,5 +1,7 @@
 import type { Node as ProseMirrorNode } from "prosemirror-model"
 import type { EditorState, Transaction } from "prosemirror-state"
+import type { ProseMirrorProfile } from "@block-editor/prosemirror"
+import { defaultProfile } from "@block-editor/prosemirror/preset"
 import { decodeDocument } from "../core/codec"
 import type { BlockDocument, ChangeEvent } from "../core/types"
 import { changeEventFrom, createEditorState } from "./editor"
@@ -11,6 +13,7 @@ export type SessionOptions = {
   readonly epoch: number
   readonly version: number
   readonly readOnly: boolean
+  readonly profile?: ProseMirrorProfile
 }
 export type Bookmark = {
   readonly modelId: string
@@ -68,9 +71,11 @@ export class ModelSession {
   private mountOwner: symbol | null = null
 
   constructor(readonly options: SessionOptions) {
+    const profile = options.profile ?? defaultProfile
     this.current = createEditorState({
-      document: snapshotToPm(decodeDocument(options.document)),
+      document: snapshotToPm(decodeDocument(options.document), profile),
       readonly: options.readOnly,
+      profile,
     })
     this.revision = options.version
     this.generation = options.epoch
@@ -85,7 +90,7 @@ export class ModelSession {
     return this.generation
   }
   get snapshot() {
-    return pmToSnapshot(this.current.doc)
+    return pmToSnapshot(this.current.doc, this.options.profile ?? defaultProfile)
   }
   get isComposing() {
     return this.composing
@@ -148,9 +153,11 @@ export class ModelSession {
       return { kind: "deferred" }
     }
     const before = this.current.doc
+    const profile = this.options.profile ?? defaultProfile
     this.current = createEditorState({
-      document: snapshotToPm(decodeDocument(update.document)),
+      document: snapshotToPm(decodeDocument(update.document), profile),
       readonly: this.options.readOnly,
+      profile,
     })
     this.revision += 1
     this.pending = null

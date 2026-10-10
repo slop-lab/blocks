@@ -12,6 +12,7 @@ import {
 import { createBlockMenu, type MenuItem } from "./block-menu"
 import { attachSelectionToolbar } from "./selection-toolbar"
 import { attachSlashMenu } from "./slash-menu"
+import { profileForState } from "./profile-plugin"
 
 export type BlockInteractionOptions = {
   readonly readOnly: boolean
@@ -58,12 +59,14 @@ export const attachBlockInteractions = (
     const index = blockIndex(blockId)
     if (index < 0) return
     const schema = view.state.schema
+    const profile = profileForState(view.state)
+    const defaultRegistration = profile?.registrations.get(profile.defaultTextType)
     const definitions: readonly {
       readonly label: string
       readonly name: string
       readonly attrs: Readonly<Record<string, unknown>>
     }[] = [
-      { label: "본문", name: "paragraph", attrs: {} },
+      { label: "본문", name: defaultRegistration?.nodeName ?? "paragraph", attrs: {} },
       { label: "제목 1", name: "heading", attrs: { level: 1 } },
       { label: "제목 2", name: "heading", attrs: { level: 2 } },
       { label: "제목 3", name: "heading", attrs: { level: 3 } },

@@ -93,7 +93,10 @@ export const useMarkdownWorkspace = (initialFile: string | null = null) => {
         if (!active) return
         setFiles(inventory.files)
         setTree(inventory.tree)
-        const first = initialFile !== null && inventory.files.includes(initialFile) ? initialFile : inventory.files[0]
+        const first =
+          initialFile !== null && inventory.files.includes(initialFile)
+            ? initialFile
+            : inventory.files[0]
         if (first === undefined) setStatus("편집할 Markdown 파일이 없습니다.")
         else void openFile(first)
       })

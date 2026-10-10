@@ -105,7 +105,10 @@ describe("Markdown workspace draft integrity", () => {
   })
   it("ignores the discarded StrictMode bootstrap after the active view has edits", async () => {
     await act(async () => root.unmount())
-    const inventory = { files: ["notes.md"], tree: [{ kind: "file" as const, name: "notes.md", path: "notes.md" }] }
+    const inventory = {
+      files: ["notes.md"],
+      tree: [{ kind: "file" as const, name: "notes.md", path: "notes.md" }],
+    }
     let finishOld: (value: typeof inventory) => void = () => {
       throw new Error("Bootstrap not started")
     }

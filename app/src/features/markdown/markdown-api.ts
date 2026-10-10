@@ -18,7 +18,12 @@ const fileSchema = z.object({
 const treeNodeSchema: z.ZodType<MarkdownTreeNode> = z.lazy(() =>
   z.union([
     z.object({ kind: z.literal("file"), name: z.string(), path: z.string() }),
-    z.object({ kind: z.literal("directory"), name: z.string(), path: z.string(), children: z.array(treeNodeSchema) }),
+    z.object({
+      kind: z.literal("directory"),
+      name: z.string(),
+      path: z.string(),
+      children: z.array(treeNodeSchema),
+    }),
   ]),
 )
 const listSchema = z.object({ files: z.array(z.string()), tree: z.array(treeNodeSchema) })
@@ -32,8 +37,16 @@ export type MarkdownMapping = z.infer<typeof mappingSchema>
 export type MarkdownFile = z.infer<typeof fileSchema>
 export type MarkdownTreeNode =
   | { readonly kind: "file"; readonly name: string; readonly path: string }
-  | { readonly kind: "directory"; readonly name: string; readonly path: string; readonly children: readonly MarkdownTreeNode[] }
-export type MarkdownInventory = { readonly files: readonly string[]; readonly tree: readonly MarkdownTreeNode[] }
+  | {
+      readonly kind: "directory"
+      readonly name: string
+      readonly path: string
+      readonly children: readonly MarkdownTreeNode[]
+    }
+export type MarkdownInventory = {
+  readonly files: readonly string[]
+  readonly tree: readonly MarkdownTreeNode[]
+}
 export type SaveResult =
   | { readonly kind: "saved"; readonly file: MarkdownFile }
   | { readonly kind: "conflict"; readonly disk: MarkdownFile }

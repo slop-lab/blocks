@@ -19,7 +19,10 @@ const choicesFor = (view: EditorView): readonly SlashChoice[] => {
     {
       label: "본문",
       keywords: `문단 text ${profile?.defaultTextType ?? "paragraph"}`,
-      type: defaultRegistration === undefined ? nodes["paragraph"] : nodes[defaultRegistration.nodeName],
+      type:
+        defaultRegistration === undefined
+          ? nodes["paragraph"]
+          : nodes[defaultRegistration.nodeName],
     },
     {
       label: "제목 1",

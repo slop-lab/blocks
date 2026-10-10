@@ -1,6 +1,6 @@
 import { join } from "node:path"
 import { revisionedDocumentSchema, type RevisionedDocument } from "@block-editor/bindings"
-import { readStored, safeName, writeStored } from "./file-utils.js"
+import { readStored, safeName, withFileQueue, writeStored } from "./file-utils.js"
 
 export class RevisionConflictError extends Error {
   readonly name = "RevisionConflictError"
@@ -29,6 +29,7 @@ export class FileCasRepository {
   }
 
   async create(input: CreateDocument): Promise<RevisionedDocument> {
+    return withFileQueue(this.path(input.documentId), async () => {
     const existing = await this.read(input.documentId)
     if (existing !== null) throw new RevisionConflictError(0, existing.revision)
     const timestamp = new Date().toISOString()
@@ -41,6 +42,7 @@ export class FileCasRepository {
     })
     await writeStored(this.path(input.documentId), record)
     return record
+    })
   }
 
   async update(
@@ -49,6 +51,7 @@ export class FileCasRepository {
     content: unknown,
     audit: { readonly actorId: string },
   ): Promise<RevisionedDocument> {
+    return withFileQueue(this.path(documentId), async () => {
     const current = await this.read(documentId)
     if (current === null) throw new RevisionConflictError(expectedRevision, 0)
     if (current.revision !== expectedRevision)
@@ -65,5 +68,6 @@ export class FileCasRepository {
     })
     await writeStored(this.path(documentId), record)
     return record
+    })
   }
 }

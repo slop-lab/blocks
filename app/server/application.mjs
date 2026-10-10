@@ -5,8 +5,9 @@ import { fileURLToPath } from "node:url"
 import { FileRoomStore } from "@block-editor/server-bindings"
 import { attachCollaboration } from "./collaboration.mjs"
 import { createHostDomain } from "./host-domain.mjs"
-import { handleLargeContent } from "./large-content.mjs"
+import { createLargeContentHandler } from "./large-content.mjs"
 import { handleMarkdown } from "./markdown.mjs"
+import { loadSessionSecret } from "./runtime-secret.mjs"
 
 const root = fileURLToPath(new URL("../../dist/", import.meta.url))
 const contentTypes = {
@@ -16,8 +17,9 @@ const contentTypes = {
 
 export const createApplicationServer = (options = {}) => {
   const runtimeRoot = options.runtimeRoot ?? fileURLToPath(new URL("../../.runtime/", import.meta.url))
-  const sessionSecret = options.sessionSecret ?? process.env.DEMO_SESSION_SECRET ?? "local-demo-session-secret-change-me"
-  const host = createHostDomain({ root: runtimeRoot, secret: sessionSecret })
+  const sessionSecret = loadSessionSecret(runtimeRoot, options.sessionSecret)
+  const host = createHostDomain({ root: runtimeRoot, secret: sessionSecret, secureCookies: options.secureCookies === true })
+  const handleLargeContent = createLargeContentHandler({ root: join(runtimeRoot, "large-content") })
   const server = createServer(async (request, response) => {
     try {
       if (await host.handle(request, response)) return
@@ -64,6 +66,14 @@ export const createApplicationServer = (options = {}) => {
       try { host.authority.require(session, room, operation); return true } catch { return false }
     },
   })
+  const closeServer = server.close.bind(server)
+  server.close = (callback) => {
+    collaboration.flushPersistence().then(
+      () => closeServer(callback),
+      (error) => callback?.(error),
+    )
+    return server
+  }
   server.on("close", () => {
     for (const client of collaboration.clients) client.terminate()
     collaboration.close()

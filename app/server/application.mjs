@@ -8,6 +8,7 @@ import { createHostDomain } from "./host-domain.mjs"
 import { createLargeContentHandler } from "./large-content.mjs"
 import { handleMarkdown } from "./markdown.mjs"
 import { loadSessionSecret } from "./runtime-secret.mjs"
+import { createOwnershipHandler } from "./ownership.mjs"
 
 const root = fileURLToPath(new URL("../../dist/", import.meta.url))
 const contentTypes = {
@@ -20,11 +21,13 @@ export const createApplicationServer = (options = {}) => {
   const sessionSecret = loadSessionSecret(runtimeRoot, options.sessionSecret)
   const host = createHostDomain({ root: runtimeRoot, secret: sessionSecret, secureCookies: options.secureCookies === true })
   const handleLargeContent = createLargeContentHandler({ root: join(runtimeRoot, "large-content") })
+  const handleOwnership = createOwnershipHandler({ root: join(runtimeRoot, "ownership"), host })
   const server = createServer(async (request, response) => {
     try {
       if (await host.handle(request, response)) return
       if (await handleMarkdown(request, response)) return
       if (await handleLargeContent(request, response)) return
+      if (await handleOwnership(request, response)) return
       const url = new URL(request.url ?? "/", "http://localhost")
       if (url.pathname === "/api/notices/current" && request.method === "GET") {
         response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" })

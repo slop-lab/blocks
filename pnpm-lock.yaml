@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@block-editor/bindings':
+        specifier: workspace:*
+        version: link:packages/bindings
+      '@block-editor/server-bindings':
+        specifier: workspace:*
+        version: link:packages/server-bindings
       '@codemirror/commands':
         specifier: ^6.11.1
         version: 6.11.1
@@ -126,6 +132,35 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@24.19.1)(jsdom@27.4.0)(tsx@4.23.15)
+
+  packages/bindings:
+    dependencies:
+      zod:
+        specifier: ^4.1.11
+        version: 4.6.5
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/server-bindings:
+    dependencies:
+      '@block-editor/bindings':
+        specifier: workspace:*
+        version: link:../bindings
+      yjs:
+        specifier: ^13.6.33
+        version: 13.6.33
+      zod:
+        specifier: ^4.1.11
+        version: 4.6.5
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.19.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
 packages:
 

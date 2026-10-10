@@ -20,7 +20,10 @@ export class InvalidSessionError extends Error {
 
 export class AccessDeniedError extends Error {
   readonly name = "AccessDeniedError"
-  constructor(readonly room: string, readonly operation: AccessOperation) {
+  constructor(
+    readonly room: string,
+    readonly operation: AccessOperation,
+  ) {
     super(`Session cannot ${operation} ${room}`)
   }
 }
@@ -33,7 +36,8 @@ type AuthorityOptions = {
 
 export class DemoSessionAuthority {
   constructor(private readonly options: AuthorityOptions) {
-    if (options.secret.length < 24) throw new TypeError("Demo session secret must contain at least 24 characters")
+    if (options.secret.length < 24)
+      throw new TypeError("Demo session secret must contain at least 24 characters")
   }
 
   private signature(payload: string): Buffer {
@@ -58,8 +62,13 @@ export class DemoSessionAuthority {
     const expected = this.signature(payload)
     if (received.length !== expected.length || !timingSafeEqual(received, expected))
       throw new InvalidSessionError("Invalid demo session signature")
-    const session = sessionSchema.parse(JSON.parse(Buffer.from(payload, "base64url").toString("utf8")))
-    if (session.issuer !== this.options.issuer || session.expiresAt <= Math.floor(Date.now() / 1000))
+    const session = sessionSchema.parse(
+      JSON.parse(Buffer.from(payload, "base64url").toString("utf8")),
+    )
+    if (
+      session.issuer !== this.options.issuer ||
+      session.expiresAt <= Math.floor(Date.now() / 1000)
+    )
       throw new InvalidSessionError("Expired demo session")
     return session
   }

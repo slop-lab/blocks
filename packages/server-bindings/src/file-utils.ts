@@ -4,13 +4,17 @@ import { z } from "zod"
 
 export class StoredValueError extends Error {
   readonly name = "StoredValueError"
-  constructor(readonly path: string, options?: ErrorOptions) {
+  constructor(
+    readonly path: string,
+    options?: ErrorOptions,
+  ) {
     super(`Invalid stored value at ${path}`, options)
   }
 }
 
 export const safeName = (value: string): string => {
-  if (!/^[a-zA-Z0-9_-]{1,160}$/.test(value)) throw new TypeError("Identifier contains unsupported characters")
+  if (!/^[a-zA-Z0-9_-]{1,160}$/.test(value))
+    throw new TypeError("Identifier contains unsupported characters")
   return value
 }
 
@@ -43,7 +47,9 @@ export const withFileQueue = async <T>(path: string, operation: () => Promise<T>
   const key = resolve(path)
   const previous = fileQueues.get(key) ?? Promise.resolve()
   let release = (): void => undefined
-  const current = new Promise<void>((resolveQueue) => { release = resolveQueue })
+  const current = new Promise<void>((resolveQueue) => {
+    release = resolveQueue
+  })
   const queued = previous.then(() => current)
   fileQueues.set(key, queued)
   await previous

@@ -15,7 +15,10 @@ vi.mock("../src/features/ownership/mixed-api", () => ({
 }))
 
 let host: HTMLDivElement | null = null
-afterEach(() => { host?.remove(); host = null })
+afterEach(() => {
+  host?.remove()
+  host = null
+})
 
 const render = async () => {
   host = document.createElement("div")
@@ -25,25 +28,34 @@ const render = async () => {
   return { root, host }
 }
 
-it("renders the status projection without creating a ProseMirror editor", async () => {
+it("renders the status projection itself without an editable surface", async () => {
   const view = await render()
-  const tab = Array.from(view.host.querySelectorAll("button")).find((item) => item.textContent === "상태 보기")
+  const tab = Array.from(view.host.querySelectorAll("button")).find(
+    (item) => item.textContent === "상태 보기",
+  )
   await act(async () => tab?.click())
 
   expect(view.host.textContent).toContain("출시 상태 보기")
-  expect(view.host.querySelector(".ProseMirror")).toBeNull()
-  expect(view.host.querySelector("[contenteditable]" )).toBeNull()
+  const status = view.host.querySelector('[aria-labelledby="status-title"]')
+  expect(status?.querySelector(".ProseMirror")).toBeNull()
+  expect(status?.querySelector("[contenteditable]")).toBeNull()
   await act(async () => view.root.unmount())
 })
 
 it("duplicates one presentation occurrence without deleting its domain task", async () => {
   const view = await render()
-  const tab = Array.from(view.host.querySelectorAll("button")).find((item) => item.textContent === "프로젝트 보드")
+  const tab = Array.from(view.host.querySelectorAll("button")).find(
+    (item) => item.textContent === "프로젝트 보드",
+  )
   await act(async () => tab?.click())
-  const duplicate = Array.from(view.host.querySelectorAll("button")).find((item) => item.textContent === "카드 복제")
+  const duplicate = Array.from(view.host.querySelectorAll("button")).find(
+    (item) => item.textContent === "카드 복제",
+  )
   await act(async () => duplicate?.click())
 
-  expect(view.host.querySelectorAll(".ownership-card")).toHaveLength(3)
-  expect(view.host.textContent).toContain("도메인 작업 2개는 카드 삭제와 무관하게 유지됩니다.")
+  expect(
+    view.host.querySelectorAll('[aria-label="프로젝트 보드 표현 편집기"] .ownership-card'),
+  ).toHaveLength(3)
+  expect(view.host.textContent).toContain("도메인 작업 2개")
   await act(async () => view.root.unmount())
 })

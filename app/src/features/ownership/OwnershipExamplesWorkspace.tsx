@@ -17,6 +17,8 @@ type Tab = (typeof tabs)[number]["id"]
 
 export const OwnershipExamplesWorkspace = () => {
   const [tab, setTab] = useState<Tab>("notebook")
+  const [visited, setVisited] = useState<ReadonlySet<Tab>>(new Set(["notebook"]))
+  const [file, setFile] = useState<string | null>(null)
   return (
     <section className="ownership-workspace">
       <header className="ownership-workspace__header">
@@ -30,18 +32,39 @@ export const OwnershipExamplesWorkspace = () => {
             type="button"
             key={item.id}
             aria-current={tab === item.id ? "page" : undefined}
-            onClick={() => setTab(item.id)}
+            onClick={() => {
+              setTab(item.id)
+              setVisited((current) => new Set([...current, item.id]))
+            }}
           >
             {item.label}
           </button>
         ))}
       </nav>
       <div className="ownership-workspace__body">
-        {tab === "notebook" && <NotebookScenario />}
-        {tab === "projectboard" && <ProjectBoardScenario />}
-        {tab === "statusview" && <StatusViewScenario />}
-        {tab === "filetree" && <MarkdownWorkspace />}
-        {tab === "mixedbacklog" && <MixedBacklogScenario onOpenFiles={() => setTab("filetree")} />}
+        <div hidden={tab !== "notebook"}>
+          <NotebookScenario />
+        </div>
+        <div hidden={tab !== "projectboard"}>
+          {visited.has("projectboard") && <ProjectBoardScenario />}
+        </div>
+        <div hidden={tab !== "statusview"}>
+          {visited.has("statusview") && <StatusViewScenario />}
+        </div>
+        <div hidden={tab !== "filetree"}>
+          {visited.has("filetree") && <MarkdownWorkspace initialFile={file} />}
+        </div>
+        <div hidden={tab !== "mixedbacklog"}>
+          {visited.has("mixedbacklog") && (
+            <MixedBacklogScenario
+              onOpenFiles={(path) => {
+                setFile(path)
+                setVisited((current) => new Set([...current, "filetree"]))
+                setTab("filetree")
+              }}
+            />
+          )}
+        </div>
       </div>
     </section>
   )

@@ -37,6 +37,15 @@ Markdown·협업·표·대용량 기능은 각각의 진입점을 가져오거�
 | `app/src/features/collaboration/` | Yjs 연결 및 다중 편집 surface |
 | `app/src/features/composite/` | 선택적 table schema, 복합 입력 context와 migration |
 | `app/src/features/large-content/` | 부분 로딩, 블록 캐시, 가상화 및 reveal/focus |
+| `@block-editor/bindings` | 엔진과 무관한 변경 전달, draft/ack 정책, 비동기 외부 액션 target guard, 엄격한 revision schema |
+| `@block-editor/server-bindings` | Node 파일 CAS 저장소, Yjs room 저장소, 서명된 데모 세션과 scope 검사, versioned 승인 workflow |
+
+두 패키지는 `corepack pnpm build:packages`로 ESM과 선언 파일을 `packages/*/dist`에 생성합니다. 앱은 로컬 노트의 저장 알림, 호스트 폼의 revision bookmark, 수정안의 비동기 target guard, 부분 문서 저장 acknowledgement를 `@block-editor/bindings`에서 직접 사용합니다. 서버는 `.runtime` 아래 durable document/room/workflow 저장소와 권한 검사를 `@block-editor/server-bindings`에서 사용합니다.
+
+```ts
+import { ChangeDelivery, PersistenceBaseline } from "@block-editor/bindings"
+import { DemoSessionAuthority, FileCasRepository } from "@block-editor/server-bindings"
+```
 
 ### 입력, 변경 통지, 저장
 
@@ -57,13 +66,16 @@ Markdown·협업·표·대용량 기능은 각각의 진입점을 가져오거�
 ## 서버와 저장 위치
 
 - `GET /api/markdown`, `GET/PUT /api/markdown/file`: 파일 목록, 읽기, 조건부 저장.
-- `/collaboration`: schema handshake와 Yjs 동기화 WebSocket.
+- `/collaboration`: schema handshake, room scope 검사, Yjs 동기화 및 재시작 가능한 room snapshot.
 - `/api/large-content`: 페이지 읽기, 블록 조회·수정, 검색 및 전체 내보내기.
+- `POST /api/demo/session?identity=author|reviewer|viewer`: 서명된 opaque 데모 세션 cookie 발급.
+- `GET/PUT /api/documents/:id`: room scope와 role을 검사하는 durable CAS 문서.
+- `POST /api/workflows/:id/submit|approve`: 명시적인 versioned 제출/승인과 audit history.
 - `.runtime/`은 실행 데이터이며 Git에서 제외합니다.
 
-Markdown은 실제 파일에 저장되고 로컬 노트·표와 코드는 브라우저에 저장됩니다. 협업 방과 보관함 예제는 서버 메모리 저장소를 사용합니다. 협업 클라이언트는 연결이 끊겨도 현재 replica를 유지하며 재연결 시 합칩니다. 서버 재시작 후 모든 클라이언트까지 닫힌 상황의 영속 보관은 호스트 저장소를 연결해야 합니다.
+Markdown은 실제 파일에 저장되고 로컬 노트·표와 코드는 브라우저에 저장됩니다. 협업 방, 일반 문서와 승인 workflow는 `.runtime`의 원자적 파일 교체를 사용합니다. 협업 클라이언트는 연결이 끊겨도 현재 replica를 유지하며 재연결 시 합치고, 서버는 debounce한 Yjs snapshot을 재시작 후 다시 엽니다. 보관함의 기본 1,600개 synthetic 원문과 수정본은 아직 해당 서버 프로세스의 메모리에 유지됩니다.
 
-예제 서버는 단일 사용자 개발 환경을 위한 것입니다. 공개 서비스에서는 호스트가 인증·방 권한·파일 접근 정책을 추가해야 합니다. 표시용 사용자 이름이나 에디터의 입력 제한은 권한 증명이 아닙니다. 외부 AI 자격 증명, 업무 승인, 서비스 간 원자성은 호스트가 소유합니다.
+데모 세션은 역할과 room scope를 서버에서 확인하지만 운영 인증을 주장하지 않습니다. `DEMO_SESSION_SECRET`을 배포 환경에서 제공해야 하며, 공개 서비스에서는 호스트의 실제 identity provider와 session rotation으로 교체해야 합니다. 표시용 사용자 이름이나 에디터의 입력 제한은 권한 증명이 아닙니다. 외부 AI 자격 증명과 서비스 간 원자성은 호스트가 소유합니다.
 
 ## 검사 실행
 

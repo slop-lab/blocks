@@ -28,7 +28,11 @@ export const useGitDocumentsWorkspace = () => {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const draftRef = useRef(draft)
+  const fileRef = useRef(file)
+  const openRequest = useRef(0)
+  const draftQueue = useRef<Promise<void>>(Promise.resolve())
   draftRef.current = draft
+  fileRef.current = file
 
   const refresh = useCallback(async () => {
     const next = await gitDocumentsApi.state()
@@ -41,9 +45,12 @@ export const useGitDocumentsWorkspace = () => {
   }, [])
 
   const open = useCallback(async (path: string) => {
+    const request = openRequest.current + 1
+    openRequest.current = request
     setBusy(true)
     try {
       const next = await gitDocumentsApi.file(path)
+      if (openRequest.current !== request) return
       setFile(next)
       setDraft(next.draft?.content ?? next.content)
       setStatus(
@@ -53,12 +60,13 @@ export const useGitDocumentsWorkspace = () => {
         gitDocumentsApi.diff(path),
         gitDocumentsApi.history(path),
       ])
+      if (openRequest.current !== request) return
       setDiff(nextDiff)
       setHistory(nextHistory)
     } catch (error) {
       setStatus(message(error))
     } finally {
-      setBusy(false)
+      if (openRequest.current === request) setBusy(false)
     }
   }, [])
 
@@ -76,8 +84,9 @@ export const useGitDocumentsWorkspace = () => {
   useEffect(() => {
     if (file === null || draft === file.content) return
     const timer = window.setTimeout(() => {
-      void gitDocumentsApi
-        .draft(file, draftRef.current)
+      const content = draftRef.current
+      draftQueue.current = draftQueue.current
+        .then(() => gitDocumentsApi.draft(file, content))
         .then(() => setStatus("복구 초안을 자동 저장했습니다."))
         .catch((error: unknown) => setStatus(`초안을 저장하지 못했습니다: ${message(error)}`))
     }, 500)
@@ -124,8 +133,10 @@ export const useGitDocumentsWorkspace = () => {
     save: () =>
       perform(async () => {
         if (file === null) return
-        const saved = await gitDocumentsApi.write(file, draftRef.current)
+        const source = draftRef.current
+        const saved = await gitDocumentsApi.write(file, source)
         await gitDocumentsApi.clearDraft(saved.path)
+        if (fileRef.current?.path !== saved.path || draftRef.current !== source) return
         setFile({ ...saved, draft: null })
         setDraft(saved.content)
         await reloadCurrent()
@@ -148,7 +159,7 @@ export const useGitDocumentsWorkspace = () => {
     rename: (to: string) =>
       perform(async () => {
         if (file === null) return
-        const renamed = await gitDocumentsApi.rename(file.path, to)
+        const renamed = await gitDocumentsApi.rename(file, to)
         await refresh()
         await open(renamed.path)
       }),
@@ -164,7 +175,18 @@ export const useGitDocumentsWorkspace = () => {
       }),
     commit: (commitMessage: string) =>
       perform(async () => {
-        await gitDocumentsApi.commit([...selected], commitMessage)
+        if (state === null) return
+        const paths = [...selected]
+        const expectedRevisions = Object.fromEntries(
+          await Promise.all(
+            paths.map(async (path) => {
+              const change = state.changes.find((item) => item.path === path)
+              if (change?.working === "deleted") return [path, null] as const
+              return [path, (await gitDocumentsApi.file(path)).revision] as const
+            }),
+          ),
+        )
+        await gitDocumentsApi.commit(paths, commitMessage, expectedRevisions)
         setSelected(new Set())
         await reloadCurrent()
         setStatus("선택한 문서 변경을 커밋했습니다.")
@@ -183,11 +205,13 @@ export const useGitDocumentsWorkspace = () => {
       }),
     createBranch: (branch: string) =>
       perform(async () => {
+        await draftQueue.current
         await gitDocumentsApi.createBranch(branch)
         window.location.reload()
       }),
     switchBranch: (branch: string) =>
       perform(async () => {
+        await draftQueue.current
         await gitDocumentsApi.switchBranch(branch)
         window.location.reload()
       }),

@@ -101,8 +101,10 @@ export const gitDocumentsApi = {
     fileSchema.parse(
       await mutation("documents", { path, content: `# ${path.replace(/\.md$/u, "")}\n\n` }),
     ),
-  rename: async (from: string, to: string) =>
-    fileSchema.parse(await mutation("rename", { from, to })),
+  rename: async (file: GitDocumentFile, to: string) =>
+    fileSchema.parse(
+      await mutation("rename", { from: file.path, to, expectedRevision: file.revision }),
+    ),
   remove: async (file: GitDocumentFile) =>
     mutation("delete", { path: file.path, expectedRevision: file.revision }),
   diff: async (path: string) =>
@@ -111,8 +113,11 @@ export const gitDocumentsApi = {
     historySchema.parse(await client.get("history", { searchParams: { path } }).json()).entries,
   restore: async (path: string, commit: string) =>
     fileSchema.parse(await mutation("restore", { path, commit })),
-  commit: async (paths: readonly string[], message: string) =>
-    mutation("commit", { paths, message }),
+  commit: async (
+    paths: readonly string[],
+    message: string,
+    expectedRevisions: Readonly<Record<string, string | null>>,
+  ) => mutation("commit", { paths, message, expectedRevisions }),
   branches: async () => branchesSchema.parse(await client.get("branches").json()).branches,
   createBranch: async (branch: string) => mutation("branches", { branch }),
   switchBranch: async (branch: string) => mutation("branch/switch", { branch }),

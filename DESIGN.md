@@ -63,6 +63,7 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 - Header is fixed in shell flow; workspace body owns vertical scroll via `min-block-size: 0`.
 - Desktop shell has an explicit `100dvh` height so editor and inspector can scroll independently. Toolbar controls do not shrink below their target size and wrap when necessary. Mobile navigation retains the primitive showcase entry; only connection metadata is hidden.
 - Document measure: `720px`; prose measure: `68ch`.
+- Runtime tokens `--document-measure` and `--prose-measure` carry those measures; `--type-body`, `--type-h1`, `--type-h2`, `--type-h3`, and `--type-mono` carry the documented type recipes.
 - Wide comparison dialog measure: `960px`; its before/after panes collapse to one column below tablet width.
 - Below 1100px the inspector moves below the document instead of disappearing, preserving access to host forms and external-update controls. Below 768px navigation is a compact three-column strip, the header stacks title above controls, and the toolbar wraps. At 375px the document is one column with 16px gutters and no horizontal primary-content scroll. Korean labels use word-preserving wrapping.
 - z-index: base 0, sticky 10, popover 30, scrim 40, dialog 50, toast 60.
@@ -144,6 +145,7 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 Mixed restrained strategy: tonal separation and whisper borders at rest; one multi-layer shadow only for dialogs/popovers.
 
 - Paper: `0 1px 2px rgba(36,35,31,.04), 0 12px 36px rgba(36,35,31,.06)`.
+- CSS token `--shadow-paper` carries the Paper recipe for rendered Markdown and document surfaces.
 - Popover: `0 2px 6px rgba(36,35,31,.06), 0 18px 48px rgba(36,35,31,.12)`.
 - CSS token `--shadow-popover` carries the Popover recipe; `--type-small-size`, `--type-caption-size`, and `--type-caption` carry compact menu and toolbar typography without one-off values.
 - Cards use no independent shadow; active cards use line-strong or a semantic soft surface.

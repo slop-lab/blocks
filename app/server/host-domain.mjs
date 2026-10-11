@@ -3,6 +3,7 @@ import {
   AccessDeniedError,
   DemoSessionAuthority,
   FileCasRepository,
+  InvalidSessionError,
   RevisionConflictError,
   WorkflowRepository,
   WorkflowService,
@@ -70,7 +71,13 @@ export const createHostDomain = ({ root, secret, secureCookies = false }) => {
   const workflowService = new WorkflowService({ documents, workflows })
   const sessionFor = (request) => {
     const token = cookieValue(request)
-    return token === null ? null : authority.verify(token)
+    if (token === null) return null
+    try {
+      return authority.verify(token)
+    } catch (error) {
+      if (error instanceof InvalidSessionError) return null
+      throw error
+    }
   }
   const issue = (identity) => {
     const selected = Object.hasOwn(identities, identity) ? identities[identity] : identities.author

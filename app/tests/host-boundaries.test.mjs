@@ -1,12 +1,38 @@
+import { createHmac } from "node:crypto"
 import { once } from "node:events"
 import { mkdtemp, rm, stat } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { DemoSessionAuthority } from "@block-editor/server-bindings"
 import { afterEach, describe, expect, it } from "vitest"
+import WebSocket from "ws"
 import { createApplicationServer } from "../server/application.mjs"
+import { createHostDomain } from "../server/host-domain.mjs"
 import { loadSessionSecret } from "../server/runtime-secret.mjs"
 
 const resources = []
+const issuer = "block-editor-demo"
+
+const signedPayload = (secret, value) => {
+  const payload = Buffer.from(value).toString("base64url")
+  const signature = createHmac("sha256", secret).update(payload).digest("base64url")
+  return `${payload}.${signature}`
+}
+
+const invalidToken = (kind, secret) => {
+  if (kind === "stale")
+    return new DemoSessionAuthority({
+      secret: "stale-session-secret-with-entropy",
+      issuer,
+    }).issue({ subject: "author", role: "editor", rooms: ["*"] })
+  if (kind === "expired")
+    return new DemoSessionAuthority({ secret, issuer, lifetimeSeconds: -1 }).issue({
+      subject: "author",
+      role: "editor",
+      rooms: ["*"],
+    })
+  return signedPayload(secret, "not-json")
+}
 
 afterEach(async () => {
   for (const resource of resources.splice(0)) {
@@ -42,6 +68,80 @@ const send = (base, path, cookie, body) =>
   })
 
 describe("host input and workflow boundaries", () => {
+  it("serves the root page and issues a demo session for a fresh request", async () => {
+    const { base } = await open()
+
+    const response = await fetch(base)
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get("content-type")).toContain("text/html")
+    expect(response.headers.getSetCookie()[0]).toMatch(/^demo_session=/)
+  })
+
+  it.each(["stale", "expired", "malformed"])(
+    "recovers the root page from a %s demo session",
+    async (kind) => {
+      const { base, root } = await open()
+      const token = invalidToken(kind, loadSessionSecret(root))
+
+      const response = await fetch(base, { headers: { cookie: `demo_session=${token}` } })
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get("content-type")).toContain("text/html")
+      expect(response.headers.getSetCookie()[0]).toMatch(/^demo_session=/)
+    },
+  )
+
+  it.each(["stale", "expired", "malformed"])(
+    "rejects a %s demo session at the protected HTTP boundary",
+    async (kind) => {
+      const { base, root } = await open()
+      const token = invalidToken(kind, loadSessionSecret(root))
+
+      const response = await fetch(`${base}/api/documents/team-minutes`, {
+        headers: { cookie: `demo_session=${token}` },
+      })
+
+      expect(response.status).toBe(401)
+      await expect(response.json()).resolves.toEqual({ error: "Demo session required" })
+    },
+  )
+
+  it("denies an invalid demo session during WebSocket upgrade", async () => {
+    const { base, root } = await open()
+    const token = invalidToken("stale", loadSessionSecret(root))
+    const socket = new WebSocket(`${base.replace("http", "ws")}/collaboration?room=team-minutes`, {
+      headers: { cookie: `demo_session=${token}` },
+    })
+    const status = new Promise((resolve, reject) => {
+      socket.once("open", () => reject(new Error("Invalid session upgraded unexpectedly")))
+      socket.once("unexpected-response", (_request, response) => {
+        response.resume()
+        resolve(response.statusCode)
+      })
+      socket.once("error", reject)
+    })
+
+    await expect(status).resolves.toBe(403)
+  })
+
+  it("propagates unexpected session verification errors", async () => {
+    const root = await mkdtemp(join(tmpdir(), "host-session-errors-"))
+    resources.push({ kind: "root", value: root })
+    const host = createHostDomain({
+      root,
+      secret: "unexpected-error-secret-with-entropy",
+    })
+    const unexpected = new Error("unexpected verification failure")
+    host.authority.verify = () => {
+      throw unexpected
+    }
+
+    expect(() => host.sessionFor({ headers: { cookie: "demo_session=opaque" } })).toThrow(
+      unexpected,
+    )
+  })
+
   it("serializes concurrent HTTP CAS updates into one success and one conflict", async () => {
     const { base } = await open()
     const { cookie } = await session(base, "author")

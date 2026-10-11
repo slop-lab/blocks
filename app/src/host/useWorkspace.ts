@@ -31,7 +31,11 @@ type ReviewState = {
 }
 
 export const useWorkspace = () => {
-  const [route, setRoute] = useState<RouteId>("note")
+  const [route, setRoute] = useState<RouteId>(() =>
+    new URLSearchParams(window.location.search).get("workspace") === "git-documents"
+      ? "git-documents"
+      : "note",
+  )
   const [toast, setToast] = useState("")
   const documents = useDocumentSessions(setToast)
   const { sessions, engines, update: updateSession } = documents

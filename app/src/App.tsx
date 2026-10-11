@@ -17,6 +17,11 @@ const MarkdownWorkspace = lazy(() =>
     default: module.MarkdownWorkspace,
   })),
 )
+const GitDocumentsWorkspace = lazy(() =>
+  import("./features/git-documents/GitDocumentsWorkspace").then((module) => ({
+    default: module.GitDocumentsWorkspace,
+  })),
+)
 const CollaborationWorkspace = lazy(() =>
   import("./features/collaboration/CollaborationWorkspace").then((module) => ({
     default: module.CollaborationWorkspace,
@@ -45,19 +50,26 @@ const OwnershipExamplesWorkspace = lazy(() =>
 
 export const App = () => {
   const workspace = useWorkspace()
-  const [visited, setVisited] = useState<ReadonlySet<RouteId>>(new Set())
+  const [visited, setVisited] = useState<ReadonlySet<RouteId>>(() => new Set([workspace.route]))
   const navigate = (route: RouteId) => {
     if (workspace.navigate(route) && !isContentRoute(route))
       setVisited((current) => new Set([...current, route]))
   }
   const local = isContentRoute(workspace.route)
+  const shellClass = local
+    ? "app-shell"
+    : workspace.route === "git-documents"
+      ? "app-shell app-shell--feature app-shell--git-documents"
+      : "app-shell app-shell--feature"
   const sessionKey = `${workspace.contentRoute}-${workspace.session.epoch}-${workspace.session.surfaceRevision}`
   return (
-    <div className={local ? "app-shell" : "app-shell app-shell--feature"}>
+    <div className={shellClass}>
       <a className="skip-link" href="#main-content">
         본문으로 건너뛰기
       </a>
-      <Sidebar route={workspace.route} onNavigate={navigate} />
+      {workspace.route !== "git-documents" && (
+        <Sidebar route={workspace.route} onNavigate={navigate} />
+      )}
       {local ? (
         <>
           <section className="workspace">
@@ -122,6 +134,9 @@ export const App = () => {
         <Suspense fallback={<p role="status">문서를 여는 중…</p>}>
           <div hidden={workspace.route !== "markdown"}>
             {visited.has("markdown") && <MarkdownWorkspace />}
+          </div>
+          <div hidden={workspace.route !== "git-documents"}>
+            {visited.has("git-documents") && <GitDocumentsWorkspace />}
           </div>
           <div hidden={workspace.route !== "collaboration"}>
             {visited.has("collaboration") && <CollaborationWorkspace />}

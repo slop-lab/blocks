@@ -14,6 +14,7 @@ export type RouteId =
   | "presentation"
   | "readonly"
   | "markdown"
+  | "git-documents"
   | "collaboration"
   | "composite"
   | "large-content"
@@ -25,6 +26,12 @@ const routes = [
   { id: "presentation", label: "B · 작업 브리핑", note: "외부 카드 + 캡션", icon: ViewGridIcon },
   { id: "readonly", label: "C · 읽기 전용", note: "호스트 액션", icon: ReaderIcon },
   { id: "markdown", label: "Markdown 파일", note: "파일 열기 · 편집 · 저장", icon: FileIcon },
+  {
+    id: "git-documents",
+    label: "문서 라이브러리",
+    note: "Git 변경 · 기록 · 동기화",
+    icon: FileIcon,
+  },
   { id: "collaboration", label: "함께 쓰기", note: "실시간 공동 편집", icon: PersonIcon },
   { id: "composite", label: "표와 코드", note: "표 · 캡션 · 코드 편집", icon: TableIcon },
   { id: "large-content", label: "문서 보관함", note: "긴 문서 · 필요한 부분 읽기", icon: RowsIcon },

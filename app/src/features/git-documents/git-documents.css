@@ -1,0 +1,387 @@
+.git-docs-shell {
+  display: grid;
+  grid-template-columns: 244px minmax(0, 1fr) 320px;
+  block-size: 100dvh;
+  min-block-size: 0;
+  background: var(--canvas);
+  color: var(--ink);
+}
+.git-docs-library,
+.git-docs-review {
+  min-block-size: 0;
+  overflow: auto;
+  background: var(--surface);
+}
+.git-docs-library {
+  border-inline-end: 1px solid var(--line);
+  padding: var(--space-5);
+}
+.git-docs-review {
+  border-inline-start: 1px solid var(--line);
+}
+.git-docs-library__heading,
+.git-docs-header,
+.git-docs-action-row,
+.git-docs-review__tabs,
+.git-docs-recovery {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.git-docs-library__heading,
+.git-docs-header {
+  justify-content: space-between;
+}
+.git-docs-library h2 {
+  margin: var(--space-1) 0 var(--space-4);
+  font: var(--type-h3);
+}
+.git-docs-icon {
+  inline-size: var(--touch-target-size);
+  justify-content: center;
+}
+.git-docs-library__toggle {
+  display: none;
+}
+.git-docs-search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.git-docs-search input {
+  min-inline-size: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+.git-docs-search input:focus {
+  outline: none;
+}
+.git-docs-tree {
+  list-style: none;
+  margin: var(--space-4) 0;
+  padding: 0;
+}
+.git-docs-tree .git-docs-tree {
+  margin: var(--space-1) 0 var(--space-1) var(--space-4);
+}
+.git-docs-tree summary {
+  padding: var(--space-2);
+  color: var(--ink-muted);
+  font: var(--type-small);
+  cursor: pointer;
+}
+.git-docs-file,
+.git-docs-results button {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  text-align: start;
+}
+.git-docs-file:hover,
+.git-docs-file--active {
+  background: var(--accent-soft);
+}
+.git-docs-results {
+  margin-block: var(--space-3);
+  border-block: 1px solid var(--line);
+  padding-block: var(--space-2);
+}
+.git-docs-results button {
+  display: grid;
+}
+.git-docs-results small {
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+.git-docs-editor {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  min-block-size: 0;
+}
+.git-docs-header {
+  padding: var(--space-4) var(--space-6);
+  border-block-end: 1px solid var(--line);
+  background: var(--paper);
+}
+.git-docs-header h1 {
+  margin: var(--space-1) 0 0;
+  font: var(--type-h3);
+  overflow-wrap: anywhere;
+}
+.git-docs-action-row {
+  flex-wrap: wrap;
+}
+.git-docs-action-row button {
+  min-block-size: var(--control-size);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.git-docs-action-row button:not(.button) {
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink-muted);
+}
+.git-docs-recovery {
+  justify-content: center;
+  padding: var(--space-2) var(--space-4);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font: var(--type-small);
+}
+.git-docs-recovery button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+}
+.git-docs-tabs,
+.git-docs-review__tabs {
+  display: flex;
+  border-block-end: 1px solid var(--line);
+  background: var(--surface);
+}
+.git-docs-tabs button,
+.git-docs-review__tabs button {
+  flex: 1;
+  padding: var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+}
+.git-docs-tabs button[aria-selected="true"],
+.git-docs-review__tabs button[aria-selected="true"] {
+  color: var(--accent);
+  box-shadow: inset 0 -2px var(--accent);
+}
+.git-docs-paper {
+  min-block-size: 0;
+  overflow: auto;
+  padding: var(--space-8);
+}
+.git-docs-paper > .markdown-rich-editor,
+.git-docs-paper > textarea {
+  display: block;
+  inline-size: min(100%, var(--document-measure));
+  min-block-size: 100%;
+  margin-inline: auto;
+  padding: var(--space-8);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+  color: var(--ink);
+}
+.git-docs-paper > textarea {
+  resize: none;
+  font: var(--type-mono);
+  line-height: 1.65;
+}
+.git-docs-status {
+  padding: var(--space-2) var(--space-4);
+  border-block-start: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-muted);
+  font: var(--type-caption);
+}
+.git-docs-resolve {
+  margin: var(--space-2) var(--space-4);
+}
+.git-docs-review__body {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+.git-docs-remote {
+  display: grid;
+  gap: var(--space-3);
+  padding-block-end: var(--space-4);
+  border-block-end: 1px solid var(--line);
+}
+.git-docs-change-list {
+  display: grid;
+  gap: var(--space-1);
+}
+.git-docs-change {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: 4px;
+}
+.git-docs-change:hover {
+  background: var(--paper);
+}
+.git-docs-change--conflict {
+  background: var(--warning-soft);
+}
+.git-docs-change span {
+  display: grid;
+  min-inline-size: 0;
+}
+.git-docs-change strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.git-docs-change small {
+  color: var(--ink-muted);
+}
+.git-docs-diff summary {
+  cursor: pointer;
+  font: var(--type-small);
+}
+.git-docs-diff > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+.git-docs-diff pre {
+  max-block-size: 240px;
+  overflow: auto;
+  margin: 0;
+  padding: var(--space-2);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font: var(--type-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.git-docs-message {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--ink-muted);
+  font: var(--type-small);
+}
+.git-docs-message input {
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+}
+.git-docs-history article {
+  display: grid;
+  gap: var(--space-1);
+  padding-block-end: var(--space-3);
+  border-block-end: 1px solid var(--line);
+}
+.git-docs-history small {
+  color: var(--ink-muted);
+}
+.git-docs-history button {
+  justify-self: start;
+}
+.git-docs-empty {
+  color: var(--ink-muted);
+  font: var(--type-small);
+}
+.git-docs-unavailable {
+  max-inline-size: 720px;
+  margin: var(--space-16) auto;
+  padding: var(--space-8);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+.git-docs-unavailable code {
+  display: block;
+  overflow: auto;
+  padding: var(--space-3);
+  background: var(--surface);
+}
+.app-shell.app-shell--feature.app-shell--git-documents {
+  grid-template-columns: minmax(0, 1fr);
+}
+.app-shell--git-documents > .feature-workspace {
+  padding: 0;
+  overflow: hidden;
+}
+@media (max-width: 1400px) {
+  .git-docs-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+@media (max-width: 1100px) {
+  .git-docs-shell {
+    grid-template-columns: 220px minmax(0, 1fr);
+    overflow: auto;
+  }
+  .git-docs-review {
+    grid-column: 1 / -1;
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--line);
+    overflow: visible;
+  }
+}
+@media (max-width: 768px) {
+  .git-docs-diff > div {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 767px) {
+  .git-docs-shell {
+    display: block;
+    block-size: auto;
+    min-block-size: 100dvh;
+  }
+  .git-docs-library {
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--line);
+    padding: var(--space-3) var(--space-4);
+  }
+  .git-docs-library h2 {
+    margin-block-end: 0;
+  }
+  .git-docs-library__toggle {
+    display: inline-flex;
+  }
+  .git-docs-library--open > .git-docs-search {
+    margin-block-start: var(--space-3);
+  }
+  .git-docs-tree {
+    max-block-size: 220px;
+    overflow: auto;
+  }
+  .git-docs-library:not(.git-docs-library--open) > .git-docs-search,
+  .git-docs-library:not(.git-docs-library--open) > .git-docs-results,
+  .git-docs-library:not(.git-docs-library--open) > .git-docs-tree,
+  .git-docs-library:not(.git-docs-library--open) > .git-docs-empty {
+    display: none;
+  }
+  .git-docs-header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: var(--space-4);
+  }
+  .git-docs-paper {
+    padding: var(--space-4);
+    min-block-size: 65dvh;
+  }
+  .git-docs-paper > .markdown-rich-editor,
+  .git-docs-paper > textarea {
+    padding: var(--space-4);
+  }
+  .git-docs-paper .markdown-prose [data-opaque="true"] {
+    min-inline-size: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .git-docs-paper .markdown-prose pre,
+  .git-docs-paper .markdown-prose pre code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}

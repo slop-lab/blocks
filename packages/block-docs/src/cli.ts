@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { once } from "node:events"
+import { existsSync } from "node:fs"
+import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { GitDocuments, initializeGitDocumentsRepository } from "@block-editor/git-documents"
 import { createGitDocumentsServer } from "@block-editor/git-documents-host"
@@ -21,7 +23,9 @@ It never checks out, resets, stashes, or deletes the repository's primary worktr
 const start = async (args: readonly string[]): Promise<void> => {
   const options = parseStart(args)
   const documents = await GitDocuments.open(options)
-  const assetsRoot = fileURLToPath(new URL("../../../dist/", import.meta.url))
+  const workspaceAssets = resolve(process.cwd(), "dist")
+  const packagedAssets = fileURLToPath(new URL("../../../dist/", import.meta.url))
+  const assetsRoot = existsSync(workspaceAssets) ? workspaceAssets : packagedAssets
   const server = createGitDocumentsServer({ documents, assetsRoot })
   server.listen(options.port, options.host)
   await once(server, "listening")

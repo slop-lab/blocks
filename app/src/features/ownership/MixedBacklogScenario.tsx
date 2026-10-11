@@ -18,6 +18,7 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
   const [selected, setSelected] = useState("TASK-104")
   const [query, setQuery] = useState("")
   const [draft, setDraft] = useState<LowerDraft | null>(null)
+  const [pending, setPending] = useState<"domain" | "draft" | null>(null)
   const [message, setMessage] = useState("서버 상태를 불러오는 중입니다.")
   const generation = useRef(0)
   const refresh = useCallback(() => {
@@ -50,8 +51,10 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
   )
   const mergeState = (next: MixedState) =>
     setState((current) => (current === null || next.revision > current.revision ? next : current))
-  const runDomain = (operation: Promise<MixedState>, success: string) =>
-    void operation
+  const runDomain = (operation: () => Promise<MixedState>, success: string) => {
+    if (pending !== null) return
+    setPending("domain")
+    void operation()
       .then((next) => {
         mergeState(next)
         setMessage(success)
@@ -59,8 +62,14 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
       .catch((error: unknown) =>
         setMessage(error instanceof Error ? error.message : "요청이 거절되었습니다."),
       )
+      .finally(() => setPending(null))
+  }
   const openLayer = (kind: "presentation" | "proposal") => {
     if (state === null || task === undefined) return
+    if (draft !== null && draft.editVersion > 0) {
+      setMessage("현재 하위 문서를 저장하거나 취소한 뒤 다른 편집기를 여세요.")
+      return
+    }
     const document =
       kind === "presentation"
         ? state.presentations[task.id]
@@ -86,7 +95,7 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
     )
   }, [])
   const saveDraft = () => {
-    if (draft === null || draft.editVersion === 0) return
+    if (draft === null || draft.editVersion === 0 || pending !== null) return
     const submitted = draft
     const operation =
       submitted.target.layer === "presentation"
@@ -105,6 +114,7 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
             )
           : null
     if (operation === null) return
+    setPending("draft")
     void operation
       .then((next) => {
         mergeState(next)
@@ -126,6 +136,7 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
       .catch((error: unknown) =>
         setMessage(error instanceof Error ? error.message : "요청이 거절되었습니다."),
       )
+      .finally(() => setPending(null))
   }
   if (state === null || task === undefined)
     return (
@@ -157,7 +168,11 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
         <aside className="mixed-search">
           <label>
             작업 검색
-            <input value={query} onChange={(event) => setQuery(event.target.value)} />
+            <input
+              value={query}
+              placeholder="작업명 또는 TASK-104"
+              onChange={(event) => setQuery(event.target.value)}
+            />
           </label>
           <h3>검색 결과</h3>
           {filtered.map((item) => (
@@ -190,11 +205,12 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
           <button
             className="button button--secondary"
             type="button"
+            disabled={pending !== null}
             onClick={() =>
-              runDomain(changeTaskStatus(state, task), "도메인 workflow 상태를 변경했습니다.")
+              runDomain(() => changeTaskStatus(state, task), "도메인 workflow 상태를 변경했습니다.")
             }
           >
-            서버 workflow 전환
+            {pending === "domain" ? "전환 중" : "서버 workflow 전환"}
           </button>
         </div>
         <aside className="mixed-lower-layer">
@@ -227,14 +243,24 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
                     : "에이전트 제안 편집기"
                 }
               />
-              <button
-                className="button button--primary"
-                disabled={draft.editVersion === 0}
-                type="button"
-                onClick={saveDraft}
-              >
-                하위 문서 저장
-              </button>
+              <div className="button-row">
+                <button
+                  className="button button--secondary"
+                  disabled={pending !== null}
+                  type="button"
+                  onClick={() => setDraft(null)}
+                >
+                  {draft.editVersion > 0 ? "변경 취소" : "편집 닫기"}
+                </button>
+                <button
+                  className="button button--primary"
+                  disabled={draft.editVersion === 0 || pending !== null}
+                  type="button"
+                  onClick={saveDraft}
+                >
+                  {pending === "draft" ? "저장 중" : "하위 문서 저장"}
+                </button>
+              </div>
             </>
           )}
         </aside>

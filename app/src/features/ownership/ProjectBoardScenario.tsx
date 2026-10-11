@@ -42,6 +42,7 @@ export const ProjectBoardScenario = () => {
   const [saved, setSaved] = useState<BlockDocument>(loadSaved)
   const [draft, setDraft] = useState(saved)
   const editor = useRef<CanonicalBlockEditorHandle>(null)
+  const dirty = encodeDocument(draft) !== encodeDocument(saved)
   const viewData = new Map(
     draft.blocks.map((block) => [
       block.id,
@@ -54,6 +55,7 @@ export const ProjectBoardScenario = () => {
     setSaved(draft)
   }
   const reload = () => {
+    if (dirty && !window.confirm("저장하지 않은 표현 변경을 버리시겠습니까?")) return
     setDraft(saved)
     editor.current?.reset(saved)
   }
@@ -73,10 +75,17 @@ export const ProjectBoardScenario = () => {
           <h2 id="board-title">프로젝트 보드</h2>
         </div>
         <div className="button-row">
+          <span
+            className={
+              dirty ? "status-badge status-badge--warning" : "status-badge status-badge--success"
+            }
+          >
+            {dirty ? "저장 전 변경" : "표현 저장됨"}
+          </span>
           <button className="button button--secondary" type="button" onClick={reload}>
             저장본 다시 열기
           </button>
-          <button className="button button--primary" type="button" onClick={save}>
+          <button className="button button--primary" type="button" onClick={save} disabled={!dirty}>
             표현 저장
           </button>
         </div>

@@ -8,6 +8,11 @@ import {
 const text = (block: Parameters<BlockRenderer>[0]) =>
   block.content.flatMap((inline) => (inline.kind === "text" ? [inline.text] : [])).join("")
 
+const statusLabels: Readonly<Record<string, string>> = {
+  running: "진행 중",
+  done: "완료",
+}
+
 export const captionBlock: BlockRegistration = {
   type: "ownership.caption",
   nodeName: "ownership_caption",
@@ -36,11 +41,13 @@ export const taskCardBlock: BlockRegistration = {
     const task = typeof data === "object" && data !== null && "title" in data ? data : null
     return (
       <article className="ownership-card">
-        <small>{String(block.attrs["taskId"] ?? "")}</small>
+        <small>연결 작업 · {String(block.attrs["taskId"] ?? "알 수 없음")}</small>
         <h3>{task === null ? "삭제된 작업" : String(task.title)}</h3>
         <p>{text(block)}</p>
         {task !== null && "status" in task && (
-          <span className="status-badge">{String(task.status)}</span>
+          <span className="status-badge">
+            {statusLabels[String(task.status)] ?? String(task.status)}
+          </span>
         )}
       </article>
     )

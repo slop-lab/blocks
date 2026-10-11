@@ -137,6 +137,12 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 - Review tabs expose structured changes, before/working content, per-document history restore, managed branches, and fixed remote actions. Divergence and conflicts always require explicit controls and textual status.
 - Below 1100px the review rail moves below the editor. Below 768px all regions become one flow, the file tree receives a bounded internal list, and before/working diff panes stack.
 
+### Structured Workspace
+- A fixed-sidenav list/detail shell presents a nested page tree beside one paper document. The document is the only primary scroll owner; database tables may scroll inline on narrow screens.
+- Page, database, and synced-source status use the shared badge and action-button primitives. Synced occurrences use `accent-soft` with a textual shared-source label, never color alone.
+- Headings render their authored relative level plus embedding depth, clamped to HTML h1-h6; rendering never writes the derived level back to JSON.
+- Below 768px the page tree becomes a collapsible top rail and the document keeps 16px gutters. Search and the Ctrl-K command palette remain keyboard reachable at every width.
+
 ## 6. Motion & Interaction
 
 - Micro: `--motion-fast` 120ms ease-out for press/focus feedback.

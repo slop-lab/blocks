@@ -6,10 +6,17 @@
 .structured-database h2 {
   margin: 0;
   font: var(--type-h3);
+  white-space: nowrap;
+}
+.structured-database > header {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
 }
 .structured-database__tools {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--space-2);
 }
 .structured-database__tools :where(input, select, button) {
@@ -140,7 +147,11 @@
   }
   .structured-database > header {
     align-items: flex-start;
+    grid-template-columns: minmax(0, 1fr);
     flex-direction: column;
+  }
+  .structured-database__tools {
+    justify-content: flex-start;
   }
 }
 @media (max-width: 767px), (pointer: coarse) {

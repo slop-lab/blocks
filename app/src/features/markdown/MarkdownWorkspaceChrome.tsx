@@ -22,10 +22,10 @@ const TreeRows = ({
   <>
     {nodes.map((node) =>
       node.kind === "directory" ? (
-        <div className="markdown-tree" key={node.path}>
-          <strong className="markdown-tree__directory">{node.name}</strong>
+        <details className="markdown-tree" key={node.path} open>
+          <summary className="markdown-tree__directory">{node.name}</summary>
           <TreeRows nodes={node.children} activeName={activeName} dirty={dirty} onOpen={onOpen} />
-        </div>
+        </details>
       ) : (
         <button
           className={activeName === node.path ? "nav-row nav-row--active" : "nav-row"}
@@ -52,7 +52,6 @@ const TreeRows = ({
 export const MarkdownFileList = ({ tree, activeName, dirty, onOpen }: FileListProps) => (
   <aside className="markdown-files">
     <header>
-      <span className="eyebrow">MARKDOWN ROOT</span>
       <h2>파일</h2>
     </header>
     <nav aria-label="Markdown 파일 목록">
@@ -69,11 +68,7 @@ type LineMapProps = {
 }
 
 export const MarkdownLineMap = ({ mappings, selectedId, disabled, onSelect }: LineMapProps) => (
-  <aside className="markdown-map" aria-label="줄과 객체 매핑">
-    <header>
-      <span className="eyebrow">TEMPORARY MAP</span>
-      <h2>줄 매핑</h2>
-    </header>
+  <section aria-label="줄과 객체 매핑">
     <div className="markdown-map__list">
       {mappings.map((mapping) => (
         <button
@@ -95,7 +90,7 @@ export const MarkdownLineMap = ({ mappings, selectedId, disabled, onSelect }: Li
         </button>
       ))}
     </div>
-  </aside>
+  </section>
 )
 
 type ConflictProps = {
@@ -112,7 +107,6 @@ export const MarkdownConflict = ({ disk, onDownload, onReload }: ConflictProps) 
       aria-modal="true"
       aria-labelledby="markdown-conflict-title"
     >
-      <span className="eyebrow">STALE WRITE REJECTED</span>
       <h2 id="markdown-conflict-title">디스크 버전과 충돌했습니다</h2>
       <p>
         초안은 그대로 보존했습니다. 최신 디스크 버전을 다시 열거나 초안을 파일로 내려받을 수

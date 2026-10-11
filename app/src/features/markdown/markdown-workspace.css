@@ -9,7 +9,7 @@
   --markdown-line: 1px;
   --markdown-line-active: 2px;
   display: grid;
-  grid-template-columns: calc(var(--space-16) * 4) minmax(0, 1fr) calc(var(--space-16) * 4);
+  grid-template-columns: calc(var(--space-16) * 4) minmax(0, 1fr);
   block-size: 100%;
   max-block-size: 100%;
   min-block-size: 0;
@@ -29,7 +29,15 @@
   border-inline-end: var(--markdown-line) solid var(--line);
 }
 .markdown-map {
-  border-inline-start: var(--markdown-line) solid var(--line);
+  grid-column: 1 / -1;
+  border-block-start: var(--markdown-line) solid var(--line);
+}
+.markdown-map > summary {
+  min-block-size: var(--markdown-touch-height);
+  padding: var(--space-3) var(--space-5);
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: var(--markdown-type-small);
 }
 .markdown-files header,
 .markdown-map header {
@@ -124,8 +132,7 @@
   font-size: var(--markdown-type-small);
   font-weight: 600;
 }
-.markdown-source textarea,
-.markdown-block textarea {
+.markdown-source textarea {
   inline-size: 100%;
   border: var(--markdown-line) solid var(--line);
   border-radius: var(--radius-control);
@@ -142,25 +149,6 @@
   resize: none;
 }
 
-.markdown-blocks {
-  display: grid;
-  gap: var(--space-3);
-  max-inline-size: var(--markdown-wide-measure);
-  margin-inline: auto;
-}
-.markdown-block {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: var(--markdown-line) solid var(--line);
-  border-radius: var(--radius-card);
-  background: var(--paper);
-}
-.markdown-block--selected {
-  border-color: var(--line-strong);
-  background: var(--accent-soft);
-}
-.markdown-block__meta,
 .markdown-map__row {
   display: flex;
   align-items: center;
@@ -173,18 +161,9 @@
   padding: var(--space-2);
   text-align: start;
 }
-.markdown-block__meta code,
 .markdown-map__row code {
   color: var(--ink-faint);
   font: var(--markdown-type-mono) / 1.4 var(--font-mono);
-}
-.markdown-block small {
-  color: var(--locked);
-  font-size: var(--markdown-type-caption);
-}
-.markdown-block textarea[readonly] {
-  background: var(--locked-soft);
-  color: var(--locked);
 }
 .markdown-map__list {
   display: grid;
@@ -222,24 +201,10 @@
 
 @media (max-width: 1099px) {
   .markdown-workspace {
-    grid-template-columns: calc(var(--space-16) * 3) minmax(0, 1fr);
+    display: block;
     block-size: auto;
     max-block-size: none;
     overflow: visible;
-  }
-  .markdown-map {
-    grid-column: 2;
-    border-block-start: var(--markdown-line) solid var(--line);
-    border-inline-start: 0;
-  }
-  .markdown-main {
-    min-block-size: 100dvh;
-  }
-}
-
-@media (max-width: 767px) {
-  .markdown-workspace {
-    display: block;
   }
   .markdown-files {
     border-inline-end: 0;
@@ -252,6 +217,18 @@
   }
   .markdown-files .nav-row {
     min-inline-size: calc(var(--space-16) * 2);
+  }
+  .markdown-map {
+    border-inline-start: 0;
+  }
+  .markdown-main {
+    min-block-size: 100dvh;
+  }
+}
+
+@media (max-width: 767px) {
+  .markdown-workspace {
+    display: block;
   }
   .markdown-header {
     align-items: flex-start;

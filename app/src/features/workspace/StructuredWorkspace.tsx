@@ -13,6 +13,7 @@ import {
   type WorkspacePayload,
 } from "./workspace-api"
 import "./workspace.css"
+import "./workspace-overlays.css"
 
 type SaveTarget = { readonly kind: "pages" | "databases" | "sources"; readonly id: string }
 

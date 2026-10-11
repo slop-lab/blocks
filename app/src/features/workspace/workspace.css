@@ -1,5 +1,3 @@
-@import "./workspace-overlays.css";
-
 .structured-workspace {
   block-size: 100dvh;
   display: grid;

@@ -39,16 +39,14 @@ try {
   await page.waitForFunction(
     () => document.querySelector(".markdown-header h1")?.textContent === "notes.md",
   )
+  const editor = markdown.getByLabel("Markdown 문서 편집기", { exact: true })
+  await editor.locator("h1").click()
+  await page.keyboard.press("Home")
+  await page.keyboard.press("Shift+End")
+  await page.keyboard.insertText("Changed title")
+  await markdown.getByRole("tab", { name: "Markdown 원문", exact: true }).click()
   const source = markdown.getByLabel("Markdown 원문", { exact: true })
-  await source.fill(`Preface\n\n${original}`)
-  await markdown.getByRole("tab", { name: "블록", exact: true }).click()
-  const heading = markdown.getByLabel("제목 3행부터 3행", { exact: true })
-  await heading.fill("# Changed title\n")
-  await markdown.getByRole("tab", { name: "원문", exact: true }).click()
-  assert.equal(
-    await source.inputValue(),
-    `Preface\n\n${original.replace("# File notes", "# Changed title")}`,
-  )
+  assert.equal(await source.inputValue(), original.replace("# File notes", "# Changed title"))
   await markdown.getByRole("button", { name: "저장", exact: true }).click()
   await page.waitForFunction(() =>
     document.querySelector(".markdown-status")?.textContent?.includes("디스크에 저장했습니다"),
@@ -68,7 +66,7 @@ try {
   assert.ok(recoveryPath)
   assert.match(await readFile(recoveryPath, "utf8"), /Local draft/)
   await markdown.getByRole("button", { name: "디스크 버전 다시 열기", exact: true }).click()
-  console.log("PASS Markdown real file save, source line remap, opaque source and conflict draft")
+  console.log("PASS Markdown visual edit, real file save, opaque source and conflict draft")
 
   await navigate("함께 쓰기")
   const collaboration = page.locator(".collaboration-workspace")

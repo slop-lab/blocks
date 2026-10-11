@@ -1,7 +1,7 @@
 import type { BlockDocument } from "@block-editor/model"
 import { BlockViewer } from "@block-editor/model/viewer"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { CanonicalBlockEditor } from "./CustomNotesEditor"
+import { MixedLowerLayer } from "./MixedLowerLayer"
 import {
   changeTaskStatus,
   type LowerDraft,
@@ -10,7 +10,7 @@ import {
   savePresentation,
   saveProposal,
 } from "./mixed-api"
-import { presentationProfile, presentationRenderers } from "./presentation-profile"
+import { presentationRenderers } from "./presentation-profile"
 
 type Props = { readonly onOpenFiles: (path: string) => void }
 export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
@@ -213,57 +213,15 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
             {pending === "domain" ? "전환 중" : "서버 workflow 전환"}
           </button>
         </div>
-        <aside className="mixed-lower-layer">
-          <h3>독립 하위 원본</h3>
-          <button
-            className="button button--secondary"
-            type="button"
-            onClick={() => openLayer("presentation")}
-          >
-            표현 편집
-          </button>
-          <button
-            className="button button--secondary"
-            type="button"
-            onClick={() => openLayer("proposal")}
-          >
-            제안 편집
-          </button>
-          {draft !== null && (
-            <>
-              <CanonicalBlockEditor
-                key={`${draft.target.layer}-${draft.target.taskId}`}
-                document={draft.document}
-                onChange={changed}
-                profile={presentationProfile}
-                modelId={`mixed-${draft.target.layer}-${draft.target.taskId}`}
-                label={
-                  draft.target.layer === "presentation"
-                    ? "혼합 표현 편집기"
-                    : "에이전트 제안 편집기"
-                }
-              />
-              <div className="button-row">
-                <button
-                  className="button button--secondary"
-                  disabled={pending !== null}
-                  type="button"
-                  onClick={() => setDraft(null)}
-                >
-                  {draft.editVersion > 0 ? "변경 취소" : "편집 닫기"}
-                </button>
-                <button
-                  className="button button--primary"
-                  disabled={draft.editVersion === 0 || pending !== null}
-                  type="button"
-                  onClick={saveDraft}
-                >
-                  {pending === "draft" ? "저장 중" : "하위 문서 저장"}
-                </button>
-              </div>
-            </>
-          )}
-        </aside>
+        <MixedLowerLayer
+          draft={draft}
+          pending={pending !== null}
+          saving={pending === "draft"}
+          onOpen={openLayer}
+          onChange={changed}
+          onCancel={() => setDraft(null)}
+          onSave={saveDraft}
+        />
       </div>
       <footer role="status">{message}</footer>
     </section>

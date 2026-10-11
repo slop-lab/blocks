@@ -56,11 +56,13 @@ export const WorkflowWorkspace = () => {
   const [text, setText] = useState(initialText)
   const [documentRevision, setDocumentRevision] = useState<number | null>(null)
   const [message, setMessage] = useState("서버 세션을 여는 중입니다.")
+  const [busy, setBusy] = useState<"opening" | "saving" | "transition" | null>(null)
 
   const open = useCallback(async (nextIdentity: Identity): Promise<void> => {
-    await client.post(`api/demo/session?identity=${nextIdentity}`)
-    setIdentity(nextIdentity)
+    setBusy("opening")
     try {
+      await client.post(`api/demo/session?identity=${nextIdentity}`)
+      setIdentity(nextIdentity)
       const document = documentSchema.parse(await client.get("api/documents/team-minutes").json())
       setDocumentRevision(document.revision)
       if (
@@ -71,8 +73,12 @@ export const WorkflowWorkspace = () => {
       )
         setText(document.content.text)
       setWorkflow(workflowSchema.parse(await client.get("api/workflows/team-minutes").json()))
+      setMessage(`${identityLabels[nextIdentity]} 권한을 서버에서 확인했습니다.`)
     } catch (error) {
-      if (!(error instanceof HTTPError) || error.response.status !== 404) throw error
+      if (!(error instanceof HTTPError) || error.response.status !== 404) {
+        setMessage(error instanceof Error ? error.message : "서버 상태를 불러오지 못했습니다.")
+        return
+      }
       if (nextIdentity !== "author") {
         setWorkflow(null)
         setMessage("작성자가 아직 문서를 만들지 않았습니다.")
@@ -90,8 +96,10 @@ export const WorkflowWorkspace = () => {
       )
       setDocumentRevision(document.revision)
       setWorkflow(workflowSchema.parse(await client.get("api/workflows/team-minutes").json()))
+      setMessage(`${identityLabels[nextIdentity]} 권한을 서버에서 확인했습니다.`)
+    } finally {
+      setBusy(null)
     }
-    setMessage(`${identityLabels[nextIdentity]} 권한을 서버에서 확인했습니다.`)
   }, [])
 
   useEffect(() => {
@@ -99,20 +107,33 @@ export const WorkflowWorkspace = () => {
   }, [open])
 
   const save = async (): Promise<void> => {
-    if (documentRevision === null) return
-    const document = documentSchema.parse(
-      await client
-        .put("api/documents/team-minutes", {
-          json: { expectedRevision: documentRevision, content: { text } },
-        })
-        .json(),
-    )
-    setDocumentRevision(document.revision)
-    setMessage("초안을 durable 문서에 저장했습니다.")
+    if (documentRevision === null || busy !== null) return
+    setBusy("saving")
+    try {
+      const document = documentSchema.parse(
+        await client
+          .put("api/documents/team-minutes", {
+            json: { expectedRevision: documentRevision, content: { text } },
+          })
+          .json(),
+      )
+      setDocumentRevision(document.revision)
+      setMessage("초안을 durable 문서에 저장했습니다.")
+    } catch (error) {
+      if (error instanceof HTTPError && error.response.status === 409) {
+        await open(identity)
+        setMessage("다른 변경을 불러왔습니다. 내용을 확인한 뒤 다시 저장하세요.")
+        return
+      }
+      setMessage(error instanceof Error ? error.message : "초안을 저장하지 못했습니다.")
+    } finally {
+      setBusy(null)
+    }
   }
 
   const transition = async (action: "submit" | "approve"): Promise<void> => {
-    if (workflow === null) return
+    if (workflow === null || busy !== null) return
+    setBusy("transition")
     try {
       const next = workflowSchema.parse(
         await client
@@ -128,14 +149,15 @@ export const WorkflowWorkspace = () => {
         error instanceof HTTPError &&
         (error.response.status === 403 || error.response.status === 409)
       ) {
-        setMessage(
-          error.response.status === 403
-            ? "현재 역할에는 이 작업 권한이 없습니다."
-            : "다른 변경이 먼저 반영되었습니다. 다시 여세요.",
-        )
+        if (error.response.status === 409) {
+          await open(identity)
+          setMessage("다른 변경을 불러왔습니다. 현재 상태에서 다시 시도하세요.")
+        } else setMessage("현재 역할에는 이 작업 권한이 없습니다.")
         return
       }
-      throw error
+      setMessage(error instanceof Error ? error.message : "워크플로 작업을 완료하지 못했습니다.")
+    } finally {
+      setBusy(null)
     }
   }
 
@@ -156,6 +178,7 @@ export const WorkflowWorkspace = () => {
               }
               type="button"
               key={value}
+              disabled={busy !== null}
               onClick={() => void open(value)}
             >
               {identityLabels[value]}
@@ -179,26 +202,26 @@ export const WorkflowWorkspace = () => {
             <button
               className="button button--secondary"
               type="button"
-              disabled={!editable}
+              disabled={!editable || busy !== null}
               onClick={() => void save()}
             >
-              초안 저장
+              {busy === "saving" ? "저장 중" : "초안 저장"}
             </button>
             <button
               className="button button--primary"
               type="button"
-              disabled={!editable}
+              disabled={!editable || busy !== null}
               onClick={() => void transition("submit")}
             >
-              검토 요청
+              {busy === "transition" && identity === "author" ? "요청 중" : "검토 요청"}
             </button>
             <button
               className="button button--primary"
               type="button"
-              disabled={identity !== "reviewer" || workflow?.state !== "submitted"}
+              disabled={identity !== "reviewer" || workflow?.state !== "submitted" || busy !== null}
               onClick={() => void transition("approve")}
             >
-              승인
+              {busy === "transition" && identity === "reviewer" ? "승인 중" : "승인"}
             </button>
           </div>
           <p role="status">{message}</p>

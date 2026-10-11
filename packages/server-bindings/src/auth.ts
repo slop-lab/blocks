@@ -62,9 +62,14 @@ export class DemoSessionAuthority {
     const expected = this.signature(payload)
     if (received.length !== expected.length || !timingSafeEqual(received, expected))
       throw new InvalidSessionError("Invalid demo session signature")
-    const session = sessionSchema.parse(
-      JSON.parse(Buffer.from(payload, "base64url").toString("utf8")),
-    )
+    let session: DemoSession
+    try {
+      session = sessionSchema.parse(JSON.parse(Buffer.from(payload, "base64url").toString("utf8")))
+    } catch (error) {
+      if (error instanceof SyntaxError || error instanceof z.ZodError)
+        throw new InvalidSessionError("Malformed demo session")
+      throw error
+    }
     if (
       session.issuer !== this.options.issuer ||
       session.expiresAt <= Math.floor(Date.now() / 1000)

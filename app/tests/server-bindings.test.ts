@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -6,12 +7,19 @@ import {
   DemoSessionAuthority,
   FileCasRepository,
   FileRoomStore,
+  InvalidSessionError,
   WorkflowRepository,
   WorkflowService,
 } from "@block-editor/server-bindings"
 import { afterEach, describe, expect, it } from "vitest"
 
 const roots: string[] = []
+const signedPayload = (secret: string, value: string): string => {
+  const payload = Buffer.from(value).toString("base64url")
+  const signature = createHmac("sha256", secret).update(payload).digest("base64url")
+  return `${payload}.${signature}`
+}
+
 const temporaryRoot = async () => {
   const root = await mkdtemp(join(tmpdir(), "block-editor-bindings-"))
   roots.push(root)
@@ -106,6 +114,32 @@ describe("server bindings package", () => {
     expect(() => authority.require(session, "private-notes", "read")).toThrow(AccessDeniedError)
     expect(() => authority.require(session, "public-notes", "write")).toThrow(AccessDeniedError)
   })
+
+  it("classifies expired demo sessions as invalid", () => {
+    const authority = new DemoSessionAuthority({
+      secret: "test-secret-with-enough-entropy",
+      issuer: "tests",
+    })
+    const expiredAuthority = new DemoSessionAuthority({
+      secret: "test-secret-with-enough-entropy",
+      issuer: "tests",
+      lifetimeSeconds: -1,
+    })
+    const token = expiredAuthority.issue({ subject: "viewer", role: "viewer", rooms: ["notes"] })
+
+    expect(() => authority.verify(token)).toThrow(InvalidSessionError)
+  })
+
+  it.each(["not-json", JSON.stringify({ subject: "viewer" })])(
+    "classifies signed malformed demo session payload %j as invalid",
+    (value) => {
+      const secret = "test-secret-with-enough-entropy"
+      const authority = new DemoSessionAuthority({ secret, issuer: "tests" })
+      const token = signedPayload(secret, value)
+
+      expect(() => authority.verify(token)).toThrow(InvalidSessionError)
+    },
+  )
 
   it("requires explicit versioned submission and approval actions", async () => {
     const root = await temporaryRoot()

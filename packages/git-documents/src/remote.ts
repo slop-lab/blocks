@@ -1,5 +1,6 @@
 import { GitDocumentsError } from "./errors.js"
 import { runGit } from "./git.js"
+import { mutateWorktree } from "./queue.js"
 import type { MergeResult, RemoteStatus } from "./types.js"
 
 type RemoteContext = {
@@ -16,14 +17,16 @@ export class RemoteOperations {
   constructor(private readonly context: RemoteContext) {}
 
   async fetch(): Promise<void> {
-    const remote = await runGit({
-      cwd: this.context.worktree,
-      args: ["remote", "get-url", this.context.remote],
-      allowFailure: true,
+    return mutateWorktree(this.context.worktree, async () => {
+      const remote = await runGit({
+        cwd: this.context.worktree,
+        args: ["remote", "get-url", this.context.remote],
+        allowFailure: true,
+      })
+      if (remote.code !== 0)
+        throw new GitDocumentsError("remote_unavailable", "Configured origin remote is unavailable")
+      await runGit({ cwd: this.context.worktree, args: ["fetch", "--prune", this.context.remote] })
     })
-    if (remote.code !== 0)
-      throw new GitDocumentsError("remote_unavailable", "Configured origin remote is unavailable")
-    await runGit({ cwd: this.context.worktree, args: ["fetch", "--prune", this.context.remote] })
   }
 
   async status(): Promise<RemoteStatus> {
@@ -54,82 +57,92 @@ export class RemoteOperations {
   }
 
   async fastForward(): Promise<RemoteStatus> {
-    if (!(await this.context.isClean()))
-      throw new GitDocumentsError(
-        "dirty_worktree",
-        "Save or commit document changes before syncing",
-      )
-    const status = await this.status()
-    if (status.state === "diverged")
-      throw new GitDocumentsError("diverged", "Local and remote branches have diverged", {
-        ahead: status.ahead,
-        behind: status.behind,
-      })
-    if (status.state === "behind")
-      await runGit({
-        cwd: this.context.worktree,
-        args: ["merge", "--ff-only", `${this.context.remote}/${this.context.branch}`],
-      })
-    return this.status()
+    return mutateWorktree(this.context.worktree, async () => {
+      if (!(await this.context.isClean()))
+        throw new GitDocumentsError(
+          "dirty_worktree",
+          "Save or commit document changes before syncing",
+        )
+      const status = await this.status()
+      if (status.state === "diverged")
+        throw new GitDocumentsError("diverged", "Local and remote branches have diverged", {
+          ahead: status.ahead,
+          behind: status.behind,
+        })
+      if (status.state === "behind")
+        await runGit({
+          cwd: this.context.worktree,
+          args: ["merge", "--ff-only", `${this.context.remote}/${this.context.branch}`],
+        })
+      return this.status()
+    })
   }
 
   async push(): Promise<RemoteStatus> {
-    const status = await this.status()
-    if (status.state === "diverged" || status.behind > 0)
-      throw new GitDocumentsError("diverged", "Fetch and resolve remote changes before pushing")
-    await runGit({
-      cwd: this.context.worktree,
-      args: ["push", "-u", this.context.remote, `HEAD:refs/heads/${this.context.branch}`],
+    return mutateWorktree(this.context.worktree, async () => {
+      const status = await this.status()
+      if (status.state === "diverged" || status.behind > 0)
+        throw new GitDocumentsError("diverged", "Fetch and resolve remote changes before pushing")
+      await runGit({
+        cwd: this.context.worktree,
+        args: ["push", "-u", this.context.remote, `HEAD:refs/heads/${this.context.branch}`],
+      })
+      return this.status()
     })
-    return this.status()
   }
 
   async merge(): Promise<MergeResult> {
-    if (!(await this.context.isClean()))
-      throw new GitDocumentsError(
-        "dirty_worktree",
-        "Save or commit document changes before merging",
-      )
-    const status = await this.status()
-    if (status.state !== "diverged")
-      throw new GitDocumentsError("diverged", "A merge is available only for diverged branches")
-    const result = await runGit({
-      cwd: this.context.worktree,
-      args: ["merge", "--no-commit", "--no-ff", `${this.context.remote}/${this.context.branch}`],
-      allowFailure: true,
+    return mutateWorktree(this.context.worktree, async () => {
+      if (!(await this.context.isClean()))
+        throw new GitDocumentsError(
+          "dirty_worktree",
+          "Save or commit document changes before merging",
+        )
+      const status = await this.status()
+      if (status.state !== "diverged")
+        throw new GitDocumentsError("diverged", "A merge is available only for diverged branches")
+      const result = await runGit({
+        cwd: this.context.worktree,
+        args: ["merge", "--no-commit", "--no-ff", `${this.context.remote}/${this.context.branch}`],
+        allowFailure: true,
+      })
+      const conflicts = await this.context.conflicts()
+      if (result.code !== 0 && conflicts.length === 0)
+        throw new GitDocumentsError(
+          "git_failed",
+          result.stderr.trim() || "Merge could not be prepared",
+        )
+      return { state: conflicts.length === 0 ? "ready" : "conflicts", conflicts }
     })
-    const conflicts = await this.context.conflicts()
-    if (result.code !== 0 && conflicts.length === 0)
-      throw new GitDocumentsError(
-        "git_failed",
-        result.stderr.trim() || "Merge could not be prepared",
-      )
-    return { state: conflicts.length === 0 ? "ready" : "conflicts", conflicts }
   }
 
   async completeMerge(message: string): Promise<RemoteStatus> {
-    const conflicts = await this.context.conflicts()
-    if (conflicts.length > 0)
-      throw new GitDocumentsError("diverged", "Resolve every document conflict before committing")
-    const staged = await runGit({
-      cwd: this.context.worktree,
-      args: ["diff", "--cached", "--name-only", "-z"],
+    return mutateWorktree(this.context.worktree, async () => {
+      const conflicts = await this.context.conflicts()
+      if (conflicts.length > 0)
+        throw new GitDocumentsError("diverged", "Resolve every document conflict before committing")
+      const staged = await runGit({
+        cwd: this.context.worktree,
+        args: ["diff", "--cached", "--name-only", "-z"],
+      })
+      const paths = staged.stdout.split("\0").filter(Boolean)
+      if (paths.length === 0 || paths.some((path) => !path.startsWith(`${this.context.docs}/`)))
+        throw new GitDocumentsError(
+          "staged_changes",
+          "Merge contains changes outside the documents root",
+        )
+      await runGit({
+        cwd: this.context.worktree,
+        args: ["commit", "-m", message.trim()],
+        ...(this.context.author === undefined ? {} : { author: this.context.author }),
+      })
+      return this.status()
     })
-    const paths = staged.stdout.split("\0").filter(Boolean)
-    if (paths.length === 0 || paths.some((path) => !path.startsWith(`${this.context.docs}/`)))
-      throw new GitDocumentsError(
-        "staged_changes",
-        "Merge contains changes outside the documents root",
-      )
-    await runGit({
-      cwd: this.context.worktree,
-      args: ["commit", "-m", message.trim()],
-      ...(this.context.author === undefined ? {} : { author: this.context.author }),
-    })
-    return this.status()
   }
 
   async abortMerge(): Promise<void> {
-    await runGit({ cwd: this.context.worktree, args: ["merge", "--abort"] })
+    await mutateWorktree(this.context.worktree, async () => {
+      await runGit({ cwd: this.context.worktree, args: ["merge", "--abort"] })
+    })
   }
 }

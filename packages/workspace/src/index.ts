@@ -30,6 +30,7 @@ export type {
   Workspace,
 } from "./schemas.js"
 export {
+  blockSchema,
   databaseSchema,
   entityIdSchema,
   pageDocumentSchema,

@@ -66,6 +66,7 @@ Git identity는 명시한 author, CLI 환경, 저장소/사용자 설정 순으�
 - **표와 코드**: 셀 선택, 붙여넣기, 행·열 변경, 병합·분할과 독립 CodeMirror 입력 영역을 사용합니다. 공유 도구 모음은 활성 입력 영역에만 적용됩니다.
 - **문서 보관함**: 문서 일부를 서버에서 가져와 가상화하여 표시합니다. 저장은 개별 블록의 revision을 확인하는 durable patch이며 아직 읽지 않은 부분을 교체하지 않습니다.
 - **수정안 비교**: 원본과 분리된 후보를 비교하고 변경을 선택하여 수락합니다. 연결된 변경의 의존성과 원본 기준을 확인합니다. 스트림 제공자를 취소하거나 교체해도 이전 결과를 새 후보에 섞지 않습니다.
+- **문서와 데이터베이스**: `?workspace=structured-workspace`에서 JSON 문서, 중첩 페이지, typed database, 공유 블록을 편집합니다. 페이지 본문·데이터베이스·공유 원본은 서로 다른 CAS entity로 저장되며 600ms 자동 저장과 2초 외부 변경 갱신을 사용합니다.
 
 Markdown·협업·표·대용량 기능은 각각의 진입점을 가져오거나 해당 예제로 이동할 때 사용합니다. 기본 viewer에서 해당 런타임을 초기화할 필요는 없습니다.
 
@@ -90,6 +91,7 @@ Markdown·협업·표·대용량 기능은 각각의 진입점을 가져오거�
 | `@block-editor/server-bindings` | Node 파일 CAS 저장소, Yjs room 저장소, 서명된 데모 세션과 scope 검사, versioned 승인 workflow |
 | `@block-editor/model` | 엔진과 무관한 문서 계약, codec, 명시적 block registry와 React viewer |
 | `@block-editor/prosemirror` | opt-in ProseMirror schema/snapshot adapter와 block별 leaf export |
+| `@block-editor/workspace` | 엔진 독립 페이지/문서/database/synced-source Zod 계약, 계층 명령, typed row patch, filter/sort와 context heading projection |
 
 두 패키지는 `corepack pnpm build:packages`로 ESM과 선언 파일을 `packages/*/dist`에 생성합니다. 앱은 로컬 노트의 저장 알림, 호스트 폼의 revision bookmark, 수정안의 비동기 target guard, 부분 문서 저장 acknowledgement를 `@block-editor/bindings`에서 직접 사용합니다. 서버는 `.runtime` 아래 durable document/room/workflow 저장소와 권한 검사를 `@block-editor/server-bindings`에서 사용합니다.
 
@@ -120,6 +122,22 @@ const view = <BlockViewer content={document} renderers={renderers} />
 ```
 
 독립 leaf는 `@block-editor/prosemirror/paragraph`, `/heading`, `/quote`, `/code`, `/caption`, `/task-card`입니다. 공통 preset이 필요한 소비자만 `/preset`을 가져옵니다. 모든 package는 ESM과 선언 파일을 만들고 `sideEffects: false`를 선언합니다. `app/tests/tree-shaking.test.ts`는 실제 esbuild metafile의 입력 모듈을 검사하여 custom-text 소비자에 기본 block leaf가 없고 view-only 소비자에 ProseMirror가 없음을 증명합니다.
+
+구조화 도메인은 렌더링 엔진과 Node 저장소를 import하지 않습니다. 호스트는 schema로 경계를 파싱하고 명령 결과를 자체 CAS adapter에 전달합니다.
+
+```ts
+import {
+  filterAndSortRows,
+  headingLevelAtDepth,
+  movePage,
+  workspaceSchema,
+  type WorkspaceStoragePort,
+} from "@block-editor/workspace"
+
+const workspace = workspaceSchema.parse(payload)
+const moved = movePage(workspace, "research", "project")
+const htmlLevel = headingLevelAtDepth(2, 3) // 5; 저장된 2는 바뀌지 않음
+```
 
 ## 소유권 예제
 
@@ -158,7 +176,11 @@ const view = <BlockViewer content={document} renderers={renderers} />
 - `POST /api/demo/session?identity=author|reviewer|viewer`: 서명된 opaque 데모 세션 cookie 발급.
 - `GET/PUT /api/documents/:id`: room scope와 role을 검사하는 durable CAS 문서.
 - `POST /api/workflows/:id/submit|approve`: 제출한 콘텐츠 revision을 고정하는 versioned 제출/승인과 audit history. 제출·승인된 문서는 이 예제 API에서 수정할 수 없습니다.
+- `GET /api/workspace`: sample workspace와 별도 page/database/synced-source entity를 읽습니다.
+- `PUT /api/workspace/:kind/:id`: `trees|pages|databases|sources` entity를 Zod로 파싱한 뒤 `expectedRevision` CAS로 저장합니다. 새 page document만 revision 없이 생성할 수 있습니다.
 - `.runtime/`은 실행 데이터이며 Git에서 제외합니다.
+
+구조화 작업 공간은 기본 서버에서 `.runtime/workspace/{trees,pages,databases,sources}`에 entity별 JSON snapshot과 audit history를 저장합니다. `RUNTIME_ROOT`를 직접 받는 API는 없으며 테스트는 `createApplicationServer({ runtimeRoot })`로 임시 root를 격리합니다. 저장 직렬화는 한 Node process 안의 파일별 queue와 atomic rename을 사용합니다. 여러 process 또는 분산 transaction을 제공한다고 가정하지 않습니다.
 
 Markdown은 실제 파일에 저장되고 로컬 노트·표와 코드는 브라우저에 저장됩니다. 협업 방, 일반 문서, 문서 보관함의 수정 블록과 승인 workflow는 `.runtime`의 원자적 파일 교체를 사용합니다. 협업 클라이언트는 연결이 끊겨도 현재 replica를 유지하며 재연결 시 합치고, 서버는 종료 전에 마지막 Yjs snapshot을 저장하여 재시작 후 다시 엽니다. 보관함의 기본 1,600개 원문은 synthetic이며 수정본만 저장합니다.
 

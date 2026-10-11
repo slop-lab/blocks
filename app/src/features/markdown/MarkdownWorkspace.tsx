@@ -1,10 +1,11 @@
 import { CheckIcon, ReloadIcon } from "@radix-ui/react-icons"
 import { useRef } from "react"
-import { MarkdownBlockEditor, mappingRange } from "./MarkdownBlockEditor"
+import { MarkdownRichEditor, type MarkdownRichEditorHandle } from "./MarkdownRichEditor"
 import { MarkdownConflict, MarkdownFileList, MarkdownLineMap } from "./MarkdownWorkspaceChrome"
 import type { MarkdownMapping } from "./markdown-api"
 import { useMarkdownWorkspace } from "./useMarkdownWorkspace"
 import "./markdown-workspace.css"
+import "./markdown-rich.css"
 
 export const MarkdownWorkspace = ({
   initialFile = null,
@@ -13,15 +14,17 @@ export const MarkdownWorkspace = ({
 }) => {
   const workspace = useMarkdownWorkspace(initialFile)
   const sourceRef = useRef<HTMLTextAreaElement>(null)
+  const richRef = useRef<MarkdownRichEditorHandle>(null)
 
   const selectMapping = (mapping: MarkdownMapping) => {
     if (!workspace.mappingFresh) return
     workspace.setSelectedId(mapping.id)
-    if (workspace.mode === "source") {
-      const range = mappingRange(sourceRef.current?.value ?? workspace.draft, mapping)
-      sourceRef.current?.focus()
-      sourceRef.current?.setSelectionRange(range.start, range.end)
-    }
+    if (workspace.mode !== "source") return
+    const lines = (sourceRef.current?.value ?? workspace.draft).split(/(?<=\n)/u)
+    const start = lines.slice(0, mapping.startLine - 1).join("").length
+    const end = lines.slice(0, mapping.endLine).join("").length
+    sourceRef.current?.focus()
+    sourceRef.current?.setSelectionRange(start, end)
   }
 
   const downloadDraft = () => {
@@ -114,59 +117,72 @@ export const MarkdownWorkspace = ({
           <button
             type="button"
             role="tab"
-            aria-selected={workspace.mode === "source"}
+            aria-selected={workspace.mode === "visual"}
             disabled={workspace.composing || workspace.loading}
-            onClick={() => workspace.setMode("source")}
+            onClick={() => {
+              const current = richRef.current?.source()
+              if (current !== workspace.draft) richRef.current?.resetSource(workspace.draft)
+              workspace.setMode("visual")
+            }}
           >
-            원문
+            문서
           </button>
           <button
             type="button"
             role="tab"
-            aria-selected={workspace.mode === "blocks"}
-            disabled={!workspace.mappingFresh || workspace.composing || workspace.loading}
-            onClick={() => workspace.setMode("blocks")}
+            aria-selected={workspace.mode === "source"}
+            disabled={workspace.composing || workspace.loading}
+            onClick={() => workspace.setMode("source")}
           >
-            블록
+            Markdown 원문
           </button>
         </div>
         <div className="markdown-editor-pane">
           {workspace.loading || workspace.disk === null ? (
             <p role="status">파일을 불러오는 중입니다.</p>
-          ) : workspace.mode === "source" ? (
-            <label className="markdown-source">
-              <span>Markdown 원문</span>
-              <textarea
-                aria-label="Markdown 원문"
-                ref={sourceRef}
-                value={workspace.draft}
-                onChange={(event) => workspace.editSource(event.target.value)}
-                onCompositionStart={() => workspace.onCompositionChange(true)}
-                onCompositionEnd={() => workspace.onCompositionChange(false)}
-                spellCheck={false}
-              />
-            </label>
           ) : (
-            <MarkdownBlockEditor
-              content={workspace.draft}
-              mappings={workspace.mappings}
-              selectedId={workspace.selectedId}
-              onSelect={selectMapping}
-              onChange={workspace.changeBlock}
-              onCompositionChange={workspace.onCompositionChange}
-            />
+            <>
+              <MarkdownRichEditor
+                key={workspace.disk.name}
+                ref={richRef}
+                source={workspace.disk.content}
+                hidden={workspace.mode === "source"}
+                onChange={workspace.changeDraft}
+                onCompositionChange={workspace.onCompositionChange}
+              />
+              {workspace.mode === "source" && (
+                <label className="markdown-source">
+                  <span>
+                    Markdown 원문
+                    <small> 지원하지 않는 구문도 이 보기에서 원문 그대로 편집할 수 있습니다.</small>
+                  </span>
+                  <textarea
+                    aria-label="Markdown 원문"
+                    ref={sourceRef}
+                    value={workspace.draft}
+                    onChange={(event) => workspace.editSource(event.target.value)}
+                    onCompositionStart={() => workspace.onCompositionChange(true)}
+                    onCompositionEnd={() => workspace.onCompositionChange(false)}
+                    spellCheck={false}
+                  />
+                </label>
+              )}
+            </>
           )}
         </div>
         <footer className="markdown-status" role="status">
           {workspace.status}
         </footer>
       </section>
-      <MarkdownLineMap
-        mappings={workspace.mappings}
-        selectedId={workspace.selectedId}
-        disabled={!workspace.mappingFresh || workspace.loading}
-        onSelect={selectMapping}
-      />
+      <details className="markdown-map">
+        <summary>문서 위치 정보</summary>
+        <MarkdownLineMap
+          mappings={workspace.mappings}
+          selectedId={workspace.selectedId}
+          disabled={!workspace.mappingFresh || workspace.loading}
+          onSelect={selectMapping}
+        />
+      </details>
       {workspace.conflict !== null && (
         <MarkdownConflict
           disk={workspace.conflict}

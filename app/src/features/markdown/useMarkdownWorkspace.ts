@@ -11,7 +11,7 @@ import {
 } from "./markdown-api"
 import { lineEndingOf, preserveLineEndings } from "./source-edit"
 
-export type MarkdownMode = "source" | "blocks"
+export type MarkdownMode = "source" | "visual"
 export type MarkdownSaveMode = "manual" | "auto"
 
 const errorMessage = (error: unknown) =>
@@ -24,7 +24,7 @@ export const useMarkdownWorkspace = (initialFile: string | null = null) => {
   const [draft, setDraft] = useState("")
   const [mappings, setMappings] = useState<readonly MarkdownMapping[]>([])
   const [mappedContent, setMappedContent] = useState("")
-  const [mode, setMode] = useState<MarkdownMode>("source")
+  const [mode, setMode] = useState<MarkdownMode>("visual")
   const [saveMode, setSaveMode] = useState<MarkdownSaveMode>("manual")
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [conflict, setConflict] = useState<MarkdownFile | null>(null)
@@ -75,7 +75,7 @@ export const useMarkdownWorkspace = (initialFile: string | null = null) => {
         setMappedContent(loaded.content)
         setConflict(null)
         setSelectedId(null)
-        setMode("source")
+        setMode("visual")
         setStatus("디스크 버전과 초안이 같습니다.")
       } catch (error) {
         if (generation === fileGenerationRef.current) setStatus(errorMessage(error))

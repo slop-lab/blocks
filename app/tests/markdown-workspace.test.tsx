@@ -51,6 +51,13 @@ const button = (label: string) =>
     (candidate) => candidate.textContent?.trim() === label,
   )
 
+const sourceEditor = async () => {
+  await act(async () => button("Markdown 원문")?.click())
+  const source = host.querySelector<HTMLTextAreaElement>(".markdown-source textarea")
+  if (source === null) throw new TypeError("Markdown source did not mount")
+  return source
+}
+
 beforeEach(async () => {
   api.list.mockReset().mockResolvedValue({
     files: ["notes.md", "slow.md", "fast.md"],
@@ -90,10 +97,18 @@ afterEach(async () => {
 })
 
 describe("Markdown workspace draft integrity", () => {
+  it("refreshes the mounted visual editor when the same file reloads", async () => {
+    api.load.mockResolvedValueOnce({ ...initialFile, content: "# Reloaded\n" })
+    await act(async () => button("다시 읽기")?.click())
+    await act(async () => await Promise.resolve())
+    expect(host.querySelector("[aria-label='Markdown 문서 편집기']")?.textContent).toContain(
+      "Reloaded",
+    )
+  })
+
   it("keeps an unsaved draft when the active file is selected again", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true)
-    const source = host.querySelector<HTMLTextAreaElement>(".markdown-source textarea")
-    if (source === null) throw new TypeError("Source missing")
+    const source = await sourceEditor()
     await changeTextarea(source, "# Unsaved\n")
     const active = [...host.querySelectorAll<HTMLButtonElement>(".markdown-files button")].find(
       (item) => item.querySelector("strong")?.textContent === "notes.md",
@@ -130,8 +145,7 @@ describe("Markdown workspace draft integrity", () => {
         </StrictMode>,
       )
     })
-    const source = host.querySelector<HTMLTextAreaElement>(".markdown-source textarea")
-    if (source === null) throw new TypeError("Active source did not mount")
+    const source = await sourceEditor()
     await changeTextarea(source, "# New draft\n")
     await act(async () => {
       finishOld(inventory)
@@ -148,8 +162,7 @@ describe("Markdown workspace draft integrity", () => {
           acknowledge = resolve
         }),
     )
-    const textarea = host.querySelector<HTMLTextAreaElement>(".markdown-source textarea")
-    if (textarea === null) throw new TypeError("Markdown source did not mount")
+    const textarea = await sourceEditor()
     const submitted = `${initialFile.content}Save A\n`
     const newerDraft = `${submitted}Typing B\n`
     await changeTextarea(textarea, submitted)
@@ -167,22 +180,19 @@ describe("Markdown workspace draft integrity", () => {
     expect(host.textContent).toContain("저장 중 추가된 변경은 초안에 남아 있습니다.")
   })
 
-  it("refreshes line mappings before block editing a prepended source", async () => {
-    const source = host.querySelector<HTMLTextAreaElement>(".markdown-source textarea")
-    if (source === null) throw new TypeError("Markdown source did not mount")
+  it("opens in visual mode and carries source edits back into the document", async () => {
+    expect(host.querySelector("[aria-label='Markdown 문서 편집기']")?.textContent).toContain(
+      "Heading",
+    )
+    const source = await sourceEditor()
     const prepended = `Preface\n\n${initialFile.content}`
     await changeTextarea(source, prepended)
-    expect(button("블록")?.disabled).toBe(true)
     await act(async () => new Promise((resolve) => window.setTimeout(resolve, 220)))
-    expect(button("블록")?.disabled).toBe(false)
-    await act(async () => button("블록")?.click())
-    const heading = host.querySelector<HTMLTextAreaElement>("[aria-label='제목 3행부터 3행']")
-    if (heading === null) throw new TypeError("Fresh heading mapping did not render")
-    await changeTextarea(heading, "# Changed")
-    await act(async () => button("원문")?.click())
-    const updated = host.querySelector<HTMLTextAreaElement>(".markdown-source textarea")
-
-    expect(updated?.value).toBe("Preface\n\n# Changed\n\nParagraph\n")
+    await act(async () => button("문서")?.click())
+    expect(host.querySelector("[aria-label='Markdown 문서 편집기']")?.textContent).toContain(
+      "Preface",
+    )
+    expect(button("문서")?.getAttribute("aria-selected")).toBe("true")
   })
 
   it("ignores an older file response that settles after the latest selection", async () => {
@@ -217,8 +227,7 @@ describe("Markdown workspace draft integrity", () => {
     })
 
     expect(host.querySelector(".markdown-header h1")?.textContent).toBe("fast.md")
-    expect(host.querySelector<HTMLTextAreaElement>(".markdown-source textarea")?.value).toBe(
-      "# Fast\n",
-    )
+    const source = await sourceEditor()
+    expect(source.value).toBe("# Fast\n")
   })
 })

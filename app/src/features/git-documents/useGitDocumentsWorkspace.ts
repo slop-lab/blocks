@@ -135,9 +135,10 @@ export const useGitDocumentsWorkspace = () => {
         if (file === null) return
         const source = draftRef.current
         const saved = await gitDocumentsApi.write(file, source)
-        await gitDocumentsApi.clearDraft(saved.path)
-        if (fileRef.current?.path !== saved.path || draftRef.current !== source) return
+        if (fileRef.current?.path !== saved.path) return
         setFile({ ...saved, draft: null })
+        if (draftRef.current !== source) return
+        await gitDocumentsApi.clearDraft(saved.path)
         setDraft(saved.content)
         await reloadCurrent()
         setStatus("작업 트리에 저장했습니다. 커밋은 검토 탭에서 별도로 만드세요.")

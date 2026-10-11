@@ -31,10 +31,18 @@ try {
   await workspace.waitFor()
 
   await workspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
-  const nestedHeading = workspace.locator("h4 input")
+  const nestedHeading = workspace.locator('h4[data-authored-level="2"]')
   await nestedHeading.waitFor()
-  assert.equal(await nestedHeading.getAttribute("data-authored-level"), null)
-  assert.equal(await nestedHeading.inputValue(), "조사 메모")
+  assert.equal(await nestedHeading.textContent(), "조사 메모")
+  await nestedHeading.click()
+  await page.keyboard.press("End")
+  await page.keyboard.insertText(" 편집")
+  assert.equal(await nestedHeading.textContent(), "조사 메모 편집")
+  await page.keyboard.press("ControlOrMeta+z")
+  assert.equal(await nestedHeading.textContent(), "조사 메모")
+  await page.keyboard.press("End")
+  await page.keyboard.insertText(" 저장됨")
+  await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
 
   await workspace.getByRole("button", { name: "제품 출시", exact: true }).click()
   const occurrences = workspace.locator(".structured-sync")
@@ -46,9 +54,11 @@ try {
     .getByRole("button", { name: "제품 출시", exact: true })
     .click()
   await occurrences.first().getByRole("button", { name: "공유 원본 편집" }).click()
-  const shared = page.getByRole("dialog").getByLabel("공유 블록 내용")
+  const shared = page.getByRole("dialog").getByLabel("구조화 문서 편집기")
   assert.equal(await shared.evaluate((element) => element === document.activeElement), true)
-  await shared.fill("두 위치에 자동으로 반영된 출시 메모")
+  await shared.locator("p").click()
+  await page.keyboard.press("ControlOrMeta+a")
+  await page.keyboard.insertText("두 위치에 자동으로 반영된 출시 메모")
   await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
   assert.deepEqual(await occurrences.locator("p").allTextContents(), [
     "두 위치에 자동으로 반영된 출시 메모",
@@ -65,9 +75,54 @@ try {
     true,
   )
 
+  await page.route("**/api/workspace/pages/project", async (route) => {
+    if (route.request().method() === "PUT")
+      await new Promise((resolve) => setTimeout(resolve, 2_500))
+    await route.continue()
+  })
+  const pageSaved = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" &&
+      response.url().endsWith("/api/workspace/pages/project"),
+  )
+  const databaseSaved = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" &&
+      response.url().endsWith("/api/workspace/databases/tasks"),
+  )
+  const projectHeading = workspace.locator('.structured-prosemirror h2[data-authored-level="1"]')
+  await projectHeading.click()
+  await page.keyboard.press("End")
+  await page.keyboard.insertText(" 동시 저장")
   await workspace.getByLabel("task-2 상태").selectOption("진행")
+  assert.equal((await databaseSaved).status(), 200)
+  await page.waitForTimeout(1_600)
+  assert.match(await projectHeading.textContent(), /동시 저장/u)
+  assert.equal((await pageSaved).status(), 200)
+  await page.unroute("**/api/workspace/pages/project")
+
+  await occurrences.first().getByRole("button", { name: "복제", exact: true }).click()
   await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
+  assert.equal(await occurrences.count(), 3)
+  const occurrenceIds = await occurrences.evaluateAll((elements) =>
+    elements.map((element) => element.getAttribute("data-occurrence-id")),
+  )
+  assert.equal(new Set(occurrenceIds).size, 3)
+  await occurrences.first().getByRole("button", { name: "연결 해제", exact: true }).click()
+  await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
+  assert.equal(await occurrences.count(), 2)
+  const sourceAfterUnlink = await (await page.request.get(`${base}/api/workspace`)).json()
+  assert.equal(
+    sourceAfterUnlink.sources[0].content.blocks[0].text,
+    "두 위치에 자동으로 반영된 출시 메모",
+  )
+
   await page.reload({ waitUntil: "networkidle" })
+  await workspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
+  assert.equal(
+    await workspace.locator('h4[data-authored-level="2"]').textContent(),
+    "조사 메모 저장됨",
+  )
   await workspace.getByRole("button", { name: "제품 출시", exact: true }).click()
   assert.equal(await workspace.getByLabel("task-2 상태").inputValue(), "진행")
   assert.equal(
@@ -94,7 +149,20 @@ try {
   await newPageButton.click()
   await page.getByRole("dialog").getByLabel("페이지 제목").fill("출시 회고")
   await page.getByRole("dialog").getByRole("button", { name: "만들기" }).click()
-  await workspace.getByRole("heading", { name: "출시 회고" }).waitFor()
+  await workspace.locator(".structured-topbar h1", { hasText: "출시 회고" }).waitFor()
+  const newPageEditor = workspace.getByLabel("구조화 문서 편집기").last()
+  const emptyParagraph = newPageEditor.locator("p").last()
+  await emptyParagraph.click()
+  await page.keyboard.insertText("/quote")
+  await page.keyboard.press("ArrowDown")
+  await page.keyboard.press("Enter")
+  const quote = newPageEditor.locator("blockquote")
+  await quote.waitFor()
+  await page.keyboard.insertText("회고 인용")
+  await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
+  await page.reload({ waitUntil: "networkidle" })
+  await workspace.getByRole("button", { name: "출시 회고", exact: true }).click()
+  await workspace.locator("blockquote", { hasText: "회고 인용" }).waitFor()
 
   await second.close()
 

@@ -9,6 +9,7 @@ import { createLargeContentHandler } from "./large-content.mjs"
 import { handleMarkdown } from "./markdown.mjs"
 import { createOwnershipHandler } from "./ownership.mjs"
 import { loadSessionSecret } from "./runtime-secret.mjs"
+import { createWorkspaceHandler } from "./workspace.mjs"
 
 const root = fileURLToPath(new URL("../../dist/", import.meta.url))
 const contentTypes = {
@@ -30,12 +31,14 @@ export const createApplicationServer = (options = {}) => {
   })
   const handleLargeContent = createLargeContentHandler({ root: join(runtimeRoot, "large-content") })
   const handleOwnership = createOwnershipHandler({ root: join(runtimeRoot, "ownership"), host })
+  const handleWorkspace = createWorkspaceHandler({ root: join(runtimeRoot, "workspace"), host })
   const server = createServer(async (request, response) => {
     try {
       if (await host.handle(request, response)) return
       if (await handleMarkdown(request, response)) return
       if (await handleLargeContent(request, response)) return
       if (await handleOwnership(request, response)) return
+      if (await handleWorkspace(request, response)) return
       const url = new URL(request.url ?? "/", "http://localhost")
       if (url.pathname === "/api/notices/current" && request.method === "GET") {
         response

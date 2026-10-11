@@ -28,7 +28,11 @@ const transitionInput = z.object({ expectedRevision }).strict()
 const identities = {
   author: { subject: "author", role: "editor", rooms: ["*"] },
   reviewer: { subject: "reviewer", role: "owner", rooms: ["*"] },
-  viewer: { subject: "viewer", role: "viewer", rooms: ["team-minutes", "large-content"] },
+  viewer: {
+    subject: "viewer",
+    role: "viewer",
+    rooms: ["team-minutes", "large-content", "structured-workspace"],
+  },
 }
 
 const cookieValue = (request) => {

@@ -74,20 +74,17 @@ export const entityRecordSchemas = {
   sources: sourceRecordSchema,
 } as const
 
-export const createPageDocument = async (pageId: string): Promise<EntityRecord<PageDocument>> =>
-  pageRecordSchema.parse(
-    await client
-      .put(`api/workspace/pages/${pageId}`, {
-        json: {
-          content: {
-            pageId,
-            version: 1,
-            blocks: [
-              { id: `${pageId}-heading`, type: "heading", level: 1, text: "제목 없음" },
-              { id: `${pageId}-paragraph`, type: "paragraph", text: "내용을 작성하세요." },
-            ],
-          },
-        },
-      })
-      .json(),
-  )
+const createdPageSchema = z.object({ tree: treeRecordSchema, document: pageRecordSchema }).strict()
+
+export const createWorkspacePage = async (input: {
+  readonly expectedTreeRevision: number
+  readonly page: {
+    readonly id: string
+    readonly parentId: string | null
+    readonly title: string
+    readonly icon: "file" | "database" | "note"
+  }
+}): Promise<{
+  readonly tree: EntityRecord<Workspace>
+  readonly document: EntityRecord<PageDocument>
+}> => createdPageSchema.parse(await client.post("api/workspace/pages", { json: input }).json())

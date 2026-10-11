@@ -1,4 +1,4 @@
-import { mkdir, rename, rm } from "node:fs/promises"
+import { mkdir, readdir, rename, rm } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { GitDocumentsError } from "./errors.js"
 import {
@@ -11,15 +11,13 @@ import {
   readText,
 } from "./files.js"
 import { runGit } from "./git.js"
+import { mutateWorktree } from "./queue.js"
 import type {
   CommitResult,
-  DocumentDiff,
   DocumentFile,
   DocumentStatus,
   DocumentTreeNode,
   Draft,
-  HistoryEntry,
-  SearchResult,
 } from "./types.js"
 import { documentPath } from "./validation.js"
 
@@ -40,7 +38,6 @@ const state = (value: string): DocumentStatus["working"] => {
 }
 
 export class DocumentOperations {
-  private queue: Promise<void> = Promise.resolve()
   constructor(private readonly context: Context) {}
 
   private documentFile(path: string): string {
@@ -52,17 +49,7 @@ export class DocumentOperations {
   }
 
   private async exclusive<T>(operation: () => Promise<T>): Promise<T> {
-    const previous = this.queue
-    let release = (): void => undefined
-    this.queue = new Promise<void>((resolveQueue) => {
-      release = resolveQueue
-    })
-    await previous
-    try {
-      return await operation()
-    } finally {
-      release()
-    }
+    return mutateWorktree(this.context.worktree, operation)
   }
 
   async list(): Promise<readonly DocumentTreeNode[]> {
@@ -108,23 +95,42 @@ export class DocumentOperations {
   }
 
   async saveDraft(path: string, content: string, baseRevision: string): Promise<Draft> {
-    const draft = { content, baseRevision, updatedAt: new Date().toISOString() }
-    await atomicWrite(this.draftFile(path), JSON.stringify(draft))
-    return draft
+    return this.exclusive(async () => {
+      const draft = { content, baseRevision, updatedAt: new Date().toISOString() }
+      await atomicWrite(this.draftFile(path), JSON.stringify(draft))
+      return draft
+    })
   }
 
   async clearDraft(path: string): Promise<void> {
-    await rm(this.draftFile(path), { force: true })
+    await this.exclusive(async () => rm(this.draftFile(path), { force: true }))
   }
 
-  async rename(from: string, to: string): Promise<DocumentFile> {
+  async hasDrafts(): Promise<boolean> {
+    try {
+      return (await readdir(this.context.draftRoot)).some((entry) => entry.endsWith(".json"))
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") return false
+      throw error
+    }
+  }
+
+  async rename(from: string, to: string, expectedRevision: string): Promise<DocumentFile> {
     return this.exclusive(async () => {
       const source = await this.read(from)
+      if (source.revision !== expectedRevision)
+        throw new GitDocumentsError("stale_revision", "Document changed since it was opened")
       const target = documentPath(to)
+      await assertNoSymlink(this.context.docsRoot, target)
       if ((await readText(this.documentFile(target))) !== null)
         throw new GitDocumentsError("already_exists", `Document ${target} already exists`)
       await mkdir(dirname(this.documentFile(target)), { recursive: true })
       await rename(this.documentFile(source.path), this.documentFile(target))
+      const draft = this.draftFile(source.path)
+      if ((await readText(draft)) !== null) {
+        await mkdir(dirname(this.draftFile(target)), { recursive: true })
+        await rename(draft, this.draftFile(target))
+      }
       return this.read(target)
     })
   }
@@ -135,6 +141,25 @@ export class DocumentOperations {
       if (current.revision !== expectedRevision)
         throw new GitDocumentsError("stale_revision", "Document changed since it was opened")
       await rm(this.documentFile(current.path))
+      await rm(this.draftFile(current.path), { force: true })
+    })
+  }
+
+  async resolveConflict(
+    path: string,
+    content: string,
+    expectedRevision: string,
+  ): Promise<DocumentFile> {
+    return this.exclusive(async () => {
+      const current = await this.read(path)
+      if (current.revision !== expectedRevision)
+        throw new GitDocumentsError("stale_revision", "Document changed since it was opened")
+      await atomicWrite(this.documentFile(current.path), content)
+      await runGit({
+        cwd: this.context.worktree,
+        args: ["add", "--", `${this.context.docs}/${current.path}`],
+      })
+      return this.read(current.path)
     })
   }
 
@@ -143,28 +168,45 @@ export class DocumentOperations {
       cwd: this.context.worktree,
       args: ["status", "--porcelain=v1", "-z", "--untracked-files=all", "--", this.context.docs],
     })
-    return result.stdout
-      .split("\0")
-      .filter((line) => line.length > 3)
-      .map((line) => {
-        const repositoryPath = line.slice(3).replace(/^.* -> /, "")
-        const prefix = `${this.context.docs}/`
-        return {
-          path: repositoryPath.startsWith(prefix)
-            ? repositoryPath.slice(prefix.length)
-            : repositoryPath,
-          staged: state(line[0] ?? " "),
-          working: state(line[1] ?? " "),
-          conflict: /U/u.test(line.slice(0, 2)) || ["AA", "DD"].includes(line.slice(0, 2)),
-        }
+    const fields = result.stdout.split("\0")
+    const statuses: DocumentStatus[] = []
+    for (let index = 0; index < fields.length; index += 1) {
+      const line = fields[index] ?? ""
+      if (line.length <= 3) continue
+      const code = line.slice(0, 2)
+      const renamed = code.includes("R") || code.includes("C")
+      const repositoryPath = line.slice(3)
+      if (renamed) index += 1
+      const prefix = `${this.context.docs}/`
+      statuses.push({
+        path: repositoryPath.startsWith(prefix)
+          ? repositoryPath.slice(prefix.length)
+          : repositoryPath,
+        staged: state(line[0] ?? " "),
+        working: state(line[1] ?? " "),
+        conflict: /U/u.test(code) || ["AA", "DD"].includes(code),
       })
+    }
+    return statuses
   }
 
-  async commit(paths: readonly string[], message: string): Promise<CommitResult> {
+  async commit(
+    paths: readonly string[],
+    message: string,
+    expectedRevisions?: Readonly<Record<string, string | null>>,
+  ): Promise<CommitResult> {
     return this.exclusive(async () => {
       if (paths.length === 0 || message.trim().length === 0 || message.length > 500)
         throw new GitDocumentsError("invalid_path", "Commit requires selected paths and a message")
       const selected = [...new Set(paths.map((path) => documentPath(path)))]
+      if (expectedRevisions !== undefined) {
+        for (const path of selected) {
+          const content = await readText(this.documentFile(path))
+          const actual = content === null ? null : contentRevision(content)
+          if (expectedRevisions[path] !== actual)
+            throw new GitDocumentsError("stale_revision", `Document ${path} changed after review`)
+        }
+      }
       const stagedBefore = await runGit({
         cwd: this.context.worktree,
         args: ["diff", "--cached", "--name-only", "-z"],
@@ -191,7 +233,7 @@ export class DocumentOperations {
       } catch (error) {
         await runGit({
           cwd: this.context.worktree,
-          args: ["reset", "--quiet", "HEAD", "--", ...repositoryPaths],
+          args: ["restore", "--staged", "--", ...repositoryPaths],
         })
         if (error instanceof GitDocumentsError && /identity|email|name/u.test(error.message))
           throw new GitDocumentsError(
@@ -205,88 +247,16 @@ export class DocumentOperations {
     })
   }
 
-  async history(path: string, limit = 50): Promise<readonly HistoryEntry[]> {
-    const safePath = documentPath(path)
-    const result = await runGit({
-      cwd: this.context.worktree,
-      args: [
-        "log",
-        `-${Math.min(Math.max(limit, 1), 100)}`,
-        "--format=%H%x1f%an%x1f%aI%x1f%s",
-        "--",
-        `${this.context.docs}/${safePath}`,
-      ],
-    })
-    return result.stdout.trim() === ""
-      ? []
-      : result.stdout
-          .trim()
-          .split("\n")
-          .map((line) => {
-            const [commit = "", author = "", authoredAt = "", subject = ""] = line.split("\x1f")
-            return { commit, author, authoredAt, subject }
-          })
-  }
-
   async restore(path: string, commit: string): Promise<DocumentFile> {
-    const current = await this.read(path)
+    const safePath = documentPath(path)
     if (!/^[0-9a-f]{7,64}$/u.test(commit))
       throw new GitDocumentsError("invalid_path", "Commit identifier is invalid")
     const result = await runGit({
       cwd: this.context.worktree,
-      args: ["show", `${commit}:${this.context.docs}/${current.path}`],
+      args: ["show", `${commit}:${this.context.docs}/${safePath}`],
     })
-    return this.write(current.path, result.stdout, current.revision)
-  }
-
-  async diff(path: string): Promise<DocumentDiff> {
-    const current = await this.read(path)
-    const repositoryPath = `${this.context.docs}/${current.path}`
-    const head = await runGit({
-      cwd: this.context.worktree,
-      args: ["show", `HEAD:${repositoryPath}`],
-      allowFailure: true,
-    })
-    const staged = await runGit({
-      cwd: this.context.worktree,
-      args: ["show", `:${repositoryPath}`],
-      allowFailure: true,
-    })
-    return {
-      path: current.path,
-      head: head.code === 0 ? head.stdout : null,
-      working: current.content,
-      staged: staged.code === 0 ? staged.stdout : null,
-    }
-  }
-
-  async search(query: string, limit = 100): Promise<readonly SearchResult[]> {
-    const needle = query.trim().toLocaleLowerCase()
-    if (needle.length < 2 || needle.length > 200)
-      throw new GitDocumentsError("invalid_path", "Search query must contain 2 to 200 characters")
-    const results: SearchResult[] = []
-    const visit = async (nodes: readonly DocumentTreeNode[]): Promise<void> => {
-      for (const node of nodes) {
-        if (results.length >= limit) return
-        if (node.kind === "directory") await visit(node.children)
-        else {
-          const file = await this.read(node.path)
-          for (const [index, line] of file.content.split("\n").entries()) {
-            if (line.toLocaleLowerCase().includes(needle))
-              results.push({ path: node.path, line: index + 1, excerpt: line.slice(0, 240) })
-            if (results.length >= limit) return
-          }
-        }
-      }
-    }
-    await visit(await this.list())
-    return results
-  }
-
-  async backlinks(path: string): Promise<readonly SearchResult[]> {
-    const target = documentPath(path)
-    const name = target.replace(/\.md$/iu, "")
-    const candidates = await this.search(name, 200)
-    return candidates.filter((result) => result.path !== target)
+    const current = await readText(this.documentFile(safePath))
+    if (current === null) return this.create(safePath, result.stdout)
+    return this.write(safePath, result.stdout, contentRevision(current))
   }
 }

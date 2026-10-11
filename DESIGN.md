@@ -130,6 +130,13 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 - Badge is text plus icon where needed. Toast uses `aria-live="polite"`, never steals focus, and offers recovery when actionable.
 - On mobile the status region occupies its own row above the document instead of covering text. Prose uses Korean word-preserving wrapping; long unbroken payloads still wrap inside their containers.
 
+### Git Document Library
+- A three-region list/document/review shell uses the existing 244px navigation measure and 320px inspector measure. The document is the primary scroll owner; library and review rails scroll independently only on wide screens.
+- The library combines a recursive file tree, full-text search, and backlinks. Active files use `accent-soft`; paths and excerpts always wrap or ellipsize without forcing shell overflow.
+- Draft recovery is a warning-soft in-flow notice. Saving writes the managed working tree only; selective commit remains a separate primary action in the review rail.
+- Review tabs expose structured changes, before/working content, per-document history restore, managed branches, and fixed remote actions. Divergence and conflicts always require explicit controls and textual status.
+- Below 1100px the review rail moves below the editor. Below 768px all regions become one flow, the file tree receives a bounded internal list, and before/working diff panes stack.
+
 ## 6. Motion & Interaction
 
 - Micro: `--motion-fast` 120ms ease-out for press/focus feedback.

@@ -14,6 +14,49 @@ corepack pnpm start
 
 개발 서버는 `/api`와 협업 WebSocket을 기본적으로 3000 포트에 전달합니다. 백엔드 포트를 바꾸었다면 `BACKEND_URL=http://127.0.0.1:4174 corepack pnpm dev`를 사용합니다.
 
+## Git 문서 라이브러리 CLI
+
+`block-docs`는 기존 non-bare Git 저장소의 주 작업 트리를 건드리지 않고, `.runtime/git-documents` 아래에 브랜치별 관리 작업 트리를 만들거나 재사용합니다. 브라우저는 같은 origin의 고정된 문서 API만 호출하며 Git 명령이나 인자를 전달하는 endpoint는 없습니다.
+
+```sh
+corepack pnpm build
+corepack pnpm docs:start -- --repo /absolute/path/to/repository --docs docs --port 3000
+```
+
+기본 브랜치는 `block-docs`, 기본 listen 주소는 `127.0.0.1`입니다. 임시 포트는 `--port 0`, 별도 runtime 위치는 `--data /absolute/runtime/path`, 기존 관리 브랜치는 `--branch notes/topic`으로 선택합니다. container나 신뢰한 LAN에서만 `--host 0.0.0.0`을 명시하세요. 시작하면 출력된 `http://127.0.0.1:<port>/?workspace=git-documents`를 엽니다.
+
+새 전용 저장소가 필요하면 다음 고정 명령을 사용합니다. 디렉터리는 비어 있어야 하며 CLI는 `docs/welcome.md`, `.gitignore`, 초기 커밋만 만듭니다. 기존 repository/global Git config를 수정하지 않습니다.
+
+```sh
+node packages/block-docs/dist/cli.js init \
+  --repo /absolute/path/to/new-library \
+  --author-name "Your Name" \
+  --author-email "you@example.com"
+
+node packages/block-docs/dist/cli.js --help
+```
+
+Git identity는 명시한 author, CLI 환경, 저장소/사용자 설정 순으로 Git이 해석합니다. identity가 없으면 commit/init이 설명과 함께 실패합니다. CLI는 credential을 저장하지 않고 `origin`만 사용하며 terminal prompt를 끕니다. remote 인증은 사용자의 기존 Git credential helper 또는 SSH agent가 담당합니다.
+
+문서 라이브러리에서 지원하는 흐름:
+
+- source-preserving WYSIWYG와 Markdown 원문 편집, 500ms 복구 초안 자동 저장, CAS 기반 작업 트리 저장
+- 폴더 경로를 포함한 Markdown 생성·이동·삭제, 전체 검색과 상대 문서명 기반 백링크 후보
+- HEAD/작업본 비교, 문서 경로 선택 커밋, 문서별 기록 열람과 작업본 복원
+- branch 생성·목록·전환. 각 branch는 별도 관리 작업 트리와 별도 draft scope를 사용
+- 수동 `origin` fetch, clean worktree의 fast-forward-only 반영, 현재 branch push
+- divergence 표시, 명시적 `--no-commit` merge 준비, 문서 conflict 원문 편집·resolve·merge commit 또는 abort
+
+안전 경계와 의도적인 제한:
+
+- 문서는 구성한 repository-relative root 아래 `.md`만 허용합니다. 절대 경로, `..`, 역슬래시, option처럼 `-`로 시작하는 이름, `.git`, symlink를 거부합니다.
+- commit은 선택한 문서 root 경로만 stage합니다. 기존 staged change가 있거나 merge가 문서 root 밖 파일을 포함하면 거부합니다.
+- worktree를 자동 삭제하지 않습니다. 종료·재시작은 같은 등록 worktree와 branch별 draft를 재사용하므로 미커밋 변경을 잃지 않습니다.
+- reset, rebase, stash, force push, 임의 remote URL, 임의 shell/Git argv를 제공하지 않습니다. primary branch가 이미 다른 worktree에 checkout되어 있으면 그 branch를 관리 worktree로 중복 열지 않습니다.
+- Git hook은 subprocess별 `core.hooksPath=/dev/null`로 비활성화합니다. 이 도구는 신뢰한 개인 저장소의 문서 파일을 관리하며 repository의 application code나 package hook을 실행하지 않습니다.
+- 요청 본문은 6 MiB, Markdown 파일/초안은 5 MiB, search 결과는 100개, history는 최대 100개로 제한합니다. attachment upload는 현재 제공하지 않습니다.
+- mutation 요청은 browser Origin이 Host와 다르면 거부합니다. 기본 localhost는 개인용입니다. `0.0.0.0` 공개 시 reverse proxy 인증과 HTTPS는 host 운영자가 추가해야 합니다.
+
 ## 사용 예제
 
 - **로컬 노트**: 수동 저장, 입력 후 자동 저장, 주기적 자동 저장, 포커스 이탈 저장 중 선택합니다. 데이터는 localStorage에 저장됩니다.

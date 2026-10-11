@@ -1,0 +1,122 @@
+.markdown-rich {
+  max-inline-size: var(--document-measure);
+  min-block-size: 100%;
+  margin-inline: auto;
+  padding: var(--space-8) var(--space-10) var(--space-16);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+
+.markdown-rich[hidden] {
+  display: none;
+}
+
+.markdown-prose {
+  min-block-size: calc(var(--space-16) * 6);
+  outline: none;
+  color: var(--ink);
+  font: var(--type-body);
+  overflow-wrap: anywhere;
+}
+
+.markdown-prose > * {
+  position: relative;
+  margin-block: 0 var(--space-4);
+}
+
+.markdown-prose h1,
+.markdown-prose h2,
+.markdown-prose h3,
+.markdown-prose h4,
+.markdown-prose h5,
+.markdown-prose h6 {
+  margin-block: var(--space-8) var(--space-3);
+  font-family: var(--font-editorial);
+  text-wrap: balance;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
+.markdown-prose h1 {
+  font: var(--type-h1);
+}
+
+.markdown-prose h2 {
+  font: var(--type-h2);
+}
+
+.markdown-prose h3,
+.markdown-prose h4,
+.markdown-prose h5,
+.markdown-prose h6 {
+  font: var(--type-h3);
+}
+
+.markdown-prose p {
+  max-inline-size: var(--prose-measure);
+  line-height: 1.72;
+  text-wrap: pretty;
+}
+
+.markdown-prose a {
+  color: var(--accent);
+  text-decoration-thickness: var(--markdown-line);
+  text-underline-offset: var(--space-1);
+}
+
+.markdown-prose blockquote {
+  margin-inline: 0;
+  padding-inline-start: var(--space-5);
+  border-inline-start: var(--markdown-line-active) solid var(--accent);
+  color: var(--ink-muted);
+}
+
+.markdown-prose ul,
+.markdown-prose ol {
+  padding-inline-start: var(--space-6);
+}
+
+.markdown-prose li > p {
+  margin-block: var(--space-1);
+}
+
+.markdown-prose pre {
+  overflow-x: auto;
+  padding: var(--space-4);
+  border: var(--markdown-line) solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  font: var(--type-mono);
+  white-space: pre;
+}
+
+.markdown-prose :not(pre) > code {
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-family: var(--font-mono);
+}
+
+.markdown-prose [data-opaque="true"] {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: var(--markdown-line-active) solid var(--locked);
+  background: var(--locked-soft);
+  color: var(--locked);
+}
+
+.markdown-prose [data-opaque="true"] small {
+  font-size: var(--markdown-type-caption);
+}
+
+.markdown-prose.ProseMirror-focused {
+  caret-color: var(--accent);
+}
+
+@media (max-width: 767px) {
+  .markdown-rich {
+    padding: var(--space-6) var(--space-4) var(--space-12);
+    box-shadow: none;
+  }
+}

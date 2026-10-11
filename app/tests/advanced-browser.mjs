@@ -45,10 +45,11 @@ try {
   await page.keyboard.press("Home")
   await page.keyboard.press("Shift+End")
   await page.keyboard.insertText("Changed title")
-  await editor.locator("p").first().click()
-  await page.keyboard.press("End")
-  await page.keyboard.press("Enter")
+  await editor.locator("p").first().hover()
+  await page.getByRole("button", { name: "이 블록 뒤에 문단 추가", exact: true }).click()
   await page.keyboard.insertText("Added paragraph")
+  await page.keyboard.press("Enter")
+  await page.keyboard.insertText("Enter paragraph")
   const added = editor.locator("p", { hasText: "Added paragraph" })
   await added.click()
   await page.keyboard.press("Shift+F10")
@@ -63,7 +64,10 @@ try {
     await source.inputValue(),
     original
       .replace("# File notes", "# Changed title")
-      .replace("Original paragraph.\n", "Added paragraph\n\nOriginal paragraph.\n"),
+      .replace(
+        "Original paragraph.\n",
+        "Added paragraph\n\nOriginal paragraph.\n\nEnter paragraph\n",
+      ),
   )
   assert.match(await readFile(join(root, "notes.md"), "utf8"), /# Changed title/)
   assert.match(await readFile(join(root, "notes.md"), "utf8"), /Added paragraph/)

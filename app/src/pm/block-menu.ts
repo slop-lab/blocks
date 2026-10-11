@@ -49,6 +49,7 @@ export const createBlockMenu = (ownerDocument: Document, label: string): MenuCon
       const button = ownerDocument.createElement("button")
       button.type = "button"
       button.role = "menuitem"
+      button.setAttribute("aria-label", item.label)
       button.className = item.danger
         ? "block-menu__item block-menu__item--danger"
         : "block-menu__item"
@@ -58,6 +59,7 @@ export const createBlockMenu = (ownerDocument: Document, label: string): MenuCon
       button.append(text)
       if (item.hint !== undefined) {
         const hint = ownerDocument.createElement("kbd")
+        hint.setAttribute("aria-hidden", "true")
         hint.textContent = item.hint
         button.append(hint)
       }

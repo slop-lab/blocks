@@ -76,7 +76,7 @@ export const NotebookScenario = () => {
         도메인 객체 없이 블록 문서가 원본입니다. 기본 paragraph는 등록하지 않고{" "}
         <code>notes.text</code>와 callout만 사용합니다.
       </p>
-      <CustomNotesEditor key={editorKey} document={document} onChange={changed} />
+      <CustomNotesEditor key={editorKey} document={document} onChange={changed} onSave={save} />
     </section>
   )
 }

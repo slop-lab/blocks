@@ -23,20 +23,26 @@ type CanonicalBlockEditorProps = {
   readonly profile: ProseMirrorProfile
   readonly modelId: string
   readonly label: string
+  readonly onSave?: () => void
 }
 
 export const CanonicalBlockEditor = forwardRef<
   CanonicalBlockEditorHandle,
   CanonicalBlockEditorProps
->(function CanonicalBlockEditor({ document, onChange, onRevision, profile, modelId, label }, ref) {
+>(function CanonicalBlockEditor(
+  { document, onChange, onRevision, profile, modelId, label, onSave },
+  ref,
+) {
   const host = useRef<HTMLDivElement>(null)
   const initialDocument = useRef(document)
   const sessionRef = useRef<ModelSession | null>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
   const onRevisionRef = useRef(onRevision)
+  const onSaveRef = useRef(onSave)
   onChangeRef.current = onChange
   onRevisionRef.current = onRevision
+  onSaveRef.current = onSave
 
   const run = (command: Command): boolean => {
     const session = sessionRef.current
@@ -89,6 +95,13 @@ export const CanonicalBlockEditor = forwardRef<
     sessionRef.current = session
     viewRef.current = view
     const detach = attachBlockInteractions(view, { readOnly: false })
+    const saveShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "s") {
+        event.preventDefault()
+        onSaveRef.current?.()
+      }
+    }
+    view.dom.addEventListener("keydown", saveShortcut)
     const unsubscribe = session.subscribe((event) => {
       if (event !== null) {
         onChangeRef.current(session.snapshot)
@@ -98,6 +111,7 @@ export const CanonicalBlockEditor = forwardRef<
     return () => {
       unsubscribe()
       detach()
+      view.dom.removeEventListener("keydown", saveShortcut)
       view.destroy()
       session.dispose()
       sessionRef.current = null
@@ -110,6 +124,7 @@ export const CanonicalBlockEditor = forwardRef<
 export const CustomNotesEditor = (props: {
   readonly document: BlockDocument
   readonly onChange: (document: BlockDocument) => void
+  readonly onSave?: () => void
 }) => (
   <CanonicalBlockEditor
     {...props}

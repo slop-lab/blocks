@@ -11,6 +11,12 @@ importers:
       '@block-editor/bindings':
         specifier: workspace:*
         version: link:packages/bindings
+      '@block-editor/git-documents':
+        specifier: workspace:*
+        version: link:packages/git-documents
+      '@block-editor/git-documents-host':
+        specifier: workspace:*
+        version: link:packages/git-documents-host
       '@block-editor/markdown':
         specifier: workspace:*
         version: link:packages/markdown
@@ -154,6 +160,47 @@ importers:
         specifier: ^4.1.11
         version: 4.6.5
     devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/block-docs:
+    dependencies:
+      '@block-editor/git-documents':
+        specifier: workspace:*
+        version: link:../git-documents
+      '@block-editor/git-documents-host':
+        specifier: workspace:*
+        version: link:../git-documents-host
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.19.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/git-documents:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.19.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/git-documents-host:
+    dependencies:
+      '@block-editor/git-documents':
+        specifier: workspace:*
+        version: link:../git-documents
+      zod:
+        specifier: ^4.1.11
+        version: 4.6.5
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.19.1
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

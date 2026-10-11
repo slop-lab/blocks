@@ -12,12 +12,16 @@
     "test": "vitest run",
     "test:browser": "node app/tests/browser.mjs && node app/tests/advanced-browser.mjs && node app/tests/block-interactions-browser.mjs && node app/tests/workflow-browser.mjs && node app/tests/ownership-browser.mjs",
     "test:markdown-browser": "node app/tests/advanced-browser.mjs",
+    "test:git-documents-browser": "node app/tests/git-documents-browser.mjs",
     "test:block-interactions-browser": "node app/tests/block-interactions-browser.mjs",
     "lint": "biome check .",
-    "start": "node app/server.mjs"
+    "start": "node app/server.mjs",
+    "docs:start": "node packages/block-docs/dist/cli.js start"
   },
   "dependencies": {
     "@block-editor/bindings": "workspace:*",
+    "@block-editor/git-documents": "workspace:*",
+    "@block-editor/git-documents-host": "workspace:*",
     "@block-editor/markdown": "workspace:*",
     "@block-editor/model": "workspace:*",
     "@block-editor/prosemirror": "workspace:*",

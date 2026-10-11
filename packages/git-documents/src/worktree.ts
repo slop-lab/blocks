@@ -37,20 +37,30 @@ export const prepareWorktree = async (options: WorktreeOptions) => {
   const branch = branchName(options.branch ?? "block-docs")
   const data = resolve(options.data ?? join(repo, ".runtime", "git-documents"))
   const repoId = createHash("sha256").update(repo).digest("hex").slice(0, 16)
-  const worktree = join(data, "worktrees", repoId, branch.replaceAll("/", "--"))
+  const branchId = createHash("sha256").update(branch).digest("hex").slice(0, 16)
+  const worktree = join(data, "worktrees", repoId, branchId)
+  const legacyId = branch.replaceAll("/", "--")
   const listing = await runGit({ cwd: repo, args: ["worktree", "list", "--porcelain"] })
-  const registered = registeredWorktrees(listing.stdout).find(
-    (item) => resolve(item.path) === worktree,
+  const records = registeredWorktrees(listing.stdout)
+  const managedRoot = join(data, "worktrees", repoId)
+  const existingManaged = records.find(
+    (item) => item.branch === branch && resolve(item.path).startsWith(`${managedRoot}/`),
   )
+  if (existingManaged !== undefined) {
+    const existingPath = resolve(existingManaged.path)
+    const storageId = existingPath === join(managedRoot, legacyId) ? legacyId : branchId
+    return { repo, data, branch, worktree: existingPath, repoId, storageId }
+  }
+  const registered = records.find((item) => resolve(item.path) === worktree)
   if (registered !== undefined) {
     if (registered.branch !== branch)
       throw new GitDocumentsError(
         "invalid_repository",
         "Managed worktree is registered to another branch",
       )
-    return { repo, data, branch, worktree, repoId }
+    return { repo, data, branch, worktree, repoId, storageId: branchId }
   }
-  const occupied = registeredWorktrees(listing.stdout).find((item) => item.branch === branch)
+  const occupied = records.find((item) => item.branch === branch)
   if (occupied !== undefined)
     throw new GitDocumentsError(
       "invalid_repository",
@@ -70,5 +80,5 @@ export const prepareWorktree = async (options: WorktreeOptions) => {
         ? ["worktree", "add", worktree, branch]
         : ["worktree", "add", "-b", branch, worktree, "HEAD"],
   })
-  return { repo, data, branch, worktree, repoId }
+  return { repo, data, branch, worktree, repoId, storageId: branchId }
 }

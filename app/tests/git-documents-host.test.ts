@@ -68,7 +68,11 @@ describe("Git documents host", () => {
     const state = await (await fetch(`${base}/api/git-documents`)).json()
     const file = await (await fetch(`${base}/api/git-documents/file?path=guide.md`)).json()
     const committed = await (
-      await mutate("/commit", { paths: ["guide.md"], message: "Add guide" })
+      await mutate("/commit", {
+        paths: ["guide.md"],
+        message: "Add guide",
+        expectedRevisions: { "guide.md": created.revision },
+      })
     ).json()
     const history = await (await fetch(`${base}/api/git-documents/history?path=guide.md`)).json()
 

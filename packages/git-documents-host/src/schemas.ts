@@ -18,11 +18,16 @@ export const draftSchema = z.object({
   content: z.string().max(5 * 1024 * 1024),
   baseRevision: z.string().length(64),
 })
-export const renameSchema = z.object({ from: pathSchema, to: pathSchema })
+export const renameSchema = z.object({
+  from: pathSchema,
+  to: pathSchema,
+  expectedRevision: z.string().length(64),
+})
 export const deleteSchema = z.object({ path: pathSchema, expectedRevision: z.string().length(64) })
 export const commitSchema = z.object({
   paths: z.array(pathSchema).min(1).max(200),
   message: z.string().trim().min(1).max(500),
+  expectedRevisions: z.record(pathSchema, z.string().length(64).nullable()),
 })
 export const restoreSchema = z.object({
   path: pathSchema,

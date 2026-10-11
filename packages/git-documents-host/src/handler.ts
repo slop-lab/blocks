@@ -76,14 +76,22 @@ export const createGitDocumentsHandler = (options: GitDocumentsHandlerOptions) =
         json(response, 200, { cleared: true })
       } else if (request.method === "POST" && route === "/rename") {
         const input = renameSchema.parse(await body(request))
-        json(response, 200, await documents.renameDocument(input.from, input.to))
+        json(
+          response,
+          200,
+          await documents.renameDocument(input.from, input.to, input.expectedRevision),
+        )
       } else if (request.method === "POST" && route === "/delete") {
         const input = deleteSchema.parse(await body(request))
         await documents.deleteDocument(input.path, input.expectedRevision)
         json(response, 200, { deleted: true })
       } else if (request.method === "POST" && route === "/commit") {
         const input = commitSchema.parse(await body(request))
-        json(response, 200, await documents.commit(input.paths, input.message))
+        json(
+          response,
+          200,
+          await documents.commit(input.paths, input.message, input.expectedRevisions),
+        )
       } else if (request.method === "POST" && route === "/restore") {
         const input = restoreSchema.parse(await body(request))
         json(response, 200, await documents.restoreDocument(input.path, input.commit))
@@ -93,6 +101,7 @@ export const createGitDocumentsHandler = (options: GitDocumentsHandlerOptions) =
         json(response, 201, { branch: documents.branch })
       } else if (request.method === "POST" && route === "/branch/switch") {
         const input = branchSchema.parse(await body(request))
+        await documents.assertSafeToSwitch()
         documents = await GitDocuments.open({
           repo: documents.repo,
           data: documents.data,

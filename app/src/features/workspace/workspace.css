@@ -1,0 +1,354 @@
+.structured-workspace {
+  block-size: 100dvh;
+  display: grid;
+  grid-template-columns: 244px minmax(0, 1fr);
+  background: var(--canvas);
+  color: var(--ink);
+}
+.structured-tree {
+  min-block-size: 0;
+  overflow: auto;
+  padding: var(--space-4) var(--space-3);
+  background: var(--surface);
+  border-inline-end: 1px solid var(--line);
+}
+.structured-tree > header,
+.structured-topbar,
+.structured-dialog header,
+.structured-database > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.structured-tree > header {
+  min-block-size: var(--touch-target-size);
+  padding-inline: var(--space-2);
+  font: var(--type-h3);
+}
+.structured-tree__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.structured-tree__disclosure {
+  display: none;
+}
+.structured-tree button,
+.structured-database button,
+.structured-page-ref,
+.structured-trash button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: var(--type-ui);
+  cursor: pointer;
+}
+.structured-tree button:focus-visible,
+.structured-workspace input:focus-visible,
+.structured-workspace textarea:focus-visible,
+.structured-workspace select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.structured-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block: var(--space-4);
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+}
+.structured-search input {
+  min-inline-size: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+}
+.structured-tree__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px 32px;
+  align-items: center;
+  min-block-size: 40px;
+  border-radius: 4px;
+}
+.structured-tree__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.structured-tree__row:has(.is-active) {
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 var(--accent);
+}
+.structured-tree__row > button:first-child {
+  min-inline-size: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: start;
+}
+.structured-tree__row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.structured-main {
+  min-block-size: 0;
+  overflow: auto;
+  padding: var(--space-6);
+}
+.structured-topbar {
+  max-inline-size: 960px;
+  margin-inline: auto;
+  padding-block-end: var(--space-4);
+}
+.structured-topbar h1 {
+  margin: var(--space-1) 0 0;
+  font: var(--type-display);
+  font-family: var(--font-display);
+}
+.structured-document {
+  max-inline-size: var(--document-measure);
+  min-block-size: 70dvh;
+  margin-inline: auto;
+  padding: var(--space-10) var(--space-12);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow-paper);
+}
+.structured-document h1,
+.structured-document h2,
+.structured-document h3,
+.structured-document h4,
+.structured-document h5,
+.structured-document h6 {
+  margin: var(--space-5) 0 var(--space-2);
+}
+.structured-document h1 {
+  font: var(--type-h1);
+}
+.structured-document h2 {
+  font: var(--type-h2);
+}
+.structured-document h3 {
+  font: var(--type-h3);
+}
+.structured-document h1 input,
+.structured-document h2 input,
+.structured-document h3 input,
+.structured-document h4 input,
+.structured-document h5 input,
+.structured-document h6 input {
+  inline-size: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.structured-block {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 72px;
+  resize: none;
+  padding: var(--space-2);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink);
+  font: var(--type-body);
+}
+.structured-block:hover {
+  border-color: var(--line);
+}
+.structured-block--quote {
+  border-inline-start: 3px solid var(--line-strong);
+  color: var(--ink-muted);
+}
+.structured-block--code {
+  background: var(--surface);
+  font: var(--type-mono);
+}
+.structured-page-ref {
+  display: block;
+  inline-size: 100%;
+  padding: var(--space-3);
+  text-align: start;
+  border-block: 1px solid var(--line);
+  color: var(--accent);
+}
+.structured-sync {
+  margin-block: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--accent-soft);
+}
+.structured-sync header {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink-muted);
+  font: var(--type-caption);
+}
+.structured-sync :where(p, h1, h2, h3, h4, h5, h6) {
+  overflow-wrap: anywhere;
+}
+.structured-sync p {
+  margin-block-end: 0;
+  font: var(--type-body);
+}
+.structured-database {
+  margin-block: var(--space-6);
+  border-block-start: 1px solid var(--line);
+  padding-block-start: var(--space-4);
+}
+.structured-database h2 {
+  margin: 0;
+  font: var(--type-h3);
+}
+.structured-database__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.structured-database__tools :where(input, select, button) {
+  min-block-size: 36px;
+  padding-inline: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--elevated);
+}
+.structured-table-wrap {
+  overflow-inline: auto;
+  margin-block-start: var(--space-3);
+}
+.structured-table-hint {
+  margin-block: var(--space-3) 0;
+  color: var(--ink-muted);
+  font: var(--type-caption);
+}
+.structured-database table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+.structured-database th,
+.structured-database td {
+  min-inline-size: 120px;
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  text-align: start;
+}
+.structured-database td input,
+.structured-database td select {
+  inline-size: 100%;
+  border: 0;
+  background: transparent;
+}
+.structured-trash {
+  max-inline-size: 960px;
+  display: flex;
+  gap: var(--space-3);
+  margin: var(--space-4) auto;
+  color: var(--ink-muted);
+}
+.structured-trash button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.structured-dialog-backdrop {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--scrim);
+}
+.structured-dialog {
+  z-index: 50;
+  inline-size: min(480px, 100%);
+  padding: var(--space-6);
+  border-radius: 12px;
+  background: var(--elevated);
+  box-shadow: var(--shadow-popover);
+}
+.structured-dialog label {
+  display: grid;
+  gap: var(--space-2);
+  margin-block: var(--space-4);
+}
+.structured-dialog :where(input, textarea) {
+  min-block-size: 44px;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.structured-dialog textarea {
+  min-block-size: 160px;
+  inline-size: 100%;
+  resize: vertical;
+}
+.structured-loading {
+  padding: var(--space-10);
+}
+@media (max-width: 767px) {
+  .structured-workspace {
+    block-size: auto;
+    min-block-size: 100dvh;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .structured-tree {
+    overflow: visible;
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--line);
+  }
+  .structured-tree__disclosure {
+    display: inline-grid;
+    place-items: center;
+  }
+  .structured-tree nav {
+    display: none;
+    max-block-size: 50dvh;
+    overflow: auto;
+  }
+  .structured-tree[data-expanded="true"] nav {
+    display: block;
+  }
+  .structured-search,
+  .structured-search :where(input, button),
+  .structured-database__tools :where(input, select, button),
+  .structured-database td :where(input, select) {
+    min-block-size: var(--touch-target-size);
+  }
+  .structured-dialog button {
+    min-block-size: var(--touch-target-size);
+    min-inline-size: var(--touch-target-size);
+  }
+  .structured-main {
+    padding: var(--space-4);
+  }
+  .structured-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .structured-document {
+    min-block-size: 0;
+    padding: var(--space-6) var(--space-4);
+  }
+  .structured-database > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .structured-tree__row {
+    grid-template-columns: minmax(0, 1fr) var(--touch-target-size) var(--touch-target-size);
+    min-block-size: var(--touch-target-size);
+  }
+  .structured-tree button {
+    min-block-size: var(--touch-target-size);
+  }
+}

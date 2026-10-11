@@ -145,10 +145,11 @@ export const MarkdownWorkspace = ({
               <MarkdownRichEditor
                 key={workspace.disk.name}
                 ref={richRef}
-                source={workspace.disk.content}
+                source={workspace.draft}
                 hidden={workspace.mode === "source"}
                 onChange={workspace.changeDraft}
                 onCompositionChange={workspace.onCompositionChange}
+                onSave={() => void workspace.persist()}
               />
               {workspace.mode === "source" && (
                 <label className="markdown-source">
@@ -163,6 +164,15 @@ export const MarkdownWorkspace = ({
                     onChange={(event) => workspace.editSource(event.target.value)}
                     onCompositionStart={() => workspace.onCompositionChange(true)}
                     onCompositionEnd={() => workspace.onCompositionChange(false)}
+                    onKeyDown={(event) => {
+                      if (
+                        (event.metaKey || event.ctrlKey) &&
+                        event.key.toLocaleLowerCase() === "s"
+                      ) {
+                        event.preventDefault()
+                        void workspace.persist()
+                      }
+                    }}
                     spellCheck={false}
                   />
                 </label>

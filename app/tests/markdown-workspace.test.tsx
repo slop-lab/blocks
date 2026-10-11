@@ -180,6 +180,21 @@ describe("Markdown workspace draft integrity", () => {
     expect(host.textContent).toContain("저장 중 추가된 변경은 초안에 남아 있습니다.")
   })
 
+  it("saves from Mod-S while the source editor is active", async () => {
+    const textarea = await sourceEditor()
+    await changeTextarea(textarea, "# Shortcut draft\n")
+
+    await act(async () =>
+      textarea.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "s", ctrlKey: true, bubbles: true }),
+      ),
+    )
+    await act(async () => await Promise.resolve())
+
+    expect(api.save).toHaveBeenCalledTimes(1)
+    expect(api.save.mock.calls[0]?.[0].content).toBe("# Shortcut draft\n")
+  })
+
   it("opens in visual mode and carries source edits back into the document", async () => {
     expect(host.querySelector("[aria-label='Markdown 문서 편집기']")?.textContent).toContain(
       "Heading",

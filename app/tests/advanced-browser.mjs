@@ -8,7 +8,8 @@ import { createApplicationServer } from "../server/application.mjs"
 
 const root = await mkdtemp(join(tmpdir(), "block-editor-browser-"))
 process.env.MARKDOWN_ROOT = root
-const original = "# File notes\n\nOriginal paragraph.\n\n```custom\npreserve exactly\n```\n"
+const original =
+  "# File notes\n\nOriginal paragraph.\n\n```custom\npreserve exactly\n```\n\n:::owned\nkeep these bytes\n:::\n"
 await writeFile(join(root, "notes.md"), original)
 const server = createApplicationServer()
 server.listen(0, "127.0.0.1")
@@ -44,15 +45,34 @@ try {
   await page.keyboard.press("Home")
   await page.keyboard.press("Shift+End")
   await page.keyboard.insertText("Changed title")
-  await markdown.getByRole("tab", { name: "Markdown 원문", exact: true }).click()
-  const source = markdown.getByLabel("Markdown 원문", { exact: true })
-  assert.equal(await source.inputValue(), original.replace("# File notes", "# Changed title"))
-  await markdown.getByRole("button", { name: "저장", exact: true }).click()
+  await editor.locator("p").first().click()
+  await page.keyboard.press("End")
+  await page.keyboard.press("Enter")
+  await page.keyboard.insertText("Added paragraph")
+  const added = editor.locator("p", { hasText: "Added paragraph" })
+  await added.click()
+  await page.keyboard.press("Shift+F10")
+  await page.getByRole("menuitem", { name: "위로 이동", exact: true }).click()
+  await page.keyboard.press("Control+s")
   await page.waitForFunction(() =>
     document.querySelector(".markdown-status")?.textContent?.includes("디스크에 저장했습니다"),
   )
+  await markdown.getByRole("tab", { name: "Markdown 원문", exact: true }).click()
+  const source = markdown.getByLabel("Markdown 원문", { exact: true })
+  assert.equal(
+    await source.inputValue(),
+    original
+      .replace("# File notes", "# Changed title")
+      .replace("Original paragraph.\n", "Added paragraph\n\nOriginal paragraph.\n"),
+  )
   assert.match(await readFile(join(root, "notes.md"), "utf8"), /# Changed title/)
+  assert.match(await readFile(join(root, "notes.md"), "utf8"), /Added paragraph/)
   assert.match(await readFile(join(root, "notes.md"), "utf8"), /```custom\npreserve exactly\n```/)
+  assert.match(await readFile(join(root, "notes.md"), "utf8"), /:::owned\nkeep these bytes\n:::/)
+  await markdown.getByRole("button", { name: "다시 읽기", exact: true }).click()
+  await markdown.getByRole("tab", { name: "문서", exact: true }).click()
+  assert.match(await editor.textContent(), /Added paragraph/)
+  await markdown.getByRole("tab", { name: "Markdown 원문", exact: true }).click()
   await source.fill(`${await source.inputValue()}\nLocal draft`)
   await writeFile(join(root, "notes.md"), "# Externally changed\n")
   await markdown.getByRole("button", { name: "저장", exact: true }).click()

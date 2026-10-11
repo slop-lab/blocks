@@ -47,6 +47,11 @@ const OwnershipExamplesWorkspace = lazy(() =>
     default: module.OwnershipExamplesWorkspace,
   })),
 )
+const StructuredWorkspace = lazy(() =>
+  import("./features/workspace/StructuredWorkspace").then((module) => ({
+    default: module.StructuredWorkspace,
+  })),
+)
 
 export const App = () => {
   const workspace = useWorkspace()
@@ -60,14 +65,16 @@ export const App = () => {
     ? "app-shell"
     : workspace.route === "git-documents"
       ? "app-shell app-shell--feature app-shell--git-documents"
-      : "app-shell app-shell--feature"
+      : workspace.route === "structured-workspace"
+        ? "app-shell app-shell--feature app-shell--structured"
+        : "app-shell app-shell--feature"
   const sessionKey = `${workspace.contentRoute}-${workspace.session.epoch}-${workspace.session.surfaceRevision}`
   return (
     <div className={shellClass}>
       <a className="skip-link" href="#main-content">
         본문으로 건너뛰기
       </a>
-      {workspace.route !== "git-documents" && (
+      {workspace.route !== "git-documents" && workspace.route !== "structured-workspace" && (
         <Sidebar route={workspace.route} onNavigate={navigate} />
       )}
       {local ? (
@@ -152,6 +159,9 @@ export const App = () => {
           </div>
           <div hidden={workspace.route !== "ownership"}>
             {visited.has("ownership") && <OwnershipExamplesWorkspace />}
+          </div>
+          <div hidden={workspace.route !== "structured-workspace"}>
+            {visited.has("structured-workspace") && <StructuredWorkspace />}
           </div>
         </Suspense>
       </main>

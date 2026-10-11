@@ -34,7 +34,9 @@ export const useWorkspace = () => {
   const [route, setRoute] = useState<RouteId>(() =>
     new URLSearchParams(window.location.search).get("workspace") === "git-documents"
       ? "git-documents"
-      : "note",
+      : new URLSearchParams(window.location.search).get("workspace") === "structured-workspace"
+        ? "structured-workspace"
+        : "note",
   )
   const [toast, setToast] = useState("")
   const documents = useDocumentSessions(setToast)

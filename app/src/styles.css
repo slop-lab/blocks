@@ -90,6 +90,9 @@ select {
 .app-shell.app-shell--feature {
   grid-template-columns: 244px minmax(0, 1fr);
 }
+.app-shell.app-shell--structured {
+  grid-template-columns: minmax(0, 1fr);
+}
 .feature-workspace {
   word-break: keep-all;
   overflow-wrap: break-word;
@@ -98,6 +101,9 @@ select {
   min-block-size: 0;
   overflow: auto;
   padding: var(--space-6);
+}
+.app-shell--structured .feature-workspace {
+  padding: 0;
 }
 .feature-workspace > div {
   block-size: 100%;

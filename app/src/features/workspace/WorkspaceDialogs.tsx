@@ -1,14 +1,21 @@
+import type { Database, SyncedSource, Workspace } from "@block-editor/workspace"
 import { Cross2Icon, PlusIcon } from "@radix-ui/react-icons"
 import { useEffect, useRef } from "react"
+import { WorkspaceEditor } from "./WorkspaceEditor"
 
 type Props = {
   readonly createOpen: boolean
   readonly newTitle: string
-  readonly sharedText: string | null
+  readonly workspace: Workspace
+  readonly databases: readonly Database[]
+  readonly sources: readonly SyncedSource[]
+  readonly sharedSource: SyncedSource | null
   readonly onTitle: (value: string) => void
   readonly onCreate: () => void
   readonly onCloseCreate: () => void
-  readonly onSharedText: (value: string) => void
+  readonly onSharedSource: (source: SyncedSource) => void
+  readonly onCompositionChange: (composing: boolean) => void
+  readonly sharedReturnFocus: HTMLElement | null
   readonly onCloseShared: () => void
 }
 
@@ -16,16 +23,22 @@ type DialogFocus = {
   readonly open: boolean
   readonly onClose: () => void
   readonly initialFocus: React.RefObject<HTMLElement | null>
+  readonly returnFocus?: HTMLElement | null
 }
 
-const useDialogFocus = ({ open, onClose, initialFocus }: DialogFocus) => {
+const useDialogFocus = ({ open, onClose, initialFocus, returnFocus }: DialogFocus) => {
   const dialog = useRef<HTMLElement>(null)
   const close = useRef(onClose)
   close.current = onClose
   useEffect(() => {
     if (!open) return
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    initialFocus.current?.focus()
+    const opener =
+      returnFocus ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null)
+    queueMicrotask(() => {
+      const initial = initialFocus.current
+      const editable = initial?.querySelector<HTMLElement>("[contenteditable='true']")
+      ;(editable ?? initial)?.focus()
+    })
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault()
@@ -34,7 +47,9 @@ const useDialogFocus = ({ open, onClose, initialFocus }: DialogFocus) => {
       }
       if (event.key !== "Tab" || dialog.current === null) return
       const focusable = Array.from(
-        dialog.current.querySelectorAll<HTMLElement>("button, input, textarea, select, [tabindex]"),
+        dialog.current.querySelectorAll<HTMLElement>(
+          "button, input, textarea, select, [contenteditable='true'], [tabindex]",
+        ),
       ).filter((element) => element.tabIndex >= 0 && !element.hasAttribute("disabled"))
       const first = focusable[0]
       const last = focusable.at(-1)
@@ -52,22 +67,23 @@ const useDialogFocus = ({ open, onClose, initialFocus }: DialogFocus) => {
       document.removeEventListener("keydown", handleKeyDown)
       opener?.focus()
     }
-  }, [open, initialFocus])
+  }, [open, initialFocus, returnFocus])
   return dialog
 }
 
 export const WorkspaceDialogs = (props: Props) => {
   const createInput = useRef<HTMLInputElement>(null)
-  const sharedInput = useRef<HTMLTextAreaElement>(null)
+  const sharedInput = useRef<HTMLDivElement>(null)
   const createDialog = useDialogFocus({
     open: props.createOpen,
     onClose: props.onCloseCreate,
     initialFocus: createInput,
   })
   const sharedDialog = useDialogFocus({
-    open: props.sharedText !== null,
+    open: props.sharedSource !== null,
     onClose: props.onCloseShared,
     initialFocus: sharedInput,
+    returnFocus: props.sharedReturnFocus,
   })
   return (
     <>
@@ -102,7 +118,7 @@ export const WorkspaceDialogs = (props: Props) => {
           </section>
         </div>
       )}
-      {props.sharedText !== null && (
+      {props.sharedSource !== null && (
         <div className="structured-dialog-backdrop">
           <section
             role="dialog"
@@ -118,12 +134,37 @@ export const WorkspaceDialogs = (props: Props) => {
                 <Cross2Icon />
               </button>
             </header>
-            <textarea
-              ref={sharedInput}
-              aria-label="공유 블록 내용"
-              value={props.sharedText}
-              onChange={(event) => props.onSharedText(event.target.value)}
-            />
+            <div ref={sharedInput} tabIndex={-1}>
+              <WorkspaceEditor
+                workspace={props.workspace}
+                document={{
+                  pageId: props.sharedSource.id,
+                  version: props.sharedSource.version,
+                  blocks: props.sharedSource.blocks,
+                }}
+                depth={0}
+                databases={props.databases}
+                sources={props.sources}
+                onDocument={(document) =>
+                  props.onSharedSource({
+                    id: document.pageId,
+                    version: document.version,
+                    blocks: document.blocks.flatMap((block) =>
+                      block.type === "paragraph" ||
+                      block.type === "heading" ||
+                      block.type === "quote" ||
+                      block.type === "code"
+                        ? [block]
+                        : [],
+                    ),
+                  })
+                }
+                onSourceEdit={() => {}}
+                onOpenPage={() => {}}
+                onCompositionChange={props.onCompositionChange}
+                autoFocus
+              />
+            </div>
             <p id="shared-description">이 원본을 참조하는 두 위치가 함께 갱신됩니다.</p>
           </section>
         </div>

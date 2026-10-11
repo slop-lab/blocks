@@ -7,7 +7,7 @@ import type { Node as ProseMirrorNode } from "prosemirror-model"
 import { liftListItem, sinkListItem, splitListItem } from "prosemirror-schema-list"
 import { EditorState } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react"
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react"
 import { attachBlockInteractions } from "../../pm/block-interactions"
 import { createIdentityPlugin, createLockedBlockPlugin } from "../../pm/editor"
 
@@ -21,9 +21,13 @@ type MarkdownRichEditorProps = {
   readonly hidden: boolean
   readonly onChange: (source: string) => void
   readonly onCompositionChange: (active: boolean) => void
+  readonly onSave: () => void
 }
 
-const markdownState = (document: ProseMirrorNode): EditorState => {
+export const createMarkdownEditorState = (
+  document: ProseMirrorNode,
+  onSave: () => void = () => undefined,
+): EditorState => {
   const { schema } = document.type
   const paragraph = schema.nodes["paragraph"]
   const heading = schema.nodes["heading"]
@@ -69,6 +73,10 @@ const markdownState = (document: ProseMirrorNode): EditorState => {
         "Mod-z": undo,
         "Mod-Shift-z": redo,
         "Mod-y": redo,
+        "Mod-s": () => {
+          onSave()
+          return true
+        },
         Enter: splitListItem(listItem),
         Tab: sinkListItem(listItem),
         "Shift-Tab": liftListItem(listItem),
@@ -79,20 +87,36 @@ const markdownState = (document: ProseMirrorNode): EditorState => {
 }
 
 export const MarkdownRichEditor = forwardRef<MarkdownRichEditorHandle, MarkdownRichEditorProps>(
-  function MarkdownRichEditor({ source, hidden, onChange, onCompositionChange }, ref) {
+  function MarkdownRichEditor({ source, hidden, onChange, onCompositionChange, onSave }, ref) {
     const host = useRef<HTMLDivElement>(null)
     const viewRef = useRef<EditorView | null>(null)
     const onChangeRef = useRef(onChange)
     const onCompositionRef = useRef(onCompositionChange)
+    const onSaveRef = useRef(onSave)
     const initialSource = useRef(source)
+    const composingRef = useRef(false)
+    const pendingSourceRef = useRef<string | null>(null)
+    const resetTimerRef = useRef<number | null>(null)
     onChangeRef.current = onChange
     onCompositionRef.current = onCompositionChange
+    onSaveRef.current = onSave
+
+    const resetSource = useCallback((nextSource: string) => {
+      const view = viewRef.current
+      if (view === null) return
+      if (composingRef.current || view.composing) {
+        pendingSourceRef.current = nextSource
+        return
+      }
+      pendingSourceRef.current = null
+      view.updateState(
+        createMarkdownEditorState(parseMarkdown(nextSource).document, () => onSaveRef.current()),
+      )
+    }, [])
 
     useImperativeHandle(ref, () => ({
       resetSource: (nextSource) => {
-        const view = viewRef.current
-        if (view === null) return
-        view.updateState(markdownState(parseMarkdown(nextSource).document))
+        resetSource(nextSource)
       },
       source: () => {
         const view = viewRef.current
@@ -104,38 +128,57 @@ export const MarkdownRichEditor = forwardRef<MarkdownRichEditorHandle, MarkdownR
       const target = host.current
       if (target === null) return
       const view = new EditorView(target, {
-        state: markdownState(parseMarkdown(initialSource.current).document),
+        state: createMarkdownEditorState(parseMarkdown(initialSource.current).document, () =>
+          onSaveRef.current(),
+        ),
         attributes: {
           class: "markdown-prose",
           "aria-label": "Markdown 문서 편집기",
         },
         dispatchTransaction: (transaction) => {
-          const next = view.state.apply(transaction)
-          view.updateState(next)
-          if (transaction.docChanged) onChangeRef.current(serializeMarkdown(next.doc))
+          const previous = view.state.doc
+          const result = view.state.applyTransaction(transaction)
+          if (result.transactions.length === 0) return
+          view.updateState(result.state)
+          if (!result.state.doc.eq(previous))
+            onChangeRef.current(serializeMarkdown(result.state.doc))
         },
       })
       const composing = (active: boolean) => onCompositionRef.current(active)
-      const start = () => composing(true)
-      const end = () => composing(false)
+      const start = () => {
+        composingRef.current = true
+        composing(true)
+      }
+      const end = () => {
+        composingRef.current = false
+        composing(false)
+        resetTimerRef.current =
+          view.dom.ownerDocument.defaultView?.setTimeout(() => {
+            resetTimerRef.current = null
+            const pending = pendingSourceRef.current
+            if (pending !== null) resetSource(pending)
+          }, 0) ?? null
+      }
       view.dom.addEventListener("compositionstart", start)
       view.dom.addEventListener("compositionend", end)
       const detach = attachBlockInteractions(view, { readOnly: false })
       viewRef.current = view
       return () => {
+        if (resetTimerRef.current !== null)
+          view.dom.ownerDocument.defaultView?.clearTimeout(resetTimerRef.current)
         detach()
         view.dom.removeEventListener("compositionstart", start)
         view.dom.removeEventListener("compositionend", end)
         view.destroy()
         viewRef.current = null
       }
-    }, [])
+    }, [resetSource])
 
     useEffect(() => {
       const view = viewRef.current
       if (view === null || serializeMarkdown(view.state.doc) === source) return
-      view.updateState(markdownState(parseMarkdown(source).document))
-    }, [source])
+      resetSource(source)
+    }, [resetSource, source])
 
     return (
       <section className="markdown-rich" aria-hidden={hidden} hidden={hidden}>

@@ -6,11 +6,12 @@ export const sourceAttrs = {
   originalFingerprint: { default: "" },
   prefixRaw: { default: "" },
   locked: { default: false },
+  sourceOrder: { default: -1 },
 } as const
 
 const safeHref = (href: unknown): string => {
   if (typeof href !== "string") return ""
-  if (href.startsWith("//")) return ""
+  if (href !== href.trim() || href.startsWith("//") || href.includes("\\")) return ""
   if (
     href.startsWith("#") ||
     href.startsWith("/") ||
@@ -18,6 +19,7 @@ const safeHref = (href: unknown): string => {
     href.startsWith("../")
   )
     return href
+  if (!/^[A-Za-z][A-Za-z\d+.-]*:/u.test(href)) return href
   try {
     const protocol = new URL(href).protocol
     return ["http:", "https:", "mailto:"].includes(protocol) ? href : ""

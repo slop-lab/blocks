@@ -38,7 +38,7 @@ export const createBlockControls = (ownerDocument: Document) => {
   const rail = ownerDocument.createElement("div")
   rail.className = "block-controls"
   rail.hidden = true
-  const add = button(ownerDocument, "이 블록 뒤에 문단 추가", "plus")
+  const add = button(ownerDocument, "이 블록 뒤에 블록 추가", "plus")
   const grip = button(ownerDocument, "블록 메뉴 및 드래그", "grip")
   grip.setAttribute("aria-haspopup", "menu")
   rail.append(add, grip)

@@ -67,9 +67,22 @@ try {
   await leaf.hover()
   const grip = page.locator(".block-control--grip:visible")
   assert.equal(await grip.count(), 1)
+  const leafId = await leaf.getAttribute("data-block-id")
+  const leafBox = await leaf.boundingBox()
+  const gripBox = await grip.boundingBox()
+  if (leafBox === null || gripBox === null) throw new TypeError("Missing nested rail geometry")
+  await page.mouse.move(leafBox.x + leafBox.width / 2, leafBox.y + leafBox.height / 2)
+  await page.mouse.move(gripBox.x + gripBox.width / 2, gripBox.y + gripBox.height / 2, {
+    steps: 25,
+  })
+  assert.equal(
+    await page.locator(".block-controls:visible").getAttribute("data-target-block-id"),
+    leafId,
+  )
   await grip.click()
   const menu = page.getByRole("menu", { name: "블록 작업" })
   await menu.waitFor()
+  assert.equal(await menu.getAttribute("data-target-block-id"), leafId)
   await menu.getByRole("menuitem", { name: "복제", exact: true }).click()
   assert.equal(await editor.locator('[data-block-id="outer-quote"]').count(), 1)
   assert.equal(await editor.locator('[data-block-id="middle-callout"]').count(), 1)

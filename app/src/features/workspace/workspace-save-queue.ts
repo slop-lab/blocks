@@ -28,6 +28,7 @@ type QueueEntry = {
   content: unknown
   causality: SaveCausality | undefined
   generation: number
+  epoch: number
   timer: ReturnType<typeof setTimeout> | undefined
   saving: Promise<void> | undefined
   paused: boolean
@@ -62,6 +63,7 @@ export class WorkspaceSaveQueue {
         content,
         causality,
         generation: 1,
+        epoch: 0,
         timer: undefined,
         saving: undefined,
         paused: false,
@@ -98,6 +100,7 @@ export class WorkspaceSaveQueue {
   rebase(target: SaveTarget, baseline: QueueRecord, causality?: SaveCausality): void {
     const entry = this.entries.get(targetKey(target))
     if (entry === undefined) return
+    entry.epoch += 1
     entry.baseline = baseline
     entry.causality = causality
     entry.paused = false
@@ -108,18 +111,21 @@ export class WorkspaceSaveQueue {
     const key = targetKey(target)
     const entry = this.entries.get(key)
     if (entry === undefined) return
+    entry.epoch += 1
     clearTimeout(entry.timer)
     this.entries.delete(key)
   }
 
   async flush(target: SaveTarget): Promise<void> {
-    const entry = this.entries.get(targetKey(target))
+    const key = targetKey(target)
+    const entry = this.entries.get(key)
     if (entry === undefined) return
     if (entry.saving !== undefined) return entry.saving
-    if (this.composingTargets.has(targetKey(target)) || this.disposed || entry.paused) return
+    if (this.composingTargets.has(key) || this.disposed || entry.paused) return
     clearTimeout(entry.timer)
     entry.timer = undefined
     const submittedGeneration = entry.generation
+    const submittedEpoch = entry.epoch
     const submittedContent = entry.content
     const submittedCausality = entry.causality
     const request: SaveRequest = {
@@ -129,9 +135,11 @@ export class WorkspaceSaveQueue {
       ...(submittedCausality === undefined ? {} : { causality: submittedCausality }),
     }
     let followup = false
+    const isCurrentAttempt = (): boolean =>
+      !this.disposed && this.entries.get(key) === entry && entry.epoch === submittedEpoch
     entry.saving = this.save(request)
       .then((saved) => {
-        if (this.disposed) return
+        if (!isCurrentAttempt()) return
         const clean = entry.generation === submittedGeneration
         followup = !clean
         entry.baseline = saved
@@ -144,18 +152,19 @@ export class WorkspaceSaveQueue {
           clean,
           ...(submittedCausality === undefined ? {} : { causality: submittedCausality }),
         })
-        if (clean) this.entries.delete(targetKey(entry.target))
+        if (clean) this.entries.delete(key)
       })
       .catch((error: unknown) => {
-        if (!this.disposed && this.onError(request, error) === "pause") entry.paused = true
+        if (isCurrentAttempt() && this.onError(request, error) === "pause") entry.paused = true
       })
       .finally(() => {
+        const superseded = entry.epoch !== submittedEpoch
         entry.saving = undefined
         if (
-          followup &&
+          (followup || superseded) &&
           !this.disposed &&
-          this.entries.has(targetKey(entry.target)) &&
-          !this.composingTargets.has(targetKey(entry.target)) &&
+          this.entries.get(key) === entry &&
+          !this.composingTargets.has(key) &&
           !entry.paused
         )
           this.schedule(entry, 0)

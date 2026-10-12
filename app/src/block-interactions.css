@@ -87,10 +87,10 @@
 }
 
 .ProseMirror .block-selected {
-  background-color: var(--accent-soft);
+  background-color: var(--selection-soft);
   box-shadow:
-    inset var(--drop-rule-size) 0 0 var(--accent),
-    inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent);
+    inset var(--drop-rule-size) 0 0 var(--selection),
+    inset 0 0 0 1px color-mix(in srgb, var(--selection) 36%, transparent);
 }
 
 .block-selected > [data-block-id] {
@@ -100,9 +100,26 @@
 .block-selection-marquee {
   position: fixed;
   z-index: 30;
-  border: var(--drop-rule-size) solid var(--accent);
-  background: color-mix(in srgb, var(--accent-soft) 72%, transparent);
+  border: var(--drop-rule-size) solid var(--selection);
+  background: color-mix(in srgb, var(--selection-soft) 72%, transparent);
   pointer-events: none;
+}
+
+.block-selection-status {
+  width: max-content;
+  max-width: 100%;
+  margin: 0 0 var(--space-2) auto;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--selection) 36%, var(--line));
+  border-radius: var(--radius-card);
+  color: var(--selection);
+  background: var(--elevated);
+  box-shadow: var(--shadow-popover);
+  font: var(--type-caption) var(--font-ui);
+}
+
+.block-selection-status[hidden] {
+  display: none;
 }
 
 .block-selection-marquee[hidden] {

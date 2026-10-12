@@ -25,8 +25,8 @@ describe("workspace entity save queue", () => {
         saved.push(`${target.kind}:${target.id}`)
         return record(target.id, baseline.revision + 1, content)
       },
-      () => {},
-      () => {},
+      () => undefined,
+      () => undefined,
       600,
     )
 
@@ -47,27 +47,60 @@ describe("workspace entity save queue", () => {
     const first = new Promise<void>((resolve) => {
       release = resolve
     })
-    const submitted: unknown[] = []
-    const settled: boolean[] = []
+    const submitted: {
+      readonly content: unknown
+      readonly revision: number
+      readonly cause?: string
+    }[] = []
+    const settled: { readonly clean: boolean; readonly cause?: string }[] = []
     const queue = new WorkspaceSaveQueue(
-      async ({ target, baseline, content }) => {
-        submitted.push(content)
+      async ({ target, baseline, content, causality }) => {
+        submitted.push({
+          content,
+          revision: baseline.revision,
+          ...(causality === undefined ? {} : { cause: causality.causeId }),
+        })
         if (submitted.length === 1) await first
         return record(target.id, baseline.revision + 1, content)
       },
-      ({ clean }) => settled.push(clean),
-      () => {},
+      ({ clean, causality }) =>
+        settled.push({ clean, ...(causality === undefined ? {} : { cause: causality.causeId }) }),
+      () => undefined,
       600,
     )
     const target = { kind: "pages" as const, id: "page-a" }
-    queue.stage(target, record("page-a", 1, {}), { text: "first" })
+    queue.stage(
+      target,
+      record("page-a", 1, {}),
+      { text: "first" },
+      {
+        generation: 1,
+        causeId: "cause-a",
+        baselineRevision: 1,
+      },
+    )
     await vi.advanceTimersByTimeAsync(600)
-    queue.stage(target, record("page-a", 1, {}), { text: "newest" })
+    queue.stage(
+      target,
+      record("page-a", 1, {}),
+      { text: "newest" },
+      {
+        generation: 2,
+        causeId: "cause-b",
+        baselineRevision: 1,
+      },
+    )
     release()
     await vi.runAllTimersAsync()
 
-    expect(submitted).toEqual([{ text: "first" }, { text: "newest" }])
-    expect(settled).toEqual([false, true])
+    expect(submitted).toEqual([
+      { content: { text: "first" }, revision: 1, cause: "cause-a" },
+      { content: { text: "newest" }, revision: 2, cause: "cause-b" },
+    ])
+    expect(settled).toEqual([
+      { clean: false, cause: "cause-a" },
+      { clean: true, cause: "cause-b" },
+    ])
     expect(queue.isDirty(target)).toBe(false)
     queue.dispose()
     vi.useRealTimers()
@@ -83,7 +116,7 @@ describe("workspace entity save queue", () => {
         if (offline) throw new TypeError("offline")
         return record(target.id, baseline.revision + 1, content)
       },
-      () => {},
+      () => undefined,
       () => {},
       600,
     )
@@ -125,6 +158,36 @@ describe("workspace entity save queue", () => {
 
     expect(submitted).toEqual(["pages:page-a"])
     expect(queue.isDirty(composingTarget)).toBe(true)
+    queue.dispose()
+    vi.useRealTimers()
+  })
+
+  it("pauses a conflicted target until an explicit rebase", async () => {
+    vi.useFakeTimers()
+    const target = { kind: "sources" as const, id: "shared" }
+    const revisions: number[] = []
+    let conflicted = true
+    const queue = new WorkspaceSaveQueue(
+      async ({ baseline, content }) => {
+        revisions.push(baseline.revision)
+        if (conflicted) throw new TypeError("conflict")
+        return record(target.id, baseline.revision + 1, content)
+      },
+      () => {},
+      () => "pause",
+      600,
+    )
+    queue.stage(target, record("shared", 1, {}), { text: "local" })
+    await vi.advanceTimersByTimeAsync(600)
+
+    queue.retry()
+    await vi.runAllTimersAsync()
+    conflicted = false
+    queue.rebase(target, record("shared", 2, { text: "remote" }))
+    await vi.runAllTimersAsync()
+
+    expect(revisions).toEqual([1, 2])
+    expect(queue.isDirty(target)).toBe(false)
     queue.dispose()
     vi.useRealTimers()
   })
@@ -173,4 +236,21 @@ it("merges polling records only for clean entities", () => {
     text: "local draft",
   })
   expect(merged.databases[0]?.revision).toBe(2)
+})
+
+it("ignores an older poll record for a clean entity", () => {
+  const current: WorkspacePayload = {
+    tree: entityRecord("tree", 3, { id: "tree", version: 3, pages: [] }),
+    documents: [],
+    databases: [],
+    sources: [],
+  }
+  const remote: WorkspacePayload = {
+    ...current,
+    tree: entityRecord("tree", 2, { id: "tree", version: 2, pages: [] }),
+  }
+
+  const merged = mergeWorkspacePayload(current, remote, () => false)
+
+  expect(merged.tree.revision).toBe(3)
 })

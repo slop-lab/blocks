@@ -1,3 +1,4 @@
+import { blockSelectionReconcilePlugin } from "@block-editor/interactions/prosemirror"
 import type { ProseMirrorProfile } from "@block-editor/prosemirror"
 import { defaultProfile } from "@block-editor/prosemirror/preset"
 import { baseKeymap } from "prosemirror-commands"
@@ -102,6 +103,7 @@ export const createEditorState = (options: EditorSessionOptions): EditorState =>
       }),
       lockedBlockPlugin,
       identityPlugin,
+      blockSelectionReconcilePlugin,
       createClipboardPlugin(options.profile ?? defaultProfile),
       keymap({
         "Mod-b": toggleFormat("strong"),

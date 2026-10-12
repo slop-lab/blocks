@@ -1,3 +1,4 @@
+import { blockSelectionReconcilePlugin } from "@block-editor/interactions/prosemirror"
 import { baseKeymap } from "prosemirror-commands"
 import { history, redo, undo } from "prosemirror-history"
 import { keymap } from "prosemirror-keymap"
@@ -87,6 +88,7 @@ export const createCompositeEditorState = (document: ProseMirrorNode): EditorSta
     plugins: [
       history(),
       ensureBlockIdentity,
+      blockSelectionReconcilePlugin,
       columnResizing({ handleWidth: 6, cellMinWidth: 80, defaultCellMinWidth: 120 }),
       keymap({
         Tab: goToNextCell(1),

@@ -1,3 +1,4 @@
+import { blockSelectionReconcilePlugin } from "@block-editor/interactions/prosemirror"
 import { baseKeymap } from "prosemirror-commands"
 import { keymap } from "prosemirror-keymap"
 import { EditorState } from "prosemirror-state"
@@ -52,6 +53,7 @@ export const CollaborationEditor = ({ label, binding, onActive }: CollaborationE
                 transaction.getMeta(ySyncPluginKey)?.isChangeOrigin !== true,
             ),
           ),
+          blockSelectionReconcilePlugin,
           keymap({
             "Mod-b": toggleFormat("strong"),
             "Mod-i": toggleFormat("em"),

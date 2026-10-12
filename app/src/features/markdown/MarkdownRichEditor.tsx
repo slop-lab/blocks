@@ -1,3 +1,4 @@
+import { blockSelectionReconcilePlugin } from "@block-editor/interactions/prosemirror"
 import { parseMarkdown, serializeMarkdown } from "@block-editor/markdown"
 import { baseKeymap, toggleMark } from "prosemirror-commands"
 import { history, redo, undo } from "prosemirror-history"
@@ -55,6 +56,7 @@ export const createMarkdownEditorState = (
       history(),
       createLockedBlockPlugin(),
       createIdentityPlugin(),
+      blockSelectionReconcilePlugin,
       inputRules({
         rules: [
           textblockTypeInputRule(/^(#{1,6})\s$/u, heading, (match) => ({

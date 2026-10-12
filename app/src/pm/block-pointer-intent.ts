@@ -8,10 +8,11 @@ export const insideRailCorridor = (
   bounds: PointerIntentBounds,
 ): boolean => {
   const padding = 8
+  const blockEdge = bounds.rail.right <= bounds.block.left ? bounds.block.left : bounds.block.right
   return (
-    point.x >= Math.min(bounds.rail.left, bounds.block.left) - padding &&
-    point.x <= Math.max(bounds.rail.right, bounds.block.right) + padding &&
-    point.y >= Math.min(bounds.rail.top, bounds.block.top) - padding &&
-    point.y <= Math.max(bounds.rail.bottom, bounds.block.bottom) + padding
+    point.x >= Math.min(bounds.rail.left, blockEdge) - padding &&
+    point.x <= Math.max(bounds.rail.right, blockEdge) + padding &&
+    point.y >= bounds.rail.top - padding &&
+    point.y <= bounds.rail.bottom + padding
   )
 }

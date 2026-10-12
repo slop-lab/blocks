@@ -93,10 +93,6 @@
     inset 0 0 0 1px color-mix(in srgb, var(--selection) 36%, transparent);
 }
 
-.block-selected > [data-block-id] {
-  background-color: color-mix(in srgb, var(--paper) 64%, transparent);
-}
-
 .block-selection-marquee {
   position: fixed;
   z-index: 30;

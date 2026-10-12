@@ -14,6 +14,7 @@ import {
   planBlockWrap,
   wrapBlocksById,
 } from "../src/pm/block-interaction-commands"
+import { insideRailCorridor } from "../src/pm/block-pointer-intent"
 import { createEditorState } from "../src/pm/editor"
 import { editorSchema } from "../src/pm/schema"
 
@@ -25,6 +26,36 @@ const paragraph = (id: string, text: string, locked = false) =>
 
 const documentWith = (...blocks: readonly ProseMirrorNode[]) =>
   editorSchema.nodes.doc.create(undefined, blocks)
+
+describe("block rail pointer intent", () => {
+  it("Given a tall parent block, When the pointer is over nested content, Then the parent corridor does not cover it", () => {
+    const block: DOMRect = {
+      x: 200,
+      y: 100,
+      left: 200,
+      top: 100,
+      right: 800,
+      bottom: 600,
+      width: 600,
+      height: 500,
+      toJSON: () => ({}),
+    }
+    const rail: DOMRect = {
+      x: 152,
+      y: 100,
+      left: 152,
+      top: 100,
+      right: 192,
+      bottom: 132,
+      width: 40,
+      height: 32,
+      toJSON: () => ({}),
+    }
+
+    expect(insideRailCorridor({ x: 400, y: 260 }, { block, rail })).toBe(false)
+    expect(insideRailCorridor({ x: 196, y: 116 }, { block, rail })).toBe(true)
+  })
+})
 
 describe("block interaction commands", () => {
   it("moves a stable block ID in one undoable transaction", () => {

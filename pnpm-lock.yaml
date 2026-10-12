@@ -11,12 +11,18 @@ importers:
       '@block-editor/bindings':
         specifier: workspace:*
         version: link:packages/bindings
+      '@block-editor/containers':
+        specifier: workspace:*
+        version: link:packages/containers
       '@block-editor/git-documents':
         specifier: workspace:*
         version: link:packages/git-documents
       '@block-editor/git-documents-host':
         specifier: workspace:*
         version: link:packages/git-documents-host
+      '@block-editor/interactions':
+        specifier: workspace:*
+        version: link:packages/interactions
       '@block-editor/markdown':
         specifier: workspace:*
         version: link:packages/markdown
@@ -183,6 +189,12 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/containers:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/git-documents:
     devDependencies:
       '@types/node':
@@ -204,6 +216,25 @@ importers:
       '@types/node':
         specifier: ^24.6.0
         version: 24.19.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/interactions:
+    dependencies:
+      zod:
+        specifier: ^4.1.11
+        version: 4.6.5
+    devDependencies:
+      prosemirror-model:
+        specifier: ^1.25.4
+        version: 1.25.12
+      prosemirror-state:
+        specifier: ^1.4.3
+        version: 1.4.4
+      prosemirror-view:
+        specifier: ^1.41.3
+        version: 1.42.6
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

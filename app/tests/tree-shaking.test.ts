@@ -84,3 +84,36 @@ it("emits runnable ESM for the custom text consumer", async () => {
   await import(`${driver}?run=${crypto.randomUUID()}`)
   expect(Reflect.get(globalThis, "__profile")).toBe("notes.text")
 })
+
+it("keeps the standalone interaction and container consumer engine-free", async () => {
+  const result = await bundle(`
+    import { canonicalSelection } from "@block-editor/containers";
+    import { BlockSelection } from "@block-editor/interactions";
+    const tree = [{ id: "parent", children: [{ id: "child", children: [] }] }];
+    const selection = new BlockSelection();
+    selection.apply({ kind: "replace", id: "parent" }, ["parent", "child"]);
+    globalThis.__standalone = [canonicalSelection(tree, ["parent", "child"]), selection.value];
+  `)
+  const inputs = Object.keys(result.metafile.inputs)
+  expect(inputs.some((path) => path.includes("prosemirror-"))).toBe(false)
+  expect(inputs.some((path) => path.includes("react"))).toBe(false)
+  const output = result.outputFiles[0]
+  if (output === undefined) throw new TypeError("Missing standalone output")
+  const root = await mkdtemp(join(tmpdir(), "block-editor-interactions-driver-"))
+  roots.push(root)
+  const driver = join(root, "driver.mjs")
+  await writeFile(driver, output.text, "utf8")
+  await import(`${driver}?run=${crypto.randomUUID()}`)
+  expect(Reflect.get(globalThis, "__standalone")).toEqual([["parent"], ["parent"]])
+})
+
+it("exposes ProseMirror interactions only through the opt-in adapter", async () => {
+  const result = await bundle(`
+    import { blockSelectionReconcilePlugin } from "@block-editor/interactions/prosemirror";
+    globalThis.__adapter = blockSelectionReconcilePlugin.spec;
+  `)
+  const inputs = Object.keys(result.metafile.inputs)
+
+  expect(inputs.some((path) => path.includes("prosemirror-state"))).toBe(true)
+  expect(inputs.some((path) => path.endsWith("/interactions/dist/index.js"))).toBe(true)
+})

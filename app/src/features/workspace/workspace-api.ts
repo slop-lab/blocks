@@ -88,3 +88,10 @@ export const createWorkspacePage = async (input: {
   readonly tree: EntityRecord<Workspace>
   readonly document: EntityRecord<PageDocument>
 }> => createdPageSchema.parse(await client.post("api/workspace/pages", { json: input }).json())
+
+export const createWorkspaceSource = async (
+  source: SyncedSource,
+): Promise<EntityRecord<SyncedSource>> =>
+  sourceRecordSchema.parse(
+    await client.put(`api/workspace/sources/${source.id}`, { json: { content: source } }).json(),
+  )

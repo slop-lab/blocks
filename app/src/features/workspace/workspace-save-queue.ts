@@ -28,7 +28,7 @@ const targetKey = ({ kind, id }: SaveTarget): string => `${kind}:${id}`
 
 export class WorkspaceSaveQueue {
   private readonly entries = new Map<string, QueueEntry>()
-  private composing = false
+  private readonly composingTargets = new Set<string>()
   private disposed = false
 
   constructor(
@@ -63,10 +63,14 @@ export class WorkspaceSaveQueue {
     return this.entries.has(targetKey(target))
   }
 
-  setComposing(composing: boolean): void {
-    if (this.composing === composing) return
-    this.composing = composing
-    if (!composing) this.retry()
+  setComposing(target: SaveTarget, composing: boolean): void {
+    const key = targetKey(target)
+    if (composing) this.composingTargets.add(key)
+    else this.composingTargets.delete(key)
+    if (!composing) {
+      const entry = this.entries.get(key)
+      if (entry !== undefined && entry.saving === undefined) this.schedule(entry, this.delay)
+    }
   }
 
   retry(): void {
@@ -78,7 +82,7 @@ export class WorkspaceSaveQueue {
     const entry = this.entries.get(targetKey(target))
     if (entry === undefined) return
     if (entry.saving !== undefined) return entry.saving
-    if (this.composing || this.disposed) return
+    if (this.composingTargets.has(targetKey(target)) || this.disposed) return
     clearTimeout(entry.timer)
     entry.timer = undefined
     const submittedGeneration = entry.generation
@@ -111,7 +115,7 @@ export class WorkspaceSaveQueue {
           followup &&
           !this.disposed &&
           this.entries.has(targetKey(entry.target)) &&
-          !this.composing
+          !this.composingTargets.has(targetKey(entry.target))
         )
           this.schedule(entry, 0)
       })
@@ -126,7 +130,7 @@ export class WorkspaceSaveQueue {
 
   private schedule(entry: QueueEntry, delay: number): void {
     clearTimeout(entry.timer)
-    if (this.composing || this.disposed) {
+    if (this.composingTargets.has(targetKey(entry.target)) || this.disposed) {
       entry.timer = undefined
       return
     }

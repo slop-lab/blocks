@@ -3,6 +3,7 @@ import { HTTPError } from "ky"
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
   createWorkspacePage,
+  createWorkspaceSource,
   type EntityRecord,
   entityRecordSchemas,
   loadWorkspace,
@@ -209,6 +210,21 @@ export const useWorkspacePersistence = () => {
     return id
   }
 
+  const createSource = async (source: SyncedSource): Promise<boolean> => {
+    try {
+      const created = await createWorkspaceSource(source)
+      commit((current) =>
+        current === null ? current : { ...current, sources: [...current.sources, created] },
+      )
+      setStatus("공유 원본을 저장했습니다.")
+      return true
+    } catch (error) {
+      if (!(error instanceof Error)) throw error
+      setStatus(error.message)
+      return false
+    }
+  }
+
   return {
     payload,
     status,
@@ -217,6 +233,7 @@ export const useWorkspacePersistence = () => {
     updateSource,
     updateTree,
     createPage,
-    setComposing: (composing: boolean) => queue.setComposing(composing),
+    createSource,
+    setComposing: (target: SaveTarget, composing: boolean) => queue.setComposing(target, composing),
   }
 }

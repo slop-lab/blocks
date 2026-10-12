@@ -88,11 +88,11 @@ describe("workspace entity save queue", () => {
       600,
     )
     const target = { kind: "sources" as const, id: "shared" }
-    queue.setComposing(true)
+    queue.setComposing(target, true)
     queue.stage(target, record("shared", 1, {}), { text: "draft" })
     await vi.advanceTimersByTimeAsync(2_000)
     expect(submitted).toEqual([])
-    queue.setComposing(false)
+    queue.setComposing(target, false)
     await vi.advanceTimersByTimeAsync(600)
     expect(queue.isDirty(target)).toBe(true)
     offline = false
@@ -100,6 +100,31 @@ describe("workspace entity save queue", () => {
     await vi.runAllTimersAsync()
     expect(submitted).toEqual([{ text: "draft" }, { text: "draft" }])
     expect(queue.isDirty(target)).toBe(false)
+    queue.dispose()
+    vi.useRealTimers()
+  })
+
+  it("continues saving unrelated entities while one target is composing", async () => {
+    vi.useFakeTimers()
+    const submitted: string[] = []
+    const queue = new WorkspaceSaveQueue(
+      async ({ target, baseline, content }) => {
+        submitted.push(`${target.kind}:${target.id}`)
+        return record(target.id, baseline.revision + 1, content)
+      },
+      () => {},
+      () => {},
+      600,
+    )
+    const composingTarget = { kind: "sources" as const, id: "shared" }
+    queue.setComposing(composingTarget, true)
+    queue.stage(composingTarget, record("shared", 1, {}), { text: "draft" })
+    queue.stage({ kind: "pages", id: "page-a" }, record("page-a", 1, {}), { text: "page" })
+
+    await vi.advanceTimersByTimeAsync(600)
+
+    expect(submitted).toEqual(["pages:page-a"])
+    expect(queue.isDirty(composingTarget)).toBe(true)
     queue.dispose()
     vi.useRealTimers()
   })

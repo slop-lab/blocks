@@ -9,7 +9,7 @@ type SelectionDrag = {
 export const attachSelectionDrag = (
   view: EditorView,
   replace: (ids: readonly string[]) => void,
-  clear: () => void,
+  updateTextSelection: () => void,
   onFinish: (active: boolean) => void,
 ): SelectionDrag => {
   const ownerDocument = view.dom.ownerDocument
@@ -52,7 +52,7 @@ export const attachSelectionDrag = (
     if (!view.dom.contains(range.startContainer) || !view.dom.contains(range.endContainer)) return
     const intersected = ownedLeafBlockElements(view).filter((block) => range.intersectsNode(block))
     if (intersected.length < 2) {
-      clear()
+      updateTextSelection()
       return
     }
     const fullySelected = intersected.every((block) => {
@@ -64,7 +64,7 @@ export const attachSelectionDrag = (
       )
     })
     if (!fullySelected) {
-      clear()
+      updateTextSelection()
       return
     }
     replace(
@@ -74,16 +74,18 @@ export const attachSelectionDrag = (
       }),
     )
   }
-  const finish = (event: PointerEvent) => {
+  const finish = (event: PointerEvent, completed: boolean) => {
     if (marquee === null || event.pointerId !== marquee.pointerId) return
     if (view.dom.hasPointerCapture(event.pointerId)) view.dom.releasePointerCapture(event.pointerId)
-    onFinish(marquee.active)
+    onFinish(completed && marquee.active)
     marquee = null
     element.hidden = true
   }
+  const onPointerUp = (event: PointerEvent) => finish(event, true)
+  const onPointerCancel = (event: PointerEvent) => finish(event, false)
   ownerDocument.addEventListener("pointermove", onPointerMove)
-  ownerDocument.addEventListener("pointerup", finish)
-  ownerDocument.addEventListener("pointercancel", finish)
+  ownerDocument.addEventListener("pointerup", onPointerUp)
+  ownerDocument.addEventListener("pointercancel", onPointerCancel)
   ownerDocument.addEventListener("selectionchange", onNativeSelectionChange)
   return {
     start: (event) => {
@@ -98,8 +100,8 @@ export const attachSelectionDrag = (
     destroy: () => {
       element.remove()
       ownerDocument.removeEventListener("pointermove", onPointerMove)
-      ownerDocument.removeEventListener("pointerup", finish)
-      ownerDocument.removeEventListener("pointercancel", finish)
+      ownerDocument.removeEventListener("pointerup", onPointerUp)
+      ownerDocument.removeEventListener("pointercancel", onPointerCancel)
       ownerDocument.removeEventListener("selectionchange", onNativeSelectionChange)
     },
   }

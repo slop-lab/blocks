@@ -1,8 +1,24 @@
 import type { EditorView } from "prosemirror-view"
+import { selectionScopeForDocument } from "./prosemirror-selection-state.js"
 
 export const ownedBlockElements = (view: EditorView): readonly HTMLElement[] =>
   Array.from(view.dom.querySelectorAll<HTMLElement>("[data-block-id]")).filter(
-    (element) => element.closest(".ProseMirror") === view.dom,
+    (element) =>
+      element.closest(".ProseMirror") === view.dom &&
+      element.closest("[data-interaction-context-boundary]") === null,
+  )
+
+export const isOwnedTarget = (view: EditorView, target: Element): boolean =>
+  target.closest(".ProseMirror") === view.dom &&
+  target.closest("[data-interaction-context-boundary]") === null
+
+export const visibleSelectionScope = (view: EditorView) =>
+  selectionScopeForDocument(
+    view.state.doc,
+    ownedBlockElements(view).flatMap((element) => {
+      const id = element.dataset["blockId"]
+      return id === undefined ? [] : [id]
+    }),
   )
 
 export const ownedLeafBlockElements = (view: EditorView): readonly HTMLElement[] =>

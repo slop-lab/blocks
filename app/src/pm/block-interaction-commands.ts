@@ -19,6 +19,26 @@ export type SlashQuery = {
   readonly blockId: string
 }
 
+export type BlockCreation = {
+  readonly type: NodeType
+  readonly attrs: Readonly<Record<string, unknown>>
+  readonly container?: "titled" | "body"
+}
+
+const freshIdentity = (node: ProseMirrorNode): ProseMirrorNode => {
+  if (node.isText) return node
+  const children: ProseMirrorNode[] = []
+  node.forEach((child) => {
+    children.push(freshIdentity(child))
+  })
+  const id = node.attrs["id"]
+  return node.type.create(
+    typeof id === "string" ? { ...node.attrs, id: crypto.randomUUID(), locked: false } : node.attrs,
+    children.length === 0 ? undefined : Fragment.fromArray(children),
+    node.marks,
+  )
+}
+
 export const blockPositionById = (document: ProseMirrorNode, blockId: string): number =>
   locateBlock(document, blockId)?.position ?? -1
 
@@ -32,14 +52,24 @@ export const blockSiblingCountById = (document: ProseMirrorNode, blockId: string
   locateBlock(document, blockId)?.parent.childCount ?? 0
 
 export const createBlockAfter =
-  (blockId: string, type?: NodeType): Command =>
+  (blockId: string, creation?: BlockCreation): Command =>
   (state, dispatch) => {
     const target = locateBlock(state.doc, blockId)
-    const defaultText = type ?? defaultNodeForState(state)
+    const defaultText = creation?.type ?? defaultNodeForState(state)
     if (target === null || target.node.attrs["locked"] === true || defaultText === undefined)
       return false
     if (dispatch !== undefined) {
-      const node = defaultText.create({ id: crypto.randomUUID(), locked: false })
+      const attrs = { id: crypto.randomUUID(), locked: false, ...creation?.attrs }
+      const defaultChild = defaultNodeForState(state)?.create({
+        id: crypto.randomUUID(),
+        locked: false,
+      })
+      const created =
+        creation?.container === undefined
+          ? defaultText.createAndFill(attrs)
+          : defaultText.createAndFill(attrs, defaultChild)
+      if (created === null) return false
+      const node = freshIdentity(created)
       const position = target.position + target.node.nodeSize
       const transaction = state.tr.insert(position, node)
       transaction.setSelection(TextSelection.near(transaction.doc.resolve(position + 1)))

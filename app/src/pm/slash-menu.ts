@@ -1,82 +1,36 @@
-import { Fragment, type NodeType } from "prosemirror-model"
+import { Fragment } from "prosemirror-model"
 import { TextSelection } from "prosemirror-state"
 import type { EditorView } from "prosemirror-view"
 import { parseSlashQuery } from "./block-interaction-commands"
 import { createBlockMenu, type MenuController, type MenuItem } from "./block-menu"
-import { profileForState } from "./profile-plugin"
+import { type InsertionChoice, insertionChoices } from "./insertion-catalog"
 
-type SlashChoice = {
-  readonly label: string
-  readonly keywords: string
-  readonly type: NodeType
-  readonly attrs?: Readonly<Record<string, unknown>>
-  readonly wrap?: boolean
-}
-
-const choicesFor = (view: EditorView): readonly SlashChoice[] => {
-  const { nodes } = view.state.schema
-  const profile = profileForState(view.state)
-  const defaultRegistration = profile?.registrations.get(profile.defaultTextType)
-  const definitions = [
-    {
-      label: "본문",
-      keywords: `문단 text ${profile?.defaultTextType ?? "paragraph"}`,
-      type:
-        defaultRegistration === undefined
-          ? nodes["paragraph"]
-          : nodes[defaultRegistration.nodeName],
-    },
-    {
-      label: "제목 1",
-      keywords: "큰 제목 heading h1",
-      type: nodes["heading"],
-      attrs: { level: 1 },
-    },
-    {
-      label: "제목 2",
-      keywords: "중간 제목 heading h2",
-      type: nodes["heading"],
-      attrs: { level: 2 },
-    },
-    {
-      label: "제목 3",
-      keywords: "작은 제목 heading h3",
-      type: nodes["heading"],
-      attrs: { level: 3 },
-    },
-    {
-      label: "인용",
-      keywords: "인용 quote",
-      type: nodes["blockquote"] ?? nodes["container_quote"],
-      wrap: nodes["blockquote"] === undefined,
-    },
-    { label: "코드 블록", keywords: "코드 code", type: nodes["code_block"] },
-  ]
-  const choices: SlashChoice[] = []
-  for (const definition of definitions) {
-    if (definition.type === undefined) continue
-    choices.push({
-      label: definition.label,
-      keywords: definition.keywords,
-      type: definition.type,
-      ...(definition.attrs === undefined ? {} : { attrs: definition.attrs }),
-      ...(definition.wrap === undefined ? {} : { wrap: definition.wrap }),
-    })
-  }
-  return choices
-}
-
-const applyChoice = (view: EditorView, choice: SlashChoice): void => {
+const applyChoice = (view: EditorView, choice: InsertionChoice): void => {
   const query = parseSlashQuery(view.state, view.composing)
   if (query === null) return
   const position = query.from - 1
   const node = view.state.doc.nodeAt(position)
   if (node === null) return
   const content = node.content.cut(query.to - query.from)
-  if (choice.wrap === true) {
+  if (choice.wrapType !== undefined) {
+    const child = node.type.create({ ...node.attrs, id: crypto.randomUUID() }, content, node.marks)
+    const item = choice.wrapType.createAndFill(undefined, child)
+    if (item === null) return
+    const wrapped = choice.type.createAndFill(choice.attrs, item)
+    if (wrapped === null) return
+    const transaction = view.state.tr.replaceWith(position, position + node.nodeSize, wrapped)
+    transaction.setSelection(TextSelection.near(transaction.doc.resolve(position + 2)))
+    view.dispatch(transaction.setMeta("origin", "local").scrollIntoView())
+    view.focus()
+    return
+  }
+  if (choice.container !== undefined) {
     const child = node.type.create({ ...node.attrs, id: crypto.randomUUID() }, content, node.marks)
     if (!choice.type.validContent(Fragment.from(child))) return
-    const wrapped = choice.type.create({ ...node.attrs }, child)
+    const wrapped = choice.type.create(
+      { id: crypto.randomUUID(), locked: false, ...choice.attrs },
+      child,
+    )
     const transaction = view.state.tr.replaceWith(position, position + node.nodeSize, wrapped)
     transaction.setSelection(TextSelection.near(transaction.doc.resolve(position + 2)))
     view.dispatch(transaction.setMeta("origin", "local").scrollIntoView())
@@ -101,9 +55,11 @@ export const attachSlashMenu = (
       return
     }
     const normalized = query.query.toLocaleLowerCase()
-    const items: readonly MenuItem[] = choicesFor(view)
+    const items: readonly MenuItem[] = insertionChoices(view)
       .filter((choice) =>
-        `${choice.label} ${choice.keywords}`.toLocaleLowerCase().includes(normalized),
+        `${choice.label} ${choice.description} ${choice.keywords.join(" ")}`
+          .toLocaleLowerCase()
+          .includes(normalized),
       )
       .map((choice) => ({ label: choice.label, action: () => applyChoice(view, choice) }))
     if (items.length === 0) {

@@ -8,15 +8,14 @@ import {
   blockIndexById,
   blockNodeById,
   createBlockAfter,
-  duplicateBlockById,
-  indentBlocksById,
-  moveBlockById,
   moveBlocksById,
-  outdentBlocksById,
 } from "./block-interaction-commands"
+import { attachBlockKeyboard } from "./block-keyboard"
 import { createBlockMenu } from "./block-menu"
 import { blockMenuItems } from "./block-menu-items"
+import { attachRailPointerIntent } from "./block-rail-intent"
 import { attachBlockSelection } from "./block-selection"
+import { insertionChoices } from "./insertion-catalog"
 import { attachSelectionToolbar } from "./selection-toolbar"
 import { attachSlashMenu } from "./slash-menu"
 
@@ -30,11 +29,6 @@ export type BlockInteractionOptions = {
     envelope: ClipboardEnvelope,
   ) => void | Promise<void>
   readonly onReferencePaste?: (envelope: ClipboardEnvelope, context: ReferencePasteContext) => void
-}
-
-const blockElement = (target: EventTarget | null): HTMLElement | null => {
-  const element = target instanceof HTMLElement ? target : null
-  return element?.closest<HTMLElement>("[data-block-id]") ?? null
 }
 
 export const attachBlockInteractions = (
@@ -60,6 +54,7 @@ export const attachBlockInteractions = (
   })
   let activeId: string | null = null
   let railId: string | null = null
+  let activeRect: DOMRect | null = null
   const ownsBlock = (block: HTMLElement): boolean => block.closest(".ProseMirror") === view.dom
   const ownedBlockById = (id: string): HTMLElement | null =>
     Array.from(view.dom.querySelectorAll<HTMLElement>(`[data-block-id="${CSS.escape(id)}"]`)).find(
@@ -70,6 +65,7 @@ export const attachBlockInteractions = (
     activeId = null
     railId = null
     rail.hidden = true
+    rail.removeAttribute("data-target-block-id")
     menu.close()
   }
 
@@ -91,6 +87,25 @@ export const attachBlockInteractions = (
       contains: (id) => blockSelection.contains(id),
     })
     const rect = trigger.getBoundingClientRect()
+    menu.element.dataset["targetBlockId"] = blockId
+    menu.open({ point: { x: rect.left, y: rect.bottom + 4 }, items, trigger })
+  }
+  const showInsertionMenu = (blockId: string, trigger: HTMLElement) => {
+    const rect = trigger.getBoundingClientRect()
+    const items = insertionChoices(view).map((choice) => ({
+      label: choice.label,
+      hint: choice.description,
+      action: () =>
+        run(
+          createBlockAfter(blockId, {
+            type: choice.type,
+            attrs: choice.attrs,
+            ...(choice.container === undefined ? {} : { container: choice.container }),
+          }),
+        ),
+    }))
+    if (items.length === 0) return
+    menu.element.dataset["targetBlockId"] = blockId
     menu.open({ point: { x: rect.left, y: rect.bottom + 4 }, items, trigger })
   }
   const showRail = (block: HTMLElement) => {
@@ -114,9 +129,13 @@ export const attachBlockInteractions = (
     railId = blockId
     activeId = locked ? null : blockId
     const rect = block.getBoundingClientRect()
+    activeRect = rect
     rail.hidden = false
-    rail.style.left = `${Math.max(4, rect.left - rail.offsetWidth - 8)}px`
-    rail.style.top = `${rect.top}px`
+    rail.dataset["targetBlockId"] = blockId
+    const outsideLeft = rect.left - rail.offsetWidth - 8
+    const hasLeftGutter = outsideLeft >= 4
+    rail.style.left = `${hasLeftGutter ? outsideLeft : rect.left + 4}px`
+    rail.style.top = `${hasLeftGutter ? rect.top : Math.max(4, rect.top - rail.offsetHeight - 4)}px`
     add.disabled = locked
     grip.disabled = locked
     rail.dataset["locked"] = String(locked)
@@ -140,7 +159,7 @@ export const attachBlockInteractions = (
     else showRail(element)
   }
   add.addEventListener("pointerdown", (event) => event.preventDefault())
-  add.addEventListener("click", () => activeId !== null && run(createBlockAfter(activeId)))
+  add.addEventListener("click", () => activeId !== null && showInsertionMenu(activeId, add))
   const dragController = attachGripDrag(view, grip, {
     activeBlockId: () => activeId,
     move: (blockId, gap) =>
@@ -156,51 +175,14 @@ export const attachBlockInteractions = (
     if (activeId !== null && !blockSelection.selectFromClick(activeId, event))
       showMenu(activeId, grip)
   })
-  const onKeyDown = (event: KeyboardEvent) => {
-    if (blockSelection.selectedIds().length > 0 && event.key === "Tab") {
-      event.preventDefault()
-      event.stopPropagation()
-      run(
-        event.shiftKey
-          ? outdentBlocksById(blockSelection.selectedIds())
-          : indentBlocksById(blockSelection.selectedIds()),
-      )
-      return
-    }
-    if (
-      activeId !== null &&
-      event.altKey &&
-      (event.key === "ArrowUp" || event.key === "ArrowDown")
-    ) {
-      event.preventDefault()
-      event.stopPropagation()
-      const index = blockIndex(activeId)
-      const selectedIds = blockSelection.contains(activeId)
-        ? blockSelection.selectedIds()
-        : [activeId]
-      run(
-        selectedIds.length === 1
-          ? moveBlockById(activeId, event.key === "ArrowUp" ? index - 1 : index + 2)
-          : moveBlocksById(
-              selectedIds,
-              event.key === "ArrowUp"
-                ? Math.max(0, Math.min(...selectedIds.map(blockIndex)) - 1)
-                : Math.max(...selectedIds.map(blockIndex)) + 2,
-            ),
-      )
-      return
-    }
-    if (
-      activeId !== null &&
-      (event.metaKey || event.ctrlKey) &&
-      event.shiftKey &&
-      event.key.toLocaleLowerCase() === "d"
-    ) {
-      event.preventDefault()
-      event.stopPropagation()
-      run(duplicateBlockById(activeId))
-      return
-    }
+  const detachKeyboard = attachBlockKeyboard(view, {
+    activeBlockId: () => activeId,
+    selectedIds: () => blockSelection.selectedIds(),
+    contains: (blockId) => blockSelection.contains(blockId),
+    blockIndex,
+    run,
+  })
+  const onContextMenuKey = (event: KeyboardEvent) => {
     if (
       (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) &&
       activeId !== null
@@ -209,10 +191,13 @@ export const attachBlockInteractions = (
       showMenu(activeId, grip)
     }
   }
-  const onPointerOver = (event: PointerEvent) => {
-    const block = blockElement(event.target)
-    if (block !== null && ownsBlock(block)) showRail(block)
-  }
+  const detachRailIntent = attachRailPointerIntent(view, {
+    rail,
+    targetId: () => railId,
+    activeRect: () => activeRect,
+    ownsBlock,
+    show: showRail,
+  })
   const onDocumentPointerDown = (event: PointerEvent) => {
     if (!(event.target instanceof Node)) return
     if (
@@ -230,11 +215,10 @@ export const attachBlockInteractions = (
     if (id !== undefined && event.clientY >= last.getBoundingClientRect().bottom)
       run(createBlockAfter(id))
   }
-  view.dom.addEventListener("pointerover", onPointerOver)
   view.dom.addEventListener("focusin", refreshFromSelection)
   view.dom.addEventListener("keyup", refreshFromSelection)
   view.dom.addEventListener("click", onEditorClick)
-  view.dom.addEventListener("keydown", onKeyDown)
+  view.dom.addEventListener("keydown", onContextMenuKey)
   ownerDocument.addEventListener("pointerdown", onDocumentPointerDown, true)
   ownerDocument.addEventListener("scroll", refreshActiveRail, true)
   ownerDocument.defaultView?.addEventListener("resize", refreshActiveRail)
@@ -245,15 +229,16 @@ export const attachBlockInteractions = (
   return () => {
     detachSlash()
     detachFormat()
+    detachKeyboard()
+    detachRailIntent()
     menu.destroy()
     dragController.destroy()
     blockSelection.destroy()
     rail.remove()
-    view.dom.removeEventListener("pointerover", onPointerOver)
     view.dom.removeEventListener("focusin", refreshFromSelection)
     view.dom.removeEventListener("keyup", refreshFromSelection)
     view.dom.removeEventListener("click", onEditorClick)
-    view.dom.removeEventListener("keydown", onKeyDown)
+    view.dom.removeEventListener("keydown", onContextMenuKey)
     ownerDocument.removeEventListener("pointerdown", onDocumentPointerDown, true)
     ownerDocument.removeEventListener("scroll", refreshActiveRail, true)
     ownerDocument.defaultView?.removeEventListener("resize", refreshActiveRail)

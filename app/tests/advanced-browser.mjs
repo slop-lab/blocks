@@ -45,13 +45,31 @@ try {
   await page.keyboard.press("Home")
   await page.keyboard.press("Shift+End")
   await page.keyboard.insertText("Changed title")
-  await editor.locator("p").first().hover()
-  await page.getByRole("button", { name: "이 블록 뒤에 문단 추가", exact: true }).click()
+  const originalParagraph = editor.locator("p").first()
+  const originalParagraphId = await originalParagraph.getAttribute("data-block-id")
+  await originalParagraph.hover()
+  await page.waitForFunction(
+    (id) =>
+      document
+        .querySelector(".block-controls:not([hidden])")
+        ?.getAttribute("data-target-block-id") === id,
+    originalParagraphId,
+  )
+  await page.getByRole("button", { name: "이 블록 뒤에 블록 추가", exact: true }).click()
+  await page.getByRole("menuitem", { name: "본문", exact: true }).click()
   await page.keyboard.insertText("Added paragraph")
   await page.keyboard.press("Enter")
   await page.keyboard.insertText("Enter paragraph")
   const added = editor.locator("p", { hasText: "Added paragraph" })
   await added.click()
+  const addedId = await added.getAttribute("data-block-id")
+  await page.waitForFunction(
+    (id) =>
+      document
+        .querySelector(".block-controls:not([hidden])")
+        ?.getAttribute("data-target-block-id") === id,
+    addedId,
+  )
   await page.keyboard.press("Shift+F10")
   await page.getByRole("menuitem", { name: "위로 이동", exact: true }).click()
   await page.keyboard.press("Control+s")

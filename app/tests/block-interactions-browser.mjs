@@ -30,7 +30,7 @@ try {
   const firstBlock = editor.locator("[data-block-id]").first()
 
   await firstBlock.hover()
-  const add = page.getByRole("button", { name: "이 블록 뒤에 문단 추가", exact: true })
+  const add = page.getByRole("button", { name: "이 블록 뒤에 블록 추가", exact: true })
   const grip = page.getByRole("button", { name: "블록 메뉴 및 드래그", exact: true })
   await assert.doesNotReject(add.waitFor({ state: "visible" }))
   await firstBlock.evaluate((element) => {
@@ -52,6 +52,7 @@ try {
   })
   const countBeforeAdd = await editor.locator("[data-block-id]").count()
   await add.click()
+  await page.getByRole("menuitem", { name: "본문", exact: true }).click()
   assert.equal(await editor.locator("[data-block-id]").count(), countBeforeAdd + 1)
 
   await page.keyboard.type("/제")
@@ -79,6 +80,14 @@ try {
   const countBeforeCut = await editor.locator("[data-block-id]").count()
   const cutTarget = editor.locator(":scope > [data-block-id]:not(:has([data-block-id]))").first()
   await cutTarget.hover()
+  const cutTargetId = await cutTarget.getAttribute("data-block-id")
+  await page.waitForFunction(
+    (id) =>
+      document
+        .querySelector(".block-controls:not([hidden])")
+        ?.getAttribute("data-target-block-id") === id,
+    cutTargetId,
+  )
   await grip.click()
   await blockMenu.waitFor()
   await page.keyboard.press("Escape")
@@ -95,10 +104,87 @@ try {
     .locator("[data-block-id]")
     .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-block-id")))
   assert.equal(new Set(idsAfterPaste).size, idsAfterPaste.length)
+  await page.keyboard.press("Control+z")
+  assert.equal(await editor.locator("[data-block-id]").count(), countBeforeCut)
+  assert.equal(await editor.locator(`[data-block-id="${cutTargetId}"]`).count(), 1)
+  await page.keyboard.press("Control+Shift+z")
+  assert.equal(await editor.locator("[data-block-id]").count(), countBeforeCut)
+  assert.deepEqual(
+    await editor
+      .locator("[data-block-id]")
+      .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-block-id"))),
+    idsAfterPaste,
+  )
+
+  const selectable = editor.locator(":scope > p[data-block-id]")
+  const secondSelectable = selectable.nth(1)
+  const thirdSelectable = selectable.nth(2)
+  const clickWith = async (target, modifier) => {
+    const box = await target.boundingBox()
+    if (box === null) throw new TypeError("Missing selection target geometry")
+    await page.keyboard.down(modifier)
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    await page.keyboard.up(modifier)
+  }
+  await clickWith(secondSelectable, "Control")
+  await page.waitForFunction(
+    () => document.querySelector("[aria-label='블록 문서 편집기'] .block-selected") !== null,
+  )
+  assert.equal(
+    await editor.locator(".block-selected").count(),
+    1,
+    `selected ids: ${await editor.getAttribute("data-selected-block-ids")}`,
+  )
+  await clickWith(thirdSelectable, "Shift")
+  assert.equal(
+    (await editor.getAttribute("data-selected-block-ids"))?.split(" ").length,
+    4,
+    `range ids: ${await editor.getAttribute("data-selected-block-ids")}`,
+  )
+  assert.equal(await editor.locator(".block-selected").count(), 4)
+  await clickWith(secondSelectable, "Control")
+  await page.waitForFunction(
+    () => document.querySelectorAll("[aria-label='블록 문서 편집기'] .block-selected").length === 3,
+  )
+  assert.equal(await editor.locator(".block-selected").count(), 3)
+  await thirdSelectable.click()
+  assert.equal(await editor.locator(".block-selected").count(), 0)
+
+  const editorBox = await editor.boundingBox()
+  const marqueeStart = await selectable.nth(1).boundingBox()
+  const marqueeEnd = await selectable.nth(Math.min(3, (await selectable.count()) - 1)).boundingBox()
+  if (editorBox === null || marqueeStart === null || marqueeEnd === null)
+    throw new TypeError("Missing marquee geometry")
+  const marqueeX = editorBox.x + editorBox.width - 6
+  await page.mouse.move(marqueeX, marqueeStart.y + 2)
+  await page.mouse.down()
+  await page.mouse.move(marqueeX - 2, marqueeEnd.y + marqueeEnd.height - 2, { steps: 12 })
+  await page.mouse.up()
+  assert.ok((await editor.locator(".block-selected").count()) >= 2)
+  assert.equal(
+    await editor
+      .locator(".block-selected")
+      .first()
+      .evaluate((element) => {
+        const style = getComputedStyle(element)
+        return (
+          style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.backgroundColor !== "transparent"
+        )
+      }),
+    true,
+  )
+  await page.keyboard.press("Escape")
 
   const movable = editor.locator("[data-block-id]").first()
   const sourceId = await movable.getAttribute("data-block-id")
   await movable.hover()
+  await page.waitForFunction(
+    (id) =>
+      document
+        .querySelector(".block-controls:not([hidden])")
+        ?.getAttribute("data-target-block-id") === id,
+    sourceId,
+  )
   const destination = editor.locator("[data-block-id]").last()
   await grip.dragTo(destination)
   assert.equal(
@@ -109,6 +195,13 @@ try {
   const edgeSource = editor.locator("[data-block-id]").last()
   const edgeSourceId = await edgeSource.getAttribute("data-block-id")
   await edgeSource.hover()
+  await page.waitForFunction(
+    (id) =>
+      document
+        .querySelector(".block-controls:not([hidden])")
+        ?.getAttribute("data-target-block-id") === id,
+    edgeSourceId,
+  )
   const gripBox = await grip.boundingBox()
   const firstBox = await editor.locator("[data-block-id]").first().boundingBox()
   if (gripBox === null || firstBox === null) throw new TypeError("Missing drag geometry")

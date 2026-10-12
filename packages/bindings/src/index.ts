@@ -11,3 +11,16 @@ export type { ActionTarget, HostActionRequest, HostActionResult } from "./lifecy
 export { ActionRequests, PersistenceBaseline } from "./lifecycle.js"
 export type { RevisionedDocument } from "./schemas.js"
 export { revisionedDocumentSchema, revisionSchema } from "./schemas.js"
+export type {
+  PendingSourceSave,
+  RemoteSourceResult,
+  SourceAcknowledgement,
+  SourceRecord,
+  SourceRuntimeAdapter,
+  SourceRuntimeSeed,
+} from "./source-runtime.js"
+export {
+  SourceAttachmentError,
+  SourceRuntime,
+  SourceRuntimeRegistry,
+} from "./source-runtime.js"

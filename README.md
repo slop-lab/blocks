@@ -91,6 +91,7 @@ Markdown·협업·표·대용량 기능은 각각의 진입점을 가져오거�
 | `@block-editor/server-bindings` | Node 파일 CAS 저장소, Yjs room 저장소, 서명된 데모 세션과 scope 검사, versioned 승인 workflow |
 | `@block-editor/model` | 엔진과 무관한 문서 계약, codec, 명시적 block registry와 React viewer |
 | `@block-editor/interactions` | 엔진 독립 선택·clipboard·cut 정책. ProseMirror 연결은 opt-in `/prosemirror` 진입점 |
+| `@block-editor/containers` | 엔진 독립 재귀 트리 이동·복제와 명시적 최소 연결 범위 감싸기 계획 |
 | `@block-editor/prosemirror` | opt-in ProseMirror schema/snapshot adapter와 block별 leaf export |
 | `@block-editor/workspace` | 엔진 독립 페이지/문서/database/synced-source Zod 계약, 계층 명령, typed row patch, filter/sort와 context heading projection |
 

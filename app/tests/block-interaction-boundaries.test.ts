@@ -1,6 +1,7 @@
 import type { Node as ProseMirrorNode } from "prosemirror-model"
 import { EditorState, TextSelection } from "prosemirror-state"
 import { describe, expect, it } from "vitest"
+import { parseInternalTarget } from "../src/core/links"
 import { createWorkspaceProfile } from "../src/features/workspace/workspace-editor-model"
 import {
   blockPositionById,
@@ -83,6 +84,20 @@ describe("slash and link boundaries", () => {
     expect(safeLinkHref("mailto:reader@example.com")).toBe("mailto:reader@example.com")
     expect(safeLinkHref("//external.example/path")).toBeNull()
     expect(safeLinkHref("javascript:alert(1)")).toBeNull()
+    expect(safeLinkHref("block-id:page-1/block-2")).toBe("block-id:page-1/block-2")
+    expect(safeLinkHref("page-id:page-1")).toBe("page-id:page-1")
+    expect(safeLinkHref("data:text/html,unsafe")).toBeNull()
+    expect(parseInternalTarget("block-id:block-2")).toEqual({
+      kind: "block",
+      blockId: "block-2",
+    })
+    expect(parseInternalTarget("block-id:page-1/block-2")).toEqual({
+      kind: "block",
+      pageId: "page-1",
+      blockId: "block-2",
+    })
+    expect(parseInternalTarget("page-id:page-1")).toEqual({ kind: "page", pageId: "page-1" })
+    expect(parseInternalTarget("block-id:../unsafe")).toBeNull()
   })
 
   it("captures an existing link and rejects its bookmark after a document change", () => {
@@ -104,6 +119,8 @@ describe("slash and link boundaries", () => {
 
     expect(target?.href).toBe("/existing")
     if (target === null) throw new TypeError("Link target was not captured")
+    expect(isCurrentLinkTarget(state, target)).toBe(true)
+    state = state.apply(state.tr.setSelection(TextSelection.create(document, 1)))
     expect(isCurrentLinkTarget(state, target)).toBe(true)
     state = state.apply(state.tr.insertText("!", 7))
     expect(isCurrentLinkTarget(state, target)).toBe(false)

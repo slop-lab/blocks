@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Component, createElement } from "react"
-import { safeLinkHref } from "./core/links"
+import { type InternalLinkTarget, parseInternalTarget, safeLinkHref } from "./core/links"
 import type { BlockDocument, BlockSnapshot } from "./core/types"
 
 export type ViewerOverlay = {
@@ -13,6 +13,7 @@ export type ViewerProps = {
   readonly viewData?: ReadonlyMap<string, unknown>
   readonly overlays?: readonly ViewerOverlay[]
   readonly renderBlock?: (block: BlockSnapshot, viewData: unknown) => ReactNode
+  readonly onInternalLink?: (target: InternalLinkTarget) => void
 }
 
 class BlockBoundary extends Component<
@@ -36,10 +37,12 @@ const RenderBlock = ({
   block,
   renderBlock,
   data,
+  onInternalLink,
 }: {
   readonly block: BlockSnapshot
   readonly renderBlock: ViewerProps["renderBlock"]
   readonly data: unknown
+  readonly onInternalLink: ViewerProps["onInternalLink"]
 }) => {
   if (renderBlock !== undefined) {
     const rendered = renderBlock(block, data)
@@ -60,7 +63,24 @@ const RenderBlock = ({
         const attrs = mark.attrs
         if (typeof attrs === "object" && attrs !== null && "href" in attrs) {
           const href = typeof attrs.href === "string" ? safeLinkHref(attrs.href) : null
-          if (href !== null) text = <a href={href}>{text}</a>
+          if (href !== null) {
+            const internal = parseInternalTarget(href)
+            text = (
+              <a
+                href={href}
+                onClick={
+                  internal === null || onInternalLink === undefined
+                    ? undefined
+                    : (event) => {
+                        event.preventDefault()
+                        onInternalLink(internal)
+                      }
+                }
+              >
+                {text}
+              </a>
+            )
+          }
         }
       }
     }
@@ -107,6 +127,7 @@ export const BlockViewer = (props: ViewerProps) => {
               block={block}
               renderBlock={props.renderBlock}
               data={props.viewData?.get(block.id)}
+              onInternalLink={props.onInternalLink}
             />
           </BlockBoundary>
           {props.overlays

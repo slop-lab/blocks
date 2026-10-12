@@ -2,6 +2,7 @@ import type { Database, PageDocument, SyncedSource, Workspace } from "@block-edi
 import { Fragment } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
 import { useEffect, useMemo, useRef } from "react"
+import { parseInternalTarget } from "../../core/links"
 import { attachBlockInteractions } from "../../pm/block-interactions"
 import { ModelSession } from "../../pm/session"
 import {
@@ -143,6 +144,21 @@ export const WorkspaceEditor = (props: Props) => {
         )
       },
     })
+    const openInternalLink = (event: MouseEvent) => {
+      if (!(event.target instanceof Element)) return
+      const anchor = event.target.closest<HTMLAnchorElement>("a[href]")
+      if (anchor === null || anchor.closest(".ProseMirror") !== view.dom) return
+      const target = parseInternalTarget(anchor.getAttribute("href") ?? "")
+      if (target === null) return
+      event.preventDefault()
+      if (target.kind === "page") propsRef.current.onOpenPage(target.pageId)
+      else
+        propsRef.current.onOpenPage(
+          target.pageId ?? propsRef.current.document.pageId,
+          target.blockId,
+        )
+    }
+    view.dom.addEventListener("click", openInternalLink)
     sessionRef.current = session
     viewRef.current = view
     workspaceViews.refresh()
@@ -164,6 +180,7 @@ export const WorkspaceEditor = (props: Props) => {
       propsRef.current.onCompositionChange(false)
       unsubscribe()
       detach()
+      view.dom.removeEventListener("click", openInternalLink)
       workspaceViews.destroy()
       refreshViewsRef.current = () => {}
       release()

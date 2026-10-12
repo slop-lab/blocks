@@ -45,6 +45,7 @@ export class WorkspaceSourceRuntime {
   })
   private readonly entries = new Map<string, SourceEntry>()
   private readonly statusListeners = new Map<string, Set<() => void>>()
+  private readonly evictionTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private readonly attachments = new WorkspaceSourceAttachments(this.profile, (entry, record) =>
     this.receive(entry, record),
   )
@@ -59,8 +60,20 @@ export class WorkspaceSourceRuntime {
     host: HTMLElement,
     data: SourceDataPointer,
   ): SourceAttachment {
+    clearTimeout(this.evictionTimers.get(sourceRecord.documentId))
+    this.evictionTimers.delete(sourceRecord.documentId)
     const entry = this.entry(sourceRecord)
-    return this.attachments.attach(entry, occurrenceId, host, data)
+    this.subscribeEntry(entry)
+    const attachment = this.attachments.attach(entry, occurrenceId, host, data)
+    return {
+      ...attachment,
+      destroy: () => {
+        attachment.destroy()
+        if (entry.occurrences.size > 0) return
+        this.park(entry)
+        this.scheduleEviction(entry)
+      },
+    }
   }
 
   acknowledge(request: SourceEditRequest, record: EntityRecord<SyncedSource>): void {
@@ -78,6 +91,7 @@ export class WorkspaceSourceRuntime {
     )
       entry.remoteRecord = null
     this.emitStatus(request.sourceId)
+    if (entry.occurrences.size === 0) this.scheduleEviction(entry)
   }
 
   receiveRemote(record: EntityRecord<SyncedSource>): void {
@@ -92,6 +106,7 @@ export class WorkspaceSourceRuntime {
     entry.runtime.resolveConflict(resolution)
     entry.remoteRecord = null
     this.emitStatus(sourceId)
+    if (entry.occurrences.size === 0) this.scheduleEviction(entry)
     if (resolution === "accept-remote") return { kind: resolution, record }
     const pending = entry.runtime.pendingSave()
     return pending === null
@@ -120,11 +135,13 @@ export class WorkspaceSourceRuntime {
   }
 
   dispose(): void {
+    for (const timer of this.evictionTimers.values()) clearTimeout(timer)
     for (const entry of this.entries.values()) {
-      entry.unsubscribe()
+      entry.unsubscribe?.()
       this.attachments.dispose(entry)
     }
     this.entries.clear()
+    this.evictionTimers.clear()
     this.statusListeners.clear()
     this.registry.clear()
   }
@@ -150,15 +167,36 @@ export class WorkspaceSourceRuntime {
       view: null,
       detachInteractions: null,
       remoteRecord: null,
-      unsubscribe: () => {},
+      unsubscribe: null,
     }
-    entry.unsubscribe = runtime.subscribe((state) => {
-      if (entry.view !== null && entry.view.state !== state) entry.view.updateState(state)
-      for (const occurrence of entry.occurrences.values())
-        if (runtime.activeOccurrenceId !== occurrence.id) this.attachments.render(entry, occurrence)
-    })
+    this.subscribeEntry(entry)
     this.entries.set(sourceRecord.documentId, entry)
     return entry
+  }
+
+  private subscribeEntry(entry: SourceEntry): void {
+    if (entry.unsubscribe !== null) return
+    entry.unsubscribe = entry.runtime.subscribe((state) => {
+      if (entry.view !== null && entry.view.state !== state) entry.view.updateState(state)
+      for (const occurrence of entry.occurrences.values())
+        if (entry.runtime.activeOccurrenceId !== occurrence.id)
+          this.attachments.render(entry, occurrence)
+    })
+  }
+
+  private park(entry: SourceEntry): void {
+    entry.unsubscribe?.()
+    entry.unsubscribe = null
+    this.attachments.dispose(entry)
+  }
+
+  private scheduleEviction(entry: SourceEntry): void {
+    const sourceId = entry.runtime.sourceId
+    clearTimeout(this.evictionTimers.get(sourceId))
+    this.evictionTimers.delete(sourceId)
+    if (entry.runtime.dirty || entry.remoteRecord !== null) return
+    const timer = setTimeout(() => this.evict(sourceId, entry), 30_000)
+    this.evictionTimers.set(sourceId, timer)
   }
 
   private documentOf(source: SyncedSource): ProseMirrorNode {
@@ -180,6 +218,15 @@ export class WorkspaceSourceRuntime {
     if (result.kind === "conflict") entry.remoteRecord = record
     else if (result.kind === "applied") entry.remoteRecord = null
     if (result.kind !== "ignored") this.emitStatus(entry.runtime.sourceId)
+  }
+
+  private evict(sourceId: string, entry: SourceEntry): void {
+    this.evictionTimers.delete(sourceId)
+    if (entry.occurrences.size > 0 || entry.runtime.dirty || entry.remoteRecord !== null) return
+    entry.unsubscribe?.()
+    this.attachments.dispose(entry)
+    this.entries.delete(sourceId)
+    this.registry.release(sourceId, entry.runtime)
   }
 
   private emitStatus(sourceId: string): void {

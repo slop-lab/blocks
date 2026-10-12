@@ -113,3 +113,39 @@ it("preserves rich inline marks and optional section titles across persisted sna
     },
   ])
 })
+
+it("keeps every block visible while repairing duplicate durable IDs at the editor boundary", () => {
+  const snapshot = pageDocumentToSnapshot({
+    pageId: "duplicate-draft",
+    version: 1,
+    blocks: [
+      {
+        id: "section",
+        type: "section",
+        children: [
+          { id: "duplicate", type: "paragraph", text: "Original" },
+          {
+            id: "duplicate",
+            type: "quote",
+            children: [{ id: "nested", type: "paragraph", text: "Replacement" }],
+          },
+        ],
+      },
+    ],
+  })
+  const childIds = snapshot.blocks[0]?.children?.map((block) => block.id)
+
+  expect(childIds).toEqual(["duplicate", "duplicate__duplicate_1"])
+  expect(snapshot.blocks[0]?.children?.map((block) => block.type)).toEqual(["paragraph", "quote"])
+  expect(
+    () =>
+      new ModelSession({
+        modelId: "duplicate-draft",
+        document: snapshot,
+        epoch: 1,
+        version: 1,
+        readOnly: false,
+        profile: createWorkspaceProfile(0),
+      }),
+  ).not.toThrow()
+})

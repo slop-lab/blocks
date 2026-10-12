@@ -141,10 +141,23 @@ const toSnapshot = (block: WorkspaceBlock, sources: readonly SyncedSource[]): Bl
 export const pageDocumentToSnapshot = (
   document: PageDocument,
   sources: readonly SyncedSource[] = [],
-): BlockDocument => ({
-  format: "block-editor/v0.3",
-  blocks: document.blocks.map((block) => toSnapshot(block, sources)),
-})
+): BlockDocument => {
+  const occurrences = new Map<string, number>()
+  const unique = (block: BlockSnapshot): BlockSnapshot => {
+    const count = occurrences.get(block.id) ?? 0
+    occurrences.set(block.id, count + 1)
+    const id = count === 0 ? block.id : `${block.id.slice(0, 140)}__duplicate_${count}`
+    return {
+      ...block,
+      id,
+      ...(block.children === undefined ? {} : { children: block.children.map(unique) }),
+    }
+  }
+  return {
+    format: "block-editor/v0.3",
+    blocks: document.blocks.map((block) => unique(toSnapshot(block, sources))),
+  }
+}
 
 const snapshotText = (block: BlockSnapshot): string =>
   block.content.flatMap((inline) => (inline.kind === "text" ? [inline.text] : [])).join("")

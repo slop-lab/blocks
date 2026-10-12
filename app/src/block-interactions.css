@@ -86,6 +86,23 @@
   pointer-events: none;
 }
 
+.block-selected {
+  background: var(--accent-soft);
+  box-shadow: inset var(--drop-rule-size) 0 0 var(--accent);
+}
+
+.block-selection-marquee {
+  position: fixed;
+  z-index: 30;
+  border: var(--drop-rule-size) solid var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 72%, transparent);
+  pointer-events: none;
+}
+
+.block-selection-marquee[hidden] {
+  display: none;
+}
+
 .block-drop-indicator::before {
   content: "";
   position: absolute;

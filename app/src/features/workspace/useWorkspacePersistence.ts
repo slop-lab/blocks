@@ -1,4 +1,10 @@
-import type { Database, PageDocument, SyncedSource, Workspace } from "@block-editor/workspace"
+import {
+  type Database,
+  type PageDocument,
+  type SyncedSource,
+  syncedSourceSchema,
+  type Workspace,
+} from "@block-editor/workspace"
 import { HTTPError } from "ky"
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
@@ -9,6 +15,7 @@ import {
   loadWorkspace,
   type WorkspacePayload,
 } from "./workspace-api"
+import type { SourceEditRequest } from "./workspace-node-view-types"
 import { saveWorkspaceRequest } from "./workspace-persistence-request"
 import {
   mergeWorkspacePayload,
@@ -16,6 +23,16 @@ import {
   type SaveTarget,
   WorkspaceSaveQueue,
 } from "./workspace-save-queue"
+import type { SourceConflictResult } from "./workspace-source-runtime"
+
+type WorkspaceSourceEvents = {
+  readonly acknowledge: (request: SourceEditRequest, saved: EntityRecord<SyncedSource>) => void
+  readonly receiveRemote: (record: EntityRecord<SyncedSource>) => void
+  readonly resolve: (
+    sourceId: string,
+    resolution: "accept-remote" | "keep-local",
+  ) => SourceConflictResult | null
+}
 
 const replace = <T>(
   records: readonly EntityRecord<T>[],
@@ -27,7 +44,7 @@ const replace = <T>(
     record.documentId !== id ? record : clean ? saved : { ...saved, content: record.content },
   )
 
-export const useWorkspacePersistence = () => {
+export const useWorkspacePersistence = (sourceEvents: WorkspaceSourceEvents) => {
   const [payload, setPayload] = useState<WorkspacePayload | null>(null)
   const [status, setStatus] = useState("작업 공간을 여는 중입니다.")
   const stateRef = useRef(payload)
@@ -78,23 +95,29 @@ export const useWorkspacePersistence = () => {
                   clean,
                 ),
               }
-            case "sources":
+            case "sources": {
+              const savedSource = entityRecordSchemas.sources.parse(saved)
+              if (settlement.causality !== undefined)
+                sourceEvents.acknowledge(
+                  {
+                    sourceId: target.id,
+                    ...settlement.causality,
+                    content: syncedSourceSchema.parse(settlement.content),
+                  },
+                  savedSource,
+                )
               return {
                 ...current,
-                sources: replace(
-                  current.sources,
-                  target.id,
-                  entityRecordSchemas.sources.parse(saved),
-                  clean,
-                ),
+                sources: replace(current.sources, target.id, savedSource, clean),
               }
+            }
             default:
               return target.kind satisfies never
           }
         })
         setStatus(settlement.clean ? "모든 변경을 저장했습니다." : "최신 변경을 이어서 저장합니다.")
       },
-      (_target, error) => {
+      (request, error) => {
         setStatus(
           error instanceof HTTPError && error.response.status === 409
             ? "다른 창의 변경이 먼저 저장되었습니다. 초안은 유지됩니다."
@@ -102,6 +125,17 @@ export const useWorkspacePersistence = () => {
               ? error.message
               : "저장하지 못했습니다. 초안은 유지됩니다.",
         )
+        if (
+          request.target.kind === "sources" &&
+          error instanceof HTTPError &&
+          error.response.status === 409
+        ) {
+          void loadWorkspace().then((remote) => {
+            for (const record of remote.sources) sourceEvents.receiveRemote(record)
+          })
+          return "pause"
+        }
+        return error instanceof HTTPError && error.response.status === 409 ? "pause" : undefined
       },
     )
   const queue = queueRef.current
@@ -110,6 +144,7 @@ export const useWorkspacePersistence = () => {
     async (announce = true) => {
       try {
         const remote = await loadWorkspace()
+        for (const record of remote.sources) sourceEvents.receiveRemote(record)
         commit((current) =>
           current === null
             ? remote
@@ -120,7 +155,7 @@ export const useWorkspacePersistence = () => {
         setStatus(error instanceof Error ? error.message : "작업 공간을 열지 못했습니다.")
       }
     },
-    [commit, queue],
+    [commit, queue, sourceEvents],
   )
 
   useEffect(() => {
@@ -167,13 +202,23 @@ export const useWorkspacePersistence = () => {
         ),
       }
     })
-  const updateSource = (source: SyncedSource) =>
+  const updateSource = (request: SourceEditRequest) =>
     commit((current) => {
       if (current === null) return current
-      const record = current.sources.find((item) => item.documentId === source.id)
+      const record = current.sources.find((item) => item.documentId === request.sourceId)
       if (record === undefined) return current
-      const content = source
-      stage({ kind: "sources", id: record.documentId }, record, content)
+      if (record.revision !== request.baselineRevision) {
+        sourceEvents.receiveRemote(record)
+        setStatus("다른 창의 변경과 충돌했습니다. 초안 복구 방식을 선택하세요.")
+        return current
+      }
+      const content = request.content
+      queue.stage({ kind: "sources", id: record.documentId }, record, content, {
+        generation: request.generation,
+        causeId: request.causeId,
+        baselineRevision: request.baselineRevision,
+      })
+      setStatus("저장 대기")
       return {
         ...current,
         sources: current.sources.map((item) =>
@@ -188,6 +233,37 @@ export const useWorkspacePersistence = () => {
       stage({ kind: "trees", id: current.tree.documentId }, current.tree, content)
       return { ...current, tree: { ...current.tree, content } }
     })
+
+  const resolveSourceConflict = (sourceId: string, resolution: "accept-remote" | "keep-local") => {
+    const result = sourceEvents.resolve(sourceId, resolution)
+    if (result === null) return
+    const target = { kind: "sources" as const, id: sourceId }
+    if (result.kind === "accept-remote") queue.discard(target)
+    else
+      queue.rebase(target, result.record, {
+        generation: result.generation,
+        causeId: result.causeId,
+        baselineRevision: result.baselineRevision,
+      })
+    commit((current) => {
+      if (current === null) return current
+      return {
+        ...current,
+        sources: current.sources.map((record) =>
+          record.documentId !== sourceId
+            ? record
+            : result.kind === "accept-remote"
+              ? result.record
+              : { ...result.record, content: record.content },
+        ),
+      }
+    })
+    setStatus(
+      result.kind === "accept-remote"
+        ? "서버 변경을 수락했습니다."
+        : "로컬 초안을 최신 원본 위에 다시 저장합니다.",
+    )
+  }
 
   const createPage = async (title: string, parentId: string) => {
     const current = stateRef.current
@@ -232,6 +308,7 @@ export const useWorkspacePersistence = () => {
     updateDatabase,
     updateSource,
     updateTree,
+    resolveSourceConflict,
     createPage,
     createSource,
     setComposing: (target: SaveTarget, composing: boolean) => queue.setComposing(target, composing),

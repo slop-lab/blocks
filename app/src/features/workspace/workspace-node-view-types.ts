@@ -1,7 +1,6 @@
 import type { ProseMirrorProfile } from "@block-editor/prosemirror"
 import type { Database, SyncedSource, Workspace } from "@block-editor/workspace"
 import { Fragment, type Node as ProseMirrorNode } from "prosemirror-model"
-import type { EditorView } from "prosemirror-view"
 import type { EntityRecord } from "./workspace-api"
 
 export type WorkspaceNodeViewData = {
@@ -10,16 +9,22 @@ export type WorkspaceNodeViewData = {
   readonly sources: readonly EntityRecord<SyncedSource>[]
   readonly profile: ProseMirrorProfile
   readonly onOpenPage: (id: string, blockId?: string) => void
-  readonly onSourceEdit: (source: SyncedSource) => void
+  readonly onSourceEdit: (request: SourceEditRequest) => void
   readonly onSourceCreate: (source: SyncedSource) => Promise<EntityRecord<SyncedSource> | null>
   readonly onSourceCompositionChange: (sourceId: string, composing: boolean) => void
+  readonly onSourceConflictResolve: (
+    sourceId: string,
+    resolution: "accept-remote" | "keep-local",
+  ) => void
   readonly embeddingDepth: number
 }
 
-export type NestedEditor = {
-  readonly view: EditorView
-  readonly refresh: () => void
-  readonly destroy: () => void
+export type SourceEditRequest = {
+  readonly sourceId: string
+  readonly baselineRevision: number
+  readonly generation: number
+  readonly causeId: string
+  readonly content: SyncedSource
 }
 
 export const nodeViewButton = (

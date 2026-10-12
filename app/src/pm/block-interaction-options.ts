@@ -20,6 +20,7 @@ export type BlockInteractionOptions = {
   readonly contextId?: string
   readonly isActive?: () => boolean
   readonly claim?: () => void
+  readonly release?: () => void
   readonly subscribeActive?: (listener: (active: boolean) => void) => () => void
   readonly onUnavailable?: (message: string) => void
   readonly clipboardPolicy?: ClipboardPolicy

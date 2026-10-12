@@ -172,6 +172,22 @@ it("does not route block clipboard data from an inactive bookmark", () => {
   expect(controller.selectedIds()).toEqual([])
 })
 
+it("releases the active context on an outside pointer", () => {
+  const arbiter = new InteractionContextArbiter()
+  const context = arbiter.context("prose")
+  const { controller } = createSelectionView({
+    isActive: context.isActive,
+    claim: context.claim,
+    release: context.release,
+  })
+  controller.replace(["first"])
+
+  document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0 }))
+
+  expect(arbiter.snapshot).toEqual({ activeId: null, epoch: 2 })
+  expect(controller.selectedIds()).toEqual([])
+})
+
 it("excludes readonly nested projection IDs from parent hit routing", () => {
   const { view, controller } = createSelectionView()
   controller.replace(["first"])

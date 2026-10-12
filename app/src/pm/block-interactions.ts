@@ -48,6 +48,7 @@ export const attachBlockInteractions = (
   )
   const isActive = options.isActive ?? context.isActive
   const claim = options.claim ?? context.claim
+  const release = options.release ?? (options.isActive === undefined ? context.release : undefined)
   const subscribeActive = options.subscribeActive ?? context.subscribe
   const { rail, add, grip } = createBlockControls(ownerDocument)
   const menu = createBlockMenu(ownerDocument, "블록 작업")
@@ -65,6 +66,7 @@ export const attachBlockInteractions = (
     ...(options.onUnavailable === undefined ? {} : { onUnavailable: options.onUnavailable }),
     isActive,
     claim,
+    ...(release === undefined ? {} : { release }),
     isContextTarget: selectionContext.contains,
     onSelectionChange: selectionStatus.update,
   })
@@ -128,7 +130,7 @@ export const attachBlockInteractions = (
   }
   const showRail = (block: HTMLElement) => {
     const blockId = block.dataset["blockId"]
-    if (blockId === undefined || !ownsBlock(block) || options.readOnly || !isActive()) {
+    if (blockId === undefined || !ownsBlock(block) || options.readOnly) {
       hideRail()
       return
     }
@@ -172,7 +174,11 @@ export const attachBlockInteractions = (
     if (element === null) hideRail()
     else showRail(element)
   }
-  add.addEventListener("pointerdown", (event) => event.preventDefault())
+  const onRailPointerDown = (event: PointerEvent) => {
+    claim()
+    event.preventDefault()
+  }
+  rail.addEventListener("pointerdown", onRailPointerDown)
   add.addEventListener("click", () => activeId !== null && showInsertionMenu(activeId, add))
   const dragController = attachGripDrag(view, grip, {
     activeBlockId: () => activeId,
@@ -214,10 +220,7 @@ export const attachBlockInteractions = (
     targetId: () => railId,
     activeRect: () => activeRect,
     ownsBlock,
-    show: (block) => {
-      claim()
-      showRail(block)
-    },
+    show: showRail,
   })
   const onDocumentPointerDown = (event: PointerEvent) => {
     if (!(event.target instanceof Node)) return
@@ -266,6 +269,7 @@ export const attachBlockInteractions = (
     blockSelection.destroy()
     selectionStatus.destroy()
     rail.remove()
+    rail.removeEventListener("pointerdown", onRailPointerDown)
     view.dom.removeEventListener("focusin", refreshFromSelection)
     view.dom.removeEventListener("keyup", refreshFromSelection)
     view.dom.removeEventListener("click", onEditorClick)

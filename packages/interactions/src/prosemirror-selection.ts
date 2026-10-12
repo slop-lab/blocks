@@ -46,6 +46,7 @@ export type BlockSelectionOptions = ProseMirrorClipboardOptions & {
   readonly onSelectionChange?: (blockIds: readonly string[]) => void
   readonly isContextTarget?: (target: Node) => boolean
   readonly claim?: () => void
+  readonly release?: () => void
 }
 
 export const attachBlockSelection = (
@@ -229,6 +230,7 @@ export const attachBlockSelection = (
     )
       return
     clear()
+    options.release?.()
   }
   const unsubscribeSelection = subscribeBlockSelection(view, () =>
     options.onSelectionChange?.(selection.value),

@@ -88,6 +88,17 @@ it("rejects an agent proposal after its task dependency changes", async () => {
   })
 })
 
+it("rejects a malformed session without failing the ownership API", async () => {
+  const { base } = await setup()
+
+  const response = await fetch(`${base}/api/ownership/mixed`, {
+    headers: { cookie: "demo_session=malformed.invalid" },
+  })
+
+  expect(response.status).toBe(401)
+  await expect(response.json()).resolves.toEqual({ error: "forbidden" })
+})
+
 it("migrates v1 string layers into v2 block documents", () => {
   const migrated = migrateMixedContent({
     schemaVersion: 1,

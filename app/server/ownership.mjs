@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { FileCasRepository, RevisionConflictError } from "@block-editor/server-bindings"
+import { z } from "zod"
 import { markdownRoot } from "./markdown-core.mjs"
 import {
   documentInputSchema,
@@ -96,6 +97,10 @@ export const createOwnershipHandler = ({ root, host }) => {
       return true
     }
     const session = host.sessionFor(request)
+    if (session === null) {
+      json(response, 401, { error: "forbidden" })
+      return true
+    }
     try {
       host.authority.require(session, "mixed-backlog", request.method === "GET" ? "read" : "write")
       if (request.method === "GET") {
@@ -181,8 +186,8 @@ export const createOwnershipHandler = ({ root, host }) => {
         json(response, error instanceof RangeError ? 413 : 400, { error: "invalid_request" })
         return true
       }
-      if (session === null || (error instanceof Error && error.name === "AccessDeniedError")) {
-        json(response, session === null ? 401 : 403, { error: "forbidden" })
+      if (error instanceof Error && error.name === "AccessDeniedError") {
+        json(response, 403, { error: "forbidden" })
         return true
       }
       throw error

@@ -17,6 +17,30 @@ const record = (id: string, revision: number, content: unknown): QueueRecord =>
   entityRecord(id, revision, content)
 
 describe("workspace entity save queue", () => {
+  it("resumes saves after a StrictMode effect cleanup", async () => {
+    vi.useFakeTimers()
+    const saved: string[] = []
+    const queue = new WorkspaceSaveQueue(
+      async ({ target, baseline, content }) => {
+        saved.push(target.id)
+        return record(target.id, baseline.revision + 1, content)
+      },
+      () => undefined,
+      () => undefined,
+    )
+
+    queue.dispose()
+    queue.resume()
+    queue.stage({ kind: "sources", id: "source-a" }, record("source-a", 1, {}), {
+      text: "after-remount",
+    })
+    await vi.runAllTimersAsync()
+
+    expect(saved).toEqual(["source-a"])
+    queue.dispose()
+    vi.useRealTimers()
+  })
+
   it("saves page and database drafts through independent queues", async () => {
     vi.useFakeTimers()
     const saved: string[] = []

@@ -15,6 +15,7 @@ export type {
   PendingSourceSave,
   RemoteSourceResult,
   SourceAcknowledgement,
+  SourceConflictResolution,
   SourceRecord,
   SourceRuntimeAdapter,
   SourceRuntimeSeed,

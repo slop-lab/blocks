@@ -1,6 +1,7 @@
 export type SourceRuntimeAdapter<State, Content> = {
   readonly contentOf: (state: State) => Content
   readonly replaceContent: (state: State, content: Content) => State
+  readonly contentEquals: (left: Content, right: Content) => boolean
 }
 
 export type SourceRecord<Content> = {
@@ -32,6 +33,8 @@ export type RemoteSourceResult =
   | { readonly kind: "ignored" }
   | { readonly kind: "conflict"; readonly remoteRevision: number }
 
+export type SourceConflictResolution = "accept-remote" | "keep-local"
+
 export class SourceAttachmentError extends Error {
   readonly name = "SourceAttachmentError"
 
@@ -47,9 +50,10 @@ export class SourceRuntime<State, Content> {
   private savedGeneration = 0
   private causeId = ""
   private activeId: string | null = null
-  private composing = false
+  private composingId: string | null = null
   private readonly occurrences = new Set<string>()
   private readonly listeners = new Set<(state: State) => void>()
+  private readonly submitted = new Map<number, PendingSourceSave<Content>>()
   private conflictRecord: SourceRecord<Content> | null = null
 
   constructor(
@@ -77,6 +81,10 @@ export class SourceRuntime<State, Content> {
     return this.conflictRecord
   }
 
+  get composingOccurrenceId(): string | null {
+    return this.composingId
+  }
+
   get dirty(): boolean {
     return this.generation !== this.savedGeneration
   }
@@ -86,6 +94,7 @@ export class SourceRuntime<State, Content> {
     return () => {
       this.occurrences.delete(occurrenceId)
       if (this.activeId === occurrenceId) this.activeId = null
+      if (this.composingId === occurrenceId) this.composingId = null
     }
   }
 
@@ -98,8 +107,11 @@ export class SourceRuntime<State, Content> {
     if (this.activeId === occurrenceId) this.activeId = null
   }
 
-  setComposing(active: boolean): void {
-    this.composing = active
+  setComposing(occurrenceId: string, active: boolean): void {
+    if (active) {
+      if (this.activeId !== occurrenceId) throw new SourceAttachmentError(occurrenceId)
+      this.composingId = occurrenceId
+    } else if (this.composingId === occurrenceId) this.composingId = null
   }
 
   updateLocal(occurrenceId: string, state: State, causeId: string): void {
@@ -118,8 +130,11 @@ export class SourceRuntime<State, Content> {
 
   receiveRemote(record: SourceRecord<Content>): RemoteSourceResult {
     if (record.revision <= this.revision) return { kind: "ignored" }
-    if (this.dirty || this.composing) {
+    if (this.conflictRecord !== null && record.revision <= this.conflictRecord.revision)
+      return { kind: "ignored" }
+    if (this.dirty || this.composingId !== null) {
       this.conflictRecord = record
+      this.emit()
       return { kind: "conflict", remoteRevision: record.revision }
     }
     this.currentState = this.adapter.replaceContent(this.currentState, record.content)
@@ -130,24 +145,47 @@ export class SourceRuntime<State, Content> {
   }
 
   pendingSave(): PendingSourceSave<Content> | null {
-    return this.dirty
-      ? {
-          sourceId: this.sourceId,
-          generation: this.generation,
-          baselineRevision: this.revision,
-          causeId: this.causeId,
-          content: this.adapter.contentOf(this.currentState),
-        }
-      : null
+    if (!this.dirty) return null
+    const pending = {
+      sourceId: this.sourceId,
+      generation: this.generation,
+      baselineRevision: this.revision,
+      causeId: this.causeId,
+      content: this.adapter.contentOf(this.currentState),
+    }
+    this.submitted.set(pending.generation, pending)
+    return pending
   }
 
   acknowledge(input: SourceAcknowledgement<Content>): { readonly kind: "accepted" | "stale" } {
-    if (input.generation !== this.generation || input.causeId !== this.causeId)
+    const submitted = this.submitted.get(input.generation)
+    if (
+      submitted === undefined ||
+      input.causeId !== submitted.causeId ||
+      input.record.revision <= submitted.baselineRevision ||
+      !this.adapter.contentEquals(input.record.content, submitted.content)
+    )
       return { kind: "stale" }
     this.revision = input.record.revision
-    this.savedGeneration = input.generation
-    this.conflictRecord = null
+    this.savedGeneration = Math.max(this.savedGeneration, input.generation)
+    this.submitted.delete(input.generation)
+    if (this.conflictRecord !== null && this.conflictRecord.revision <= this.revision)
+      this.conflictRecord = null
+    this.emit()
     return { kind: "accepted" }
+  }
+
+  resolveConflict(resolution: SourceConflictResolution): void {
+    const conflict = this.conflictRecord
+    if (conflict === null) return
+    this.revision = conflict.revision
+    this.conflictRecord = null
+    this.submitted.clear()
+    if (resolution === "accept-remote") {
+      this.currentState = this.adapter.replaceContent(this.currentState, conflict.content)
+      this.savedGeneration = this.generation
+      this.emit()
+    } else this.emit()
   }
 
   subscribe(listener: (state: State) => void): () => void {

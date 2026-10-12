@@ -32,6 +32,7 @@ export const attachSelectionToolbar = (
   toolbar.ariaLabel = "선택한 글자 서식"
   toolbar.hidden = true
   ownerDocument.body.append(toolbar)
+  let detachLinkShortcut: () => void = () => {}
 
   const runMark = (mark: MarkType) => {
     toggleMark(mark)(view.state, view.dispatch, view)
@@ -78,7 +79,7 @@ export const attachSelectionToolbar = (
     cancel.textContent = "취소"
     form.append(input, apply, remove, cancel, error)
     linkButton.addEventListener("pointerdown", (event) => event.preventDefault())
-    linkButton.addEventListener("click", () => {
+    const openLinkForm = () => {
       target = captureLinkTarget(view.state, linkMark)
       if (target === null) return
       input.value = target.href
@@ -87,7 +88,21 @@ export const attachSelectionToolbar = (
       toolbar.classList.add("selection-toolbar--link-open")
       update()
       input.focus()
-    })
+    }
+    linkButton.addEventListener("click", openLinkForm)
+    const onLinkShortcut = (event: KeyboardEvent) => {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLocaleLowerCase() === "k" &&
+        captureLinkTarget(view.state, linkMark) !== null
+      ) {
+        event.preventDefault()
+        event.stopPropagation()
+        openLinkForm()
+      }
+    }
+    view.dom.addEventListener("keydown", onLinkShortcut)
+    detachLinkShortcut = () => view.dom.removeEventListener("keydown", onLinkShortcut)
     const applyTarget = (href: string | null) => {
       if (target === null || !isCurrentLinkTarget(view.state, target)) {
         error.textContent = "선택한 글자가 변경되었습니다. 다시 선택해 주세요."
@@ -182,6 +197,7 @@ export const attachSelectionToolbar = (
     ownerDocument.defaultView?.removeEventListener("resize", schedule)
     ownerDocument.defaultView?.visualViewport?.removeEventListener("resize", schedule)
     ownerDocument.defaultView?.visualViewport?.removeEventListener("scroll", schedule)
+    detachLinkShortcut()
     toolbar.remove()
   }
 }

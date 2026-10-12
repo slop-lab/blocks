@@ -44,6 +44,14 @@ const blockElements = (view: EditorView): readonly HTMLElement[] =>
     (element) => element.closest(".ProseMirror") === view.dom,
   )
 
+const leafBlockElements = (view: EditorView): readonly HTMLElement[] =>
+  blockElements(view).filter(
+    (element) =>
+      !Array.from(element.querySelectorAll<HTMLElement>("[data-block-id]")).some(
+        (child) => child.closest(".ProseMirror") === view.dom,
+      ),
+  )
+
 const interactiveTarget = (target: HTMLElement): boolean =>
   target.closest("button, a, input, textarea, select, [contenteditable='false']") !== null
 
@@ -145,6 +153,29 @@ export const attachBlockSelection = (
     for (const id of ids) selection.apply({ kind: "toggle", id }, visibleIds())
     render()
   }
+  const onNativeSelectionChange = () => {
+    const native = ownerDocument.getSelection()
+    if (native === null || native.isCollapsed || native.rangeCount !== 1) return
+    const range = native.getRangeAt(0)
+    if (!view.dom.contains(range.startContainer) || !view.dom.contains(range.endContainer)) return
+    const intersected = leafBlockElements(view).filter((element) => range.intersectsNode(element))
+    if (intersected.length < 2) return
+    const fullySelected = intersected.every((element) => {
+      const blockRange = ownerDocument.createRange()
+      blockRange.selectNodeContents(element)
+      return (
+        range.compareBoundaryPoints(Range.START_TO_START, blockRange) <= 0 &&
+        range.compareBoundaryPoints(Range.END_TO_END, blockRange) >= 0
+      )
+    })
+    if (!fullySelected) return
+    selection.apply({ kind: "clear" }, visibleIds())
+    for (const element of intersected) {
+      const id = element.dataset["blockId"]
+      if (id !== undefined) selection.apply({ kind: "toggle", id }, visibleIds())
+    }
+    render()
+  }
   const finishMarquee = () => {
     marquee = null
     marqueeElement.hidden = true
@@ -155,6 +186,7 @@ export const attachBlockSelection = (
   view.dom.addEventListener("pointerdown", onPointerDown)
   ownerDocument.addEventListener("pointermove", onPointerMove)
   ownerDocument.addEventListener("pointerup", finishMarquee)
+  ownerDocument.addEventListener("selectionchange", onNativeSelectionChange)
   return {
     selectFromClick,
     selectedIds: () => selection.value,
@@ -170,6 +202,7 @@ export const attachBlockSelection = (
       view.dom.removeEventListener("pointerdown", onPointerDown)
       ownerDocument.removeEventListener("pointermove", onPointerMove)
       ownerDocument.removeEventListener("pointerup", finishMarquee)
+      ownerDocument.removeEventListener("selectionchange", onNativeSelectionChange)
     },
   }
 }

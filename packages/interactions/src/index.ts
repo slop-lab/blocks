@@ -1,5 +1,10 @@
 import { z } from "zod"
 
+export {
+  InteractionContextArbiter,
+  type InteractionContextHandle,
+  type InteractionContextSnapshot,
+} from "./context.js"
 export { type CutPolicy, type CutRoute, type CutRouteOptions, routeCut } from "./cut.js"
 export { ContentHistory, type HistorySnapshot } from "./history.js"
 

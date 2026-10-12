@@ -11,14 +11,16 @@ import {
   setBlockTypeById,
 } from "./block-interaction-commands"
 import type { MenuItem } from "./block-menu"
+import { planBlockWrap, wrapBlocksById } from "./block-wrap-commands"
 import { profileForState } from "./profile-plugin"
 
 type MenuItemsOptions = {
   readonly view: EditorView
   readonly blockId: string
-  readonly run: (command: Command) => void
+  readonly run: (command: Command) => boolean
   readonly selectedIds: () => readonly string[]
   readonly contains: (blockId: string) => boolean
+  readonly replaceSelection: (blockIds: readonly string[]) => void
 }
 
 export const blockMenuItems = ({
@@ -27,6 +29,7 @@ export const blockMenuItems = ({
   run,
   selectedIds,
   contains,
+  replaceSelection,
 }: MenuItemsOptions): readonly MenuItem[] => {
   const index = blockIndexById(view.state.doc, blockId)
   if (index < 0) return []
@@ -56,6 +59,29 @@ export const blockMenuItems = ({
       })
   }
   const selection = () => (contains(blockId) ? selectedIds() : [blockId])
+  const wrapPlan = planBlockWrap(view.state.doc, selection())
+  const wrapItems: MenuItem[] = []
+  if (wrapPlan.kind === "expanded") {
+    wrapItems.push({
+      label: `선택 범위 확장 (${wrapPlan.additionalIds.length}개의 중간 블록 포함)`,
+      action: () => replaceSelection(wrapPlan.coveredIds),
+    })
+  } else if (wrapPlan.kind === "exact") {
+    for (const registration of profile?.registrations.values() ?? []) {
+      const item = registration.insertMenu?.[0]
+      if (registration.container === undefined || item === undefined) continue
+      const type = schema.nodes[registration.nodeName]
+      if (type === undefined) continue
+      wrapItems.push({
+        label: `선택 영역 감싸기 → ${item.label}`,
+        action: () => {
+          const wrapperId = crypto.randomUUID()
+          if (run(wrapBlocksById(wrapPlan.coveredIds, type, wrapperId)))
+            replaceSelection([wrapperId])
+        },
+      })
+    }
+  }
   return [
     {
       label: "위로 이동",
@@ -80,6 +106,7 @@ export const blockMenuItems = ({
       action: () => run(moveBlockById(blockId, index + 2)),
     },
     { label: "복제", hint: "Mod+Shift+D", action: () => run(duplicateBlockById(blockId)) },
+    ...wrapItems,
     ...types,
     { label: "삭제", danger: true, action: () => run(deleteBlockById(blockId)) },
   ]

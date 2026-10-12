@@ -11,6 +11,8 @@ import {
   moveBlockById,
   moveBlocksById,
   outdentBlocksById,
+  planBlockWrap,
+  wrapBlocksById,
 } from "../src/pm/block-interaction-commands"
 import { createEditorState } from "../src/pm/editor"
 import { editorSchema } from "../src/pm/schema"
@@ -161,6 +163,94 @@ describe("block interaction commands", () => {
     expect(state.doc.childCount).toBe(3)
     expect(state.doc.child(1).attrs["id"]).toBe("a")
     expect(state.doc.child(2).attrs["id"]).toBe("b")
+  })
+
+  it.each([
+    ["section", "section"],
+    ["callout", "callout"],
+    ["container_quote", "quote"],
+  ])("wraps selected siblings in one undoable %s transaction", (nodeName, snapshotType) => {
+    const profile = createWorkspaceProfile(0)
+    const documentType = profile.schema.nodes["doc"]
+    const paragraphType = profile.schema.nodes["paragraph"]
+    const containerType = profile.schema.nodes[nodeName]
+    if (documentType === undefined || paragraphType === undefined || containerType === undefined)
+      throw new TypeError("Workspace wrapping schema is incomplete")
+    const textBlock = (id: string, value: string) =>
+      paragraphType.create({ id, locked: false }, profile.schema.text(value))
+    let state = createEditorState({
+      document: documentType.create(undefined, [
+        textBlock("a", "A"),
+        textBlock("b", "B"),
+        textBlock("c", "C"),
+      ]),
+      readonly: false,
+      profile,
+    })
+    const dispatch = (transaction: Parameters<typeof state.apply>[0]) => {
+      state = state.apply(transaction)
+    }
+
+    expect(wrapBlocksById(["a", "b"], containerType)(state, dispatch)).toBe(true)
+
+    expect(state.doc.child(0).type.name).toBe(nodeName)
+    expect(state.doc.child(0).attrs["id"]).toEqual(expect.any(String))
+    expect(state.doc.child(0).attrs["snapshotType"] || snapshotType).toBe(snapshotType)
+    expect(state.doc.child(0).child(0).attrs["id"]).toBe("a")
+    expect(state.doc.child(0).child(1).attrs["id"]).toBe("b")
+    expect(undo(state, dispatch)).toBe(true)
+    expect(
+      Array.from(
+        { length: state.doc.childCount },
+        (_, index) => state.doc.child(index).attrs["id"],
+      ),
+    ).toEqual(["a", "b", "c"])
+  })
+
+  it("requires explicit expansion before wrapping a disconnected selection", () => {
+    const profile = createWorkspaceProfile(0)
+    const documentType = profile.schema.nodes["doc"]
+    const paragraphType = profile.schema.nodes["paragraph"]
+    const sectionType = profile.schema.nodes["section"]
+    if (documentType === undefined || paragraphType === undefined || sectionType === undefined)
+      throw new TypeError("Workspace wrapping schema is incomplete")
+    const block = (id: string) => paragraphType.create({ id, locked: false })
+    const state = EditorState.create({
+      schema: profile.schema,
+      doc: documentType.create(undefined, [block("a"), block("b"), block("c")]),
+    })
+
+    const plan = planBlockWrap(state.doc, ["a", "c"])
+
+    expect(plan.kind).toBe("expanded")
+    if (plan.kind !== "expanded") return
+    expect(plan.additionalIds).toEqual(["b"])
+    expect(wrapBlocksById(["a", "c"], sectionType)(state)).toBe(false)
+    expect(wrapBlocksById(plan.coveredIds, sectionType)(state)).toBe(true)
+  })
+
+  it("rejects wrapping when the connected cover contains a locked subtree", () => {
+    const profile = createWorkspaceProfile(0)
+    const documentType = profile.schema.nodes["doc"]
+    const paragraphType = profile.schema.nodes["paragraph"]
+    const calloutType = profile.schema.nodes["callout"]
+    if (documentType === undefined || paragraphType === undefined || calloutType === undefined)
+      throw new TypeError("Workspace wrapping schema is incomplete")
+    const state = EditorState.create({
+      schema: profile.schema,
+      doc: documentType.create(undefined, [
+        paragraphType.create({ id: "a", locked: false }),
+        paragraphType.create({ id: "locked", locked: true }),
+        paragraphType.create({ id: "c", locked: false }),
+      ]),
+    })
+
+    expect(planBlockWrap(state.doc, ["a", "c"])).toEqual({
+      kind: "invalid",
+      reason: "locked",
+      ids: ["locked"],
+    })
+    expect(wrapBlocksById(["a", "locked", "c"], calloutType)(state)).toBe(false)
   })
 
   it("resolves positions by current stable identity and inserts after it", () => {

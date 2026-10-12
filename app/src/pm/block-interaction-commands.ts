@@ -11,6 +11,7 @@ export {
   moveBlocksById,
   outdentBlocksById,
 } from "./block-structure-commands"
+export { planBlockWrap, wrapBlocksById } from "./block-wrap-commands"
 
 export type SlashQuery = {
   readonly from: number

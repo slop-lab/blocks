@@ -1,4 +1,5 @@
 import type { Database, PageDocument, SyncedSource, Workspace } from "@block-editor/workspace"
+import { Fragment } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
 import { useEffect, useMemo, useRef } from "react"
 import { attachBlockInteractions } from "../../pm/block-interactions"
@@ -18,8 +19,10 @@ type Props = {
   readonly sources: readonly SyncedSource[]
   readonly onDocument: (document: PageDocument) => void
   readonly onSourceEdit: (source: SyncedSource) => void
-  readonly onOpenPage: (id: string) => void
+  readonly onSourceCreate: (source: SyncedSource) => Promise<boolean>
+  readonly onOpenPage: (id: string, blockId?: string) => void
   readonly onCompositionChange: (composing: boolean) => void
+  readonly pasteMode: "clone" | "reference"
   readonly autoFocus?: boolean
 }
 
@@ -40,6 +43,8 @@ export const WorkspaceEditor = (props: Props) => {
     profile,
     onOpenPage: props.onOpenPage,
     onSourceEdit: props.onSourceEdit,
+    onSourceCreate: props.onSourceCreate,
+    embeddingDepth: props.depth,
   })
   dataRef.current = {
     workspace: props.workspace,
@@ -48,6 +53,8 @@ export const WorkspaceEditor = (props: Props) => {
     profile,
     onOpenPage: props.onOpenPage,
     onSourceEdit: props.onSourceEdit,
+    onSourceCreate: props.onSourceCreate,
+    embeddingDepth: props.depth,
   }
 
   useEffect(() => {
@@ -57,7 +64,7 @@ export const WorkspaceEditor = (props: Props) => {
     emittedRef.current = JSON.stringify(initial)
     const session = new ModelSession({
       modelId: documentId,
-      document: pageDocumentToSnapshot(initial),
+      document: pageDocumentToSnapshot(initial, propsRef.current.sources),
       epoch: 1,
       version: initial.version,
       readOnly: false,
@@ -101,10 +108,52 @@ export const WorkspaceEditor = (props: Props) => {
       emittedRef.current = JSON.stringify(document)
       propsRef.current.onDocument(document)
     })
-    const detach = attachBlockInteractions(view, { readOnly: false })
+    const detach = attachBlockInteractions(view, {
+      readOnly: false,
+      clipboardPolicy: {
+        namespace: "block-editor/workspace",
+        cut: "remove-after-write",
+        paste: () => (propsRef.current.pasteMode === "reference" ? "link" : "clone"),
+      },
+      onReferencePaste: (envelope, context) => {
+        const sourceIds = [...new Set(envelope.externalReferences)]
+        const section = context.view.state.schema.nodes["section"]
+        if (section === undefined || sourceIds.length === 0) return
+        const references = sourceIds.flatMap((sourceId) =>
+          propsRef.current.sources.some((source) => source.id === sourceId)
+            ? [
+                section.create({
+                  id: crypto.randomUUID(),
+                  locked: false,
+                  occurrenceId: crypto.randomUUID(),
+                  sourceId,
+                }),
+              ]
+            : [],
+        )
+        if (references.length === 0) return
+        context.view.dispatch(
+          context.view.state.tr
+            .insert(context.insertion, Fragment.fromArray(references))
+            .setMeta("origin", "paste")
+            .scrollIntoView(),
+        )
+      },
+    })
     sessionRef.current = session
     viewRef.current = view
     workspaceViews.refresh()
+    const revealId = decodeURIComponent(
+      view.dom.ownerDocument.defaultView?.location.hash.slice(1) ?? "",
+    )
+    if (revealId.length > 0)
+      view.dom.ownerDocument.defaultView?.requestAnimationFrame(() => {
+        const revealed = view.dom.querySelector<HTMLElement>(
+          `[data-block-id="${CSS.escape(revealId)}"]`,
+        )
+        revealed?.scrollIntoView({ block: "center" })
+        revealed?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true })
+      })
     if (propsRef.current.autoFocus === true) view.focus()
     refreshViewsRef.current = workspaceViews.refresh
     return () => {
@@ -133,10 +182,10 @@ export const WorkspaceEditor = (props: Props) => {
       epoch: session.epoch,
       baseVersion: session.version,
       requestId: crypto.randomUUID(),
-      document: pageDocumentToSnapshot(props.document),
+      document: pageDocumentToSnapshot(props.document, props.sources),
     })
     if (result.kind === "applied") view.updateState(session.state)
-  }, [props.document])
+  }, [props.document, props.sources])
 
   useEffect(() => {
     Object.assign(dataRef.current, {

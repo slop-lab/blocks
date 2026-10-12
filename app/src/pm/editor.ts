@@ -16,10 +16,11 @@ type LockedNode = { readonly position: number; readonly json: string }
 
 const lockedNodes = (document: ProseMirrorNode): readonly LockedNode[] => {
   const result: LockedNode[] = []
-  document.forEach((node, position) => {
+  document.descendants((node, position) => {
     const id = node.attrs["id"]
     if (node.attrs["locked"] === true && typeof id === "string")
       result.push({ position, json: JSON.stringify(node.toJSON()) })
+    return true
   })
   return result
 }
@@ -57,16 +58,18 @@ export const createIdentityPlugin = (
         return null
       const ids = new Set<string>()
       let repair = newState.tr
-      newState.doc.forEach((node, position) => {
+      newState.doc.descendants((node, position) => {
+        if (!Object.hasOwn(node.type.spec.attrs ?? {}, "id")) return true
         const current = node.attrs["id"]
         const valid = typeof current === "string" && current.length > 0 && !ids.has(current)
         if (valid) {
           ids.add(current)
-          return
+          return true
         }
         const id = crypto.randomUUID()
         ids.add(id)
         repair = repair.setNodeMarkup(position, undefined, { ...node.attrs, id })
+        return true
       })
       return repair.docChanged ? repair.setMeta("origin", "local") : null
     },
@@ -137,9 +140,10 @@ const transactionOrigin = (transaction: Transaction): ChangeOrigin => {
 
 const blockRevisions = (document: ProseMirrorNode): ReadonlyMap<string, ProseMirrorNode> => {
   const revisions = new Map<string, ProseMirrorNode>()
-  document.forEach((node) => {
+  document.descendants((node) => {
     const id = node.attrs["id"]
     if (typeof id === "string") revisions.set(id, node)
+    return true
   })
   return revisions
 }

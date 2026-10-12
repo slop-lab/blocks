@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 
-import { EditorState } from "prosemirror-state"
+import { baseKeymap } from "prosemirror-commands"
+import { EditorState, TextSelection } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { describe, expect, it, vi } from "vitest"
 import { initProseMirrorDoc, undo, ySyncPlugin, ySyncPluginKey, yUndoPlugin } from "y-prosemirror"
 import * as Y from "yjs"
 import type { BlockDocument } from "../src/core/types"
 import { createInitialCollaborationUpdate } from "../src/features/collaboration/CollaborationBinding"
+import { createWorkspaceProfile } from "../src/features/workspace/workspace-editor-model"
 import { duplicateBlock } from "../src/pm/commands"
 import { createIdentityPlugin, createLockedBlockPlugin } from "../src/pm/editor"
 import { editorSchema } from "../src/pm/schema"
@@ -41,6 +43,54 @@ const createView = (doc: Y.Doc, enforceLocks = false): EditorView => {
 }
 
 describe("collaboration history", () => {
+  it.each([
+    ["start", 0],
+    ["middle", 2],
+    ["end", 4],
+  ])(
+    "assigns unique nested IDs when Enter splits a quote paragraph at the %s",
+    (_label, offset) => {
+      const profile = createWorkspaceProfile(0)
+      const quote = profile.schema.nodes["container_quote"]
+      const paragraph = profile.schema.nodes["paragraph"]
+      if (quote === undefined || paragraph === undefined)
+        throw new TypeError("Workspace quote schema is incomplete")
+      const document = profile.schema.topNodeType.create(undefined, [
+        quote.create({ id: "outer-quote", locked: false }, [
+          paragraph.create({ id: "quote-text", locked: false }, profile.schema.text("abcd")),
+        ]),
+      ])
+      let state = EditorState.create({
+        schema: profile.schema,
+        doc: document,
+        selection: TextSelection.create(document, 2 + offset),
+        plugins: [createIdentityPlugin()],
+      })
+
+      const enter = baseKeymap["Enter"]
+      if (enter === undefined) throw new TypeError("Base Enter command is missing")
+      expect(
+        enter(state, (transaction) => {
+          state = state.apply(transaction)
+        }),
+      ).toBe(true)
+
+      const ids: string[] = []
+      state.doc.descendants((node) => {
+        const id = node.attrs["id"]
+        if (typeof id === "string") ids.push(id)
+        return true
+      })
+      expect(state.doc.childCount).toBe(1)
+      expect(state.doc.firstChild?.type.name).toBe("container_quote")
+      expect(state.doc.firstChild?.childCount).toBe(2)
+      expect(ids[0]).toBe("outer-quote")
+      expect(ids[1]).toBe("quote-text")
+      expect(ids[2]).toMatch(/[0-9a-f-]{36}/u)
+      expect(new Set(ids).size).toBe(ids.length)
+    },
+  )
+
   it("keeps a remote edit when the local client undoes its own edit", () => {
     const firstDoc = new Y.Doc()
     const firstFragment = firstDoc.getXmlFragment("prosemirror")

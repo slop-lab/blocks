@@ -215,6 +215,15 @@ export class SourceRuntimeRegistry<State, Content> {
     return this.runtimes.get(sourceId) ?? null
   }
 
+  release(sourceId: string, runtime: SourceRuntime<State, Content>): boolean {
+    if (this.runtimes.get(sourceId) !== runtime) return false
+    return this.runtimes.delete(sourceId)
+  }
+
+  delete(sourceId: string): void {
+    this.runtimes.delete(sourceId)
+  }
+
   clear(): void {
     this.runtimes.clear()
   }

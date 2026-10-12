@@ -14,6 +14,38 @@ const registry = () =>
   })
 
 describe("canonical source runtime", () => {
+  it("Given a registered runtime, When its source is deleted, Then the next open creates a new runtime", () => {
+    const runtimes = registry()
+    const first = runtimes.open("source-a", {
+      state: { content: "A", undo: [] },
+      revision: 1,
+    })
+
+    runtimes.delete("source-a")
+    expect(runtimes.get("source-a")).toBeNull()
+    expect(runtimes.open("source-a", { state: { content: "B", undo: [] }, revision: 2 })).not.toBe(
+      first,
+    )
+  })
+
+  it("Given a replacement runtime, When an old owner releases its handle, Then the replacement remains registered", () => {
+    const runtimes = registry()
+    const first = runtimes.open("source-a", {
+      state: { content: "A", undo: [] },
+      revision: 1,
+    })
+    runtimes.delete("source-a")
+    const replacement = runtimes.open("source-a", {
+      state: { content: "B", undo: [] },
+      revision: 2,
+    })
+
+    expect(runtimes.release("source-a", first)).toBe(false)
+    expect(runtimes.get("source-a")).toBe(replacement)
+    expect(runtimes.release("source-a", replacement)).toBe(true)
+    expect(runtimes.get("source-a")).toBeNull()
+  })
+
   it("Given two occurrences, When editing moves between them, Then one state and history authority is retained", () => {
     const runtimes = registry()
     const runtime = runtimes.open("source-a", {

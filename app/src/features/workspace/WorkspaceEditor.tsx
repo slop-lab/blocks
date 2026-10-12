@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef } from "react"
 import { parseInternalTarget } from "../../core/links"
 import { attachBlockInteractions } from "../../pm/block-interactions"
 import { ModelSession } from "../../pm/session"
+import type { EntityRecord } from "./workspace-api"
 import {
   createWorkspaceProfile,
   pageDocumentToSnapshot,
@@ -17,10 +18,10 @@ type Props = {
   readonly document: PageDocument
   readonly depth: number
   readonly databases: readonly Database[]
-  readonly sources: readonly SyncedSource[]
+  readonly sources: readonly EntityRecord<SyncedSource>[]
   readonly onDocument: (document: PageDocument) => void
   readonly onSourceEdit: (source: SyncedSource) => void
-  readonly onSourceCreate: (source: SyncedSource) => Promise<SyncedSource | null>
+  readonly onSourceCreate: (source: SyncedSource) => Promise<EntityRecord<SyncedSource> | null>
   readonly onSourceCompositionChange: (sourceId: string, composing: boolean) => void
   readonly onOpenPage: (id: string, blockId?: string) => void
   readonly onCompositionChange: (composing: boolean) => void
@@ -68,7 +69,10 @@ export const WorkspaceEditor = (props: Props) => {
     emittedRef.current = JSON.stringify(initial)
     const session = new ModelSession({
       modelId: documentId,
-      document: pageDocumentToSnapshot(initial, propsRef.current.sources),
+      document: pageDocumentToSnapshot(
+        initial,
+        propsRef.current.sources.map((record) => record.content),
+      ),
       epoch: 1,
       version: initial.version,
       readOnly: false,
@@ -124,7 +128,7 @@ export const WorkspaceEditor = (props: Props) => {
         const section = context.view.state.schema.nodes["section"]
         if (section === undefined || sourceIds.length === 0) return
         const references = sourceIds.flatMap((sourceId) =>
-          propsRef.current.sources.some((source) => source.id === sourceId)
+          propsRef.current.sources.some((record) => record.content.id === sourceId)
             ? [
                 section.create({
                   id: crypto.randomUUID(),
@@ -202,7 +206,10 @@ export const WorkspaceEditor = (props: Props) => {
       epoch: session.epoch,
       baseVersion: session.version,
       requestId: crypto.randomUUID(),
-      document: pageDocumentToSnapshot(props.document, props.sources),
+      document: pageDocumentToSnapshot(
+        props.document,
+        props.sources.map((record) => record.content),
+      ),
     })
     if (result.kind === "applied") view.updateState(session.state)
   }, [props.document, props.sources])

@@ -2,6 +2,7 @@ import type { Database, PageDocument, SyncedSource, Workspace } from "@block-edi
 import { useState } from "react"
 import { WorkspaceDatabase } from "./WorkspaceDatabase"
 import { WorkspaceEditor } from "./WorkspaceEditor"
+import type { EntityRecord } from "./workspace-api"
 import { embeddedDatabaseIds } from "./workspace-editor-model"
 
 type Props = {
@@ -9,11 +10,11 @@ type Props = {
   readonly document: PageDocument
   readonly depth: number
   readonly databases: readonly Database[]
-  readonly sources: readonly SyncedSource[]
+  readonly sources: readonly EntityRecord<SyncedSource>[]
   readonly onDocument: (document: PageDocument) => void
   readonly onDatabase: (database: Database) => void
   readonly onSourceEdit: (source: SyncedSource) => void
-  readonly onSourceCreate: (source: SyncedSource) => Promise<SyncedSource | null>
+  readonly onSourceCreate: (source: SyncedSource) => Promise<EntityRecord<SyncedSource> | null>
   readonly onSourceCompositionChange: (sourceId: string, composing: boolean) => void
   readonly backlinks: readonly {
     readonly blockId: string

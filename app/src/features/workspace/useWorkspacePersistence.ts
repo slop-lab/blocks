@@ -210,14 +210,14 @@ export const useWorkspacePersistence = () => {
     return id
   }
 
-  const createSource = async (source: SyncedSource): Promise<SyncedSource | null> => {
+  const createSource = async (source: SyncedSource): Promise<EntityRecord<SyncedSource> | null> => {
     try {
       const created = await createWorkspaceSource(source)
       commit((current) =>
         current === null ? current : { ...current, sources: [...current.sources, created] },
       )
       setStatus("공유 원본을 저장했습니다.")
-      return created.content
+      return created
     } catch (error) {
       if (!(error instanceof Error)) throw error
       setStatus(error.message)

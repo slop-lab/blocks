@@ -80,7 +80,7 @@ export const StructuredWorkspace = () => {
           document={active.content}
           depth={pageDepth(payload.tree.content, activeId)}
           databases={payload.databases.map((record) => record.content)}
-          sources={payload.sources.map((record) => record.content)}
+          sources={payload.sources}
           pasteMode={pasteMode}
           onPasteMode={(mode) => {
             setPasteMode(mode)

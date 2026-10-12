@@ -2,15 +2,16 @@ import type { ProseMirrorProfile } from "@block-editor/prosemirror"
 import type { Database, SyncedSource, Workspace } from "@block-editor/workspace"
 import { Fragment, type Node as ProseMirrorNode } from "prosemirror-model"
 import type { EditorView } from "prosemirror-view"
+import type { EntityRecord } from "./workspace-api"
 
 export type WorkspaceNodeViewData = {
   readonly workspace: Workspace
   readonly databases: readonly Database[]
-  readonly sources: readonly SyncedSource[]
+  readonly sources: readonly EntityRecord<SyncedSource>[]
   readonly profile: ProseMirrorProfile
   readonly onOpenPage: (id: string, blockId?: string) => void
   readonly onSourceEdit: (source: SyncedSource) => void
-  readonly onSourceCreate: (source: SyncedSource) => Promise<SyncedSource | null>
+  readonly onSourceCreate: (source: SyncedSource) => Promise<EntityRecord<SyncedSource> | null>
   readonly onSourceCompositionChange: (sourceId: string, composing: boolean) => void
   readonly embeddingDepth: number
 }

@@ -1,10 +1,11 @@
 import { archivePage, pageDepth, restorePage } from "@block-editor/workspace"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useWorkspacePersistence } from "./useWorkspacePersistence"
 import { WorkspaceTopbar, WorkspaceTrash } from "./WorkspaceChrome"
 import { WorkspaceDialogs } from "./WorkspaceDialogs"
 import { WorkspaceDocument } from "./WorkspaceDocument"
 import { WorkspaceTree } from "./WorkspaceTree"
+import { pageReferenceTargets } from "./workspace-editor-model"
 import "./workspace.css"
 import "./workspace-overlays.css"
 
@@ -12,9 +13,10 @@ export const StructuredWorkspace = () => {
   const persistence = useWorkspacePersistence()
   const [activeId, setActiveId] = useState("home")
   const [query, setQuery] = useState("")
-  const [sharedEdit, setSharedEdit] = useState<string | null>(null)
-  const sharedReturnFocus = useRef<HTMLElement | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [pasteMode, setPasteMode] = useState<"clone" | "reference">(() =>
+    localStorage.getItem("structured-paste-mode") === "reference" ? "reference" : "clone",
+  )
   const [newTitle, setNewTitle] = useState("")
   const [favorites, setFavorites] = useState<ReadonlySet<string>>(
     () => new Set(JSON.parse(localStorage.getItem("structured-favorites") ?? "[]")),
@@ -35,7 +37,6 @@ export const StructuredWorkspace = () => {
   const active = payload?.documents.find((record) => record.content.pageId === activeId)
   const activePage = payload?.tree.content.pages.find((page) => page.id === activeId)
   const archived = payload?.tree.content.pages.filter((page) => page.archived) ?? []
-  const shared = payload?.sources.find((record) => record.content.id === sharedEdit)
   const create = async () => {
     if (newTitle.trim() === "") return
     const id = await persistence.createPage(newTitle.trim(), activeId)
@@ -74,20 +75,43 @@ export const StructuredWorkspace = () => {
       <main className="structured-main">
         <WorkspaceTopbar title={activePage.title} status={persistence.status} />
         <WorkspaceDocument
+          key={activeId}
           workspace={payload.tree.content}
           document={active.content}
           depth={pageDepth(payload.tree.content, activeId)}
           databases={payload.databases.map((record) => record.content)}
           sources={payload.sources.map((record) => record.content)}
-          onOpenPage={setActiveId}
+          pasteMode={pasteMode}
+          onPasteMode={(mode) => {
+            setPasteMode(mode)
+            localStorage.setItem("structured-paste-mode", mode)
+          }}
+          backlinks={payload.documents.flatMap((record) => {
+            const page = payload.tree.content.pages.find(
+              (candidate) => candidate.id === record.content.pageId,
+            )
+            if (page === undefined || page.id === activeId) return []
+            return pageReferenceTargets(record.content.blocks)
+              .filter((reference) => reference.pageId === activeId)
+              .map((reference) => ({
+                blockId: reference.blockId,
+                pageId: page.id,
+                title: page.title,
+              }))
+          })}
+          onOpenPage={(id, blockId) => {
+            setActiveId(id)
+            const url = new URL(window.location.href)
+            url.hash = blockId === undefined ? "" : encodeURIComponent(blockId)
+            window.history.replaceState(null, "", url)
+          }}
           onDocument={persistence.updateDocument}
           onDatabase={persistence.updateDatabase}
-          onSourceEdit={(source) => {
-            sharedReturnFocus.current =
-              document.activeElement instanceof HTMLElement ? document.activeElement : null
-            setSharedEdit(source.id)
-          }}
-          onCompositionChange={persistence.setComposing}
+          onSourceEdit={persistence.updateSource}
+          onSourceCreate={persistence.createSource}
+          onCompositionChange={(composing) =>
+            persistence.setComposing({ kind: "pages", id: active.documentId }, composing)
+          }
         />
         <WorkspaceTrash
           pages={archived}
@@ -97,17 +121,9 @@ export const StructuredWorkspace = () => {
       <WorkspaceDialogs
         createOpen={createOpen}
         newTitle={newTitle}
-        workspace={payload.tree.content}
-        databases={payload.databases.map((record) => record.content)}
-        sources={payload.sources.map((record) => record.content)}
-        sharedSource={shared?.content ?? null}
         onTitle={setNewTitle}
         onCreate={() => void create()}
         onCloseCreate={() => setCreateOpen(false)}
-        onCloseShared={() => setSharedEdit(null)}
-        onSharedSource={persistence.updateSource}
-        onCompositionChange={persistence.setComposing}
-        sharedReturnFocus={sharedReturnFocus.current}
       />
     </section>
   )

@@ -64,3 +64,5 @@ Interaction transactions are non-content transactions and do not enter content h
 ## Adapter API
 
 An engine adapter provides operation-tree IDs, ancestry, visible order, engine selection mode, block geometry, clipboard codec hooks, and command execution. The coordinator provides active-state routing and application-menu callbacks. Neither package imports application components or application CSS constants.
+
+Hosts call `BlockSelectionController.activateText()` before intentionally installing a native or programmatic character range. A ProseMirror transaction with `selectionSet` alone is not text intent: bookmarks, menu focus, and DOM observation may change or retain engine selection while a declared context control owns focus. Native `selectionchange` activates text mode only when neither focus nor the active pointer belongs to a declared rail, menu, or selection-form context.

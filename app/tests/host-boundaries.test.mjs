@@ -78,6 +78,33 @@ describe("host input and workflow boundaries", () => {
     expect(response.headers.getSetCookie()[0]).toMatch(/^demo_session=/)
   })
 
+  it("serves extensionless routes without substituting HTML for missing assets", async () => {
+    const { base } = await open()
+
+    const route = await fetch(`${base}/workspace/settings`)
+    const missingScript = await fetch(`${base}/assets/missing.js`)
+    const legacyFavicon = await fetch(`${base}/favicon.ico`)
+
+    expect(route.status).toBe(200)
+    expect(route.headers.get("content-type")).toContain("text/html")
+    expect(missingScript.status).toBe(404)
+    expect(missingScript.headers.get("content-type")).not.toContain("text/html")
+    expect(legacyFavicon.status).toBe(204)
+    expect(legacyFavicon.headers.get("content-type")).toBeNull()
+  })
+
+  it("recovers a missing favicon request from a malformed demo session", async () => {
+    const { base, root } = await open()
+    const token = invalidToken("malformed", loadSessionSecret(root))
+
+    const response = await fetch(`${base}/favicon.ico`, {
+      headers: { cookie: `demo_session=${token}` },
+    })
+
+    expect(response.status).toBe(204)
+    expect(response.headers.getSetCookie()[0]).toMatch(/^demo_session=/)
+  })
+
   it.each(["stale", "expired", "malformed"])(
     "recovers the root page from a %s demo session",
     async (kind) => {

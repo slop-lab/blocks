@@ -1,8 +1,8 @@
-import { createReadStream, existsSync, statSync } from "node:fs"
+import { createReadStream } from "node:fs"
 import { createServer } from "node:http"
-import { extname, join, normalize } from "node:path"
+import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { FileRoomStore } from "@block-editor/server-bindings"
+import { FileRoomStore, resolveStaticApplication } from "@block-editor/server-bindings"
 import { attachCollaboration } from "./collaboration.mjs"
 import { createHostDomain } from "./host-domain.mjs"
 import { createLargeContentHandler } from "./large-content.mjs"
@@ -12,14 +12,6 @@ import { loadSessionSecret } from "./runtime-secret.mjs"
 import { createWorkspaceHandler } from "./workspace.mjs"
 
 const root = fileURLToPath(new URL("../../dist/", import.meta.url))
-const contentTypes = {
-  ".css": "text/css; charset=utf-8",
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
-}
-
 export const createApplicationServer = (options = {}) => {
   const runtimeRoot =
     options.runtimeRoot ?? fileURLToPath(new URL("../../.runtime/", import.meta.url))
@@ -61,18 +53,16 @@ export const createApplicationServer = (options = {}) => {
           .end(JSON.stringify({ error: "Not found" }))
         return
       }
-      const requested = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, "")
-      const candidate = join(root, requested)
-      const path =
-        existsSync(candidate) && statSync(candidate).isFile() ? candidate : join(root, "index.html")
-      if (!existsSync(path)) {
+      const asset = resolveStaticApplication({
+        assetsRoot: root,
+        method: request.method,
+        requestUrl: request.url,
+      })
+      if (asset.kind === "unavailable") {
         response.writeHead(503).end("Build with corepack pnpm build first")
         return
       }
-      const extension = extname(path)
       const headers = {
-        "content-type": contentTypes[extension] ?? "application/octet-stream",
-        "cache-control": extension === ".html" ? "no-cache" : "public, max-age=31536000, immutable",
         "x-content-type-options": "nosniff",
         "content-security-policy":
           "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self'",
@@ -84,8 +74,28 @@ export const createApplicationServer = (options = {}) => {
               "author",
           ),
         )
+      if (asset.kind === "no-content") {
+        response.writeHead(204, headers).end()
+        return
+      }
+      if (asset.kind === "not-found") {
+        response
+          .writeHead(404, {
+            ...headers,
+            "content-type": "application/json; charset=utf-8",
+            "cache-control": "no-store",
+          })
+          .end(JSON.stringify({ error: "Not found" }))
+        return
+      }
+      headers["content-type"] = asset.contentType
+      headers["cache-control"] = asset.cacheControl
       response.writeHead(200, headers)
-      const stream = createReadStream(path)
+      if (request.method === "HEAD") {
+        response.end()
+        return
+      }
+      const stream = createReadStream(asset.path)
       stream.on("error", () => response.destroy())
       stream.pipe(response)
     } catch (error) {

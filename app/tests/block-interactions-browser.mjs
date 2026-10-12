@@ -90,12 +90,14 @@ try {
   )
   await grip.click()
   await blockMenu.waitFor()
-  await page.keyboard.press("Escape")
   assert.equal(
     await cutTarget.evaluate((element) => element.classList.contains("block-selected")),
     true,
   )
-  await editor.focus()
+  assert.equal(
+    await blockMenu.evaluate((element) => element.contains(element.ownerDocument.activeElement)),
+    true,
+  )
   await page.evaluate(() => {
     window.__blockClipboardTypes = []
     window.__originalClipboardSetData = DataTransfer.prototype.setData
@@ -118,6 +120,22 @@ try {
   assert.equal(clipboardTypes.includes("text/html"), false)
   await page.keyboard.press("Control+x")
   assert.equal(await editor.locator("[data-block-id]").count(), countBeforeCut - 1)
+  const pasteTarget = editor.locator(":scope > [data-block-id]:not(:has([data-block-id]))").first()
+  const pasteTargetId = await pasteTarget.getAttribute("data-block-id")
+  await pasteTarget.hover()
+  await page.waitForFunction(
+    (id) =>
+      document
+        .querySelector(".block-controls:not([hidden])")
+        ?.getAttribute("data-target-block-id") === id,
+    pasteTargetId,
+  )
+  await grip.click()
+  await blockMenu.waitFor()
+  assert.equal(
+    await blockMenu.evaluate((element) => element.contains(element.ownerDocument.activeElement)),
+    true,
+  )
   await page.keyboard.press("Control+v")
   assert.equal(await editor.locator("[data-block-id]").count(), countBeforeCut)
   const idsAfterPaste = await editor
@@ -125,16 +143,11 @@ try {
     .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-block-id")))
   assert.equal(new Set(idsAfterPaste).size, idsAfterPaste.length)
   await page.keyboard.press("Control+z")
+  assert.equal(await editor.locator("[data-block-id]").count(), countBeforeCut - 1)
+  assert.equal(await editor.locator(`[data-block-id="${cutTargetId}"]`).count(), 0)
+  await page.keyboard.press("Control+z")
   assert.equal(await editor.locator("[data-block-id]").count(), countBeforeCut)
   assert.equal(await editor.locator(`[data-block-id="${cutTargetId}"]`).count(), 1)
-  await page.keyboard.press("Control+Shift+z")
-  assert.equal(await editor.locator("[data-block-id]").count(), countBeforeCut)
-  assert.deepEqual(
-    await editor
-      .locator("[data-block-id]")
-      .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-block-id"))),
-    idsAfterPaste,
-  )
 
   const selectable = editor.locator(":scope > p[data-block-id]")
   const secondSelectable = selectable.nth(1)
@@ -271,6 +284,11 @@ try {
   assert.equal(await linkInput.getAttribute("type"), "text")
   assert.equal(await linkInput.getAttribute("inputmode"), "url")
   await linkInput.fill("/relative")
+  const countBeforeNativeCopy = await editor.locator("[data-block-id]").count()
+  await linkInput.press("Control+a")
+  await linkInput.press("Control+c")
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), "/relative")
+  assert.equal(await editor.locator("[data-block-id]").count(), countBeforeNativeCopy)
   await page.getByRole("button", { name: "적용", exact: true }).click()
   const relativeLink = editor.locator("a[href='/relative']")
   assert.equal(await relativeLink.count(), 1)

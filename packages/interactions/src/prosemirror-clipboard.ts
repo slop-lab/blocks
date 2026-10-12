@@ -8,6 +8,7 @@ import {
   encodeBlockClipboard,
   routeCut,
 } from "./index.js"
+import { attachContextClipboard } from "./prosemirror-clipboard-context.js"
 import {
   cloneBlockNode,
   externalReferencesForNodes,
@@ -34,6 +35,7 @@ export type ClipboardInteractionContext = {
 export type ProseMirrorClipboardOptions = {
   readonly clipboard: ClipboardPolicy
   readonly isActive?: () => boolean
+  readonly isContextTarget?: (target: Node) => boolean
   readonly interactionContext?: () => ClipboardInteractionContext
   readonly referenceAttrsForNode?: (node: ProseMirrorNode) => readonly string[]
   readonly onDeferredCut?: (
@@ -227,10 +229,23 @@ export const attachProseMirrorClipboard = (
 
   const onCopy = (event: ClipboardEvent) => copy(event, false)
   const onCut = (event: ClipboardEvent) => copy(event, true)
+  const detachContextClipboard =
+    options.isContextTarget === undefined
+      ? () => undefined
+      : attachContextClipboard({
+          view,
+          selection: options.selection,
+          isActive: () => options.isActive?.() ?? true,
+          isContextTarget: options.isContextTarget,
+          copy: onCopy,
+          cut: onCut,
+          paste,
+        })
   view.dom.addEventListener("copy", onCopy, true)
   view.dom.addEventListener("cut", onCut, true)
   view.dom.addEventListener("paste", paste, true)
   return () => {
+    detachContextClipboard()
     view.dom.removeEventListener("copy", onCopy, true)
     view.dom.removeEventListener("cut", onCut, true)
     view.dom.removeEventListener("paste", paste, true)

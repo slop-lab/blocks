@@ -13,6 +13,8 @@ import {
   ContentHistory,
   decodeBlockClipboard,
   encodeBlockClipboard,
+  initialBlockSelectionState,
+  reduceBlockSelection,
   routeCut,
 } from "@block-editor/interactions"
 import { describe, expect, it } from "vitest"
@@ -183,6 +185,49 @@ describe("recursive container operations", () => {
 })
 
 describe("block interaction contracts", () => {
+  it("Given a selected ancestor, When its child is targeted, Then the child replaces the ancestor root", () => {
+    const scope = {
+      visibleIds: ["parent", "child", "sibling"],
+      parentById: new Map([
+        ["parent", null],
+        ["child", "parent"],
+        ["sibling", null],
+      ]),
+    }
+    const parent = reduceBlockSelection(
+      initialBlockSelectionState,
+      { kind: "replace", id: "parent" },
+      scope,
+    )
+
+    const child = reduceBlockSelection(parent, { kind: "toggle", id: "child" }, scope)
+
+    expect(child.selectedIds).toEqual(["child"])
+    expect(child.anchorId).toBe("parent")
+    expect(child.focusId).toBe("child")
+  })
+
+  it("Given selected descendants, When their ancestor is targeted, Then the ancestor is the only root", () => {
+    const scope = {
+      visibleIds: ["parent", "first", "second"],
+      parentById: new Map([
+        ["parent", null],
+        ["first", "parent"],
+        ["second", "parent"],
+      ]),
+    }
+    const first = reduceBlockSelection(
+      initialBlockSelectionState,
+      { kind: "replace", id: "first" },
+      scope,
+    )
+    const descendants = reduceBlockSelection(first, { kind: "toggle", id: "second" }, scope)
+
+    const parent = reduceBlockSelection(descendants, { kind: "toggle", id: "parent" }, scope)
+
+    expect(parent.selectedIds).toEqual(["parent"])
+  })
+
   it("Given visible nested blocks, When replace, range, and toggle intents run, Then selection follows visible order", () => {
     const visible = flattenTree(tree).map(({ node }) => node.id)
     const selection = new BlockSelection()

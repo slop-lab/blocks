@@ -1,4 +1,5 @@
 export type {
+  ClipboardInteractionContext,
   ProseMirrorClipboardOptions,
   ReferencePasteContext,
 } from "./prosemirror-clipboard.js"
@@ -18,4 +19,7 @@ export {
   type BlockSelectionController,
   type BlockSelectionOptions,
   blockSelectionReconcilePlugin,
+  type ProseMirrorSelectionMode,
+  type ProseMirrorSelectionState,
+  readBlockSelection,
 } from "./prosemirror-selection.js"

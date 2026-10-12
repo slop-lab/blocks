@@ -25,19 +25,31 @@ export type ReferencePasteContext = {
   readonly insertion: number
 }
 
+export type ClipboardInteractionContext = {
+  readonly modelId: string
+  readonly epoch: number
+  readonly version: number
+}
+
 export type ProseMirrorClipboardOptions = {
   readonly clipboard: ClipboardPolicy
+  readonly isActive?: () => boolean
+  readonly interactionContext?: () => ClipboardInteractionContext
   readonly referenceAttrsForNode?: (node: ProseMirrorNode) => readonly string[]
   readonly onDeferredCut?: (
     blockIds: readonly string[],
     envelope: ClipboardEnvelope,
+    context: ClipboardInteractionContext | null,
   ) => void | Promise<void>
   readonly onReferencePaste?: (envelope: ClipboardEnvelope, context: ReferencePasteContext) => void
   readonly onUnavailable?: (message: string) => void
 }
 
 type ClipboardControllerOptions = ProseMirrorClipboardOptions & {
-  readonly selection: { readonly value: readonly string[] }
+  readonly selection: {
+    readonly mode: "none" | "text" | "blocks"
+    readonly value: readonly string[]
+  }
   readonly clear: () => void
 }
 
@@ -59,14 +71,25 @@ export const attachProseMirrorClipboard = (
   const referenceAttrs = options.referenceAttrsForNode ?? (() => [])
   let insertionBookmark: InsertionBookmark | null = null
 
-  const removeSelected = (): InsertionBookmark | null => {
-    const selected = new Set(selectedBlockIdsInDocumentOrder(view, options.selection))
-    const located = locatedBlockNodes(view.state.doc).filter(({ id }) => selected.has(id))
-    if (
-      located.length === 0 ||
-      selectionContainsLockedNode(view.state.doc, options.selection.value)
-    )
+  const removeSelected = (
+    blockIds: readonly string[],
+    sourceDocument: ProseMirrorNode,
+    sourceContext: ClipboardInteractionContext | null,
+  ): InsertionBookmark | null => {
+    const currentContext = options.interactionContext?.() ?? null
+    const contextCurrent =
+      sourceContext === null ||
+      (currentContext !== null &&
+        currentContext.modelId === sourceContext.modelId &&
+        currentContext.epoch === sourceContext.epoch &&
+        currentContext.version === sourceContext.version)
+    if (view.state.doc !== sourceDocument || !contextCurrent) {
+      options.onUnavailable?.("문서가 변경되어 잘라내기를 취소했습니다.")
       return null
+    }
+    const selected = new Set(blockIds)
+    const located = locatedBlockNodes(view.state.doc).filter(({ id }) => selected.has(id))
+    if (located.length === 0 || selectionContainsLockedNode(view.state.doc, blockIds)) return null
     const position = Math.min(...located.map((item) => item.position))
     let transaction = view.state.tr
     for (const item of [...located].sort((left, right) => right.position - left.position))
@@ -78,7 +101,13 @@ export const attachProseMirrorClipboard = (
   }
 
   const copy = (event: ClipboardEvent, cut: boolean) => {
-    if (options.selection.value.length === 0 || event.clipboardData === null) return
+    if (
+      options.isActive?.() === false ||
+      options.selection.mode !== "blocks" ||
+      options.selection.value.length === 0 ||
+      event.clipboardData === null
+    )
+      return
     const selected = new Set(selectedBlockIdsInDocumentOrder(view, options.selection))
     const nodes = locatedBlockNodes(view.state.doc)
       .filter(({ id }) => selected.has(id))
@@ -100,14 +129,19 @@ export const attachProseMirrorClipboard = (
       return
     }
     const blockIds = selectedBlockIdsInDocumentOrder(view, options.selection)
+    const sourceDocument = view.state.doc
+    const currentContext = options.interactionContext?.()
+    const sourceContext = currentContext === undefined ? null : { ...currentContext }
     const routed = routeCut({
       policy: options.clipboard.cut,
       write: () => writeClipboard(event, encoded.json, encoded.text),
       remove: () => {
-        insertionBookmark = removeSelected()
+        insertionBookmark = removeSelected(blockIds, sourceDocument, sourceContext)
       },
       markPending: () => {
-        void options.onDeferredCut?.(blockIds, envelope)
+        void Promise.resolve(options.onDeferredCut?.(blockIds, envelope, sourceContext)).catch(() =>
+          options.onUnavailable?.("호스트가 잘라내기 요청을 완료하지 못했습니다."),
+        )
       },
     })
     void routed.completion.then((result) => {
@@ -117,30 +151,9 @@ export const attachProseMirrorClipboard = (
   }
 
   const paste = (event: ClipboardEvent) => {
-    if (event.clipboardData === null) return
+    if (options.isActive?.() === false || event.clipboardData === null) return
     const decoded = decodeBlockClipboard(event.clipboardData.getData(BLOCK_CLIPBOARD_MIME))
     if (decoded.kind !== "valid") return
-    event.preventDefault()
-    event.stopImmediatePropagation()
-    const target = selectedBlockNodes(view.state.doc, options.selection.value).at(-1)
-    const bookmark = resolveInsertionBookmark(view.state.doc, insertionBookmark)
-    const insertion =
-      target?.position === undefined
-        ? (bookmark ?? insertionPositionAtCaret(view))
-        : target.position + target.node.nodeSize
-    const decision = options.clipboard.paste(decoded.envelope, {
-      external: decoded.envelope.namespace !== options.clipboard.namespace,
-    })
-    if (decision === "reject") {
-      options.onUnavailable?.("이 문서에서는 해당 블록 붙여넣기를 허용하지 않습니다.")
-      return
-    }
-    if (decision === "link") {
-      if (options.onReferencePaste === undefined)
-        options.onUnavailable?.("이 편집기는 참조 붙여넣기를 지원하지 않습니다.")
-      else options.onReferencePaste(decoded.envelope, { view, insertion })
-      return
-    }
     const parsed: ProseMirrorNode[] = []
     for (const raw of decoded.envelope.blocks) {
       if (typeof raw !== "object" || raw === null) {
@@ -148,7 +161,9 @@ export const attachProseMirrorClipboard = (
         return
       }
       try {
-        parsed.push(view.state.schema.nodeFromJSON(raw))
+        const node = view.state.schema.nodeFromJSON(raw)
+        node.check()
+        parsed.push(node)
       } catch (error) {
         if (error instanceof RangeError) {
           options.onUnavailable?.("현재 문서 스키마에서 블록을 열 수 없습니다.")
@@ -158,6 +173,36 @@ export const attachProseMirrorClipboard = (
       }
     }
     if (parsed.length === 0) return
+    if (!view.state.schema.topNodeType.validContent(Fragment.fromArray(parsed))) {
+      options.onUnavailable?.("클립보드 블록을 문서 루트에 삽입할 수 없습니다.")
+      return
+    }
+    const envelope: ClipboardEnvelope = {
+      namespace: decoded.envelope.namespace,
+      blocks: parsed.map((node) => node.toJSON()),
+      externalReferences: externalReferencesForNodes(parsed, referenceAttrs),
+    }
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    const target = selectedBlockNodes(view.state.doc, options.selection.value).at(-1)
+    const bookmark = resolveInsertionBookmark(view.state.doc, insertionBookmark)
+    const insertion =
+      target?.position === undefined
+        ? (bookmark ?? insertionPositionAtCaret(view))
+        : target.position + target.node.nodeSize
+    const decision = options.clipboard.paste(envelope, {
+      external: envelope.namespace !== options.clipboard.namespace,
+    })
+    if (decision === "reject") {
+      options.onUnavailable?.("이 문서에서는 해당 블록 붙여넣기를 허용하지 않습니다.")
+      return
+    }
+    if (decision === "link") {
+      if (options.onReferencePaste === undefined)
+        options.onUnavailable?.("이 편집기는 참조 붙여넣기를 지원하지 않습니다.")
+      else options.onReferencePaste(envelope, { view, insertion })
+      return
+    }
     const identities = new Map<string, string>()
     const remember = (node: ProseMirrorNode) => {
       const id = node.attrs["id"]

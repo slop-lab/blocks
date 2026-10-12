@@ -1,5 +1,4 @@
-import { Plugin, PluginKey } from "prosemirror-state"
-import { Decoration, DecorationSet, type EditorView } from "prosemirror-view"
+import type { EditorView } from "prosemirror-view"
 import {
   attachProseMirrorClipboard,
   type ProseMirrorClipboardOptions,
@@ -7,12 +6,17 @@ import {
 import { attachSelectionDrag } from "./prosemirror-selection-drag.js"
 import {
   isInteractiveTarget,
-  ownedBlockElements,
+  isOwnedTarget,
   pointHitsGlyph,
+  visibleSelectionScope,
 } from "./prosemirror-selection-hit.js"
 import {
-  type BlockSelectionScope,
-  type BlockSelectionState,
+  type ProseMirrorSelectionState,
+  readBlockSelection,
+  setBlockSelectionMeta,
+  subscribeBlockSelection,
+} from "./prosemirror-selection-state.js"
+import {
   initialBlockSelectionState,
   reconcileBlockSelection,
   reduceBlockSelection,
@@ -20,102 +24,18 @@ import {
   selectionStateForIds,
 } from "./selection.js"
 
-const updates = new WeakMap<EditorView, () => void>()
-const selectionKey = new PluginKey<BlockSelectionState>("block-editor-selection")
-
-const sameIds = (left: readonly string[], right: readonly string[]): boolean =>
-  left.length === right.length && left.every((id, index) => id === right[index])
-
-const sameSelection = (left: BlockSelectionState, right: BlockSelectionState): boolean =>
-  left.anchorId === right.anchorId &&
-  left.focusId === right.focusId &&
-  sameIds(left.selectedIds, right.selectedIds)
-
-const scopeForElements = (elements: readonly HTMLElement[]): BlockSelectionScope => {
-  const visibleIds = elements.flatMap((element) => {
-    const id = element.dataset["blockId"]
-    return id === undefined ? [] : [id]
-  })
-  const visible = new Set(visibleIds)
-  const parentById = new Map<string, string | null>()
-  for (const element of elements) {
-    const id = element.dataset["blockId"]
-    if (id === undefined) continue
-    const parentId =
-      element.parentElement?.closest<HTMLElement>("[data-block-id]")?.dataset["blockId"]
-    parentById.set(id, parentId !== undefined && visible.has(parentId) ? parentId : null)
-  }
-  return { visibleIds, parentById }
-}
-
-const scopeForView = (view: EditorView): BlockSelectionScope =>
-  scopeForElements(ownedBlockElements(view))
-
-const pluginSelection = (view: EditorView): BlockSelectionState =>
-  selectionKey.getState(view.state) ?? initialBlockSelectionState
-
-const parseSelectionMeta = (meta: unknown): BlockSelectionState | null => {
-  if (typeof meta !== "object" || meta === null || !("selectedIds" in meta)) return null
-  const selectedIds = meta.selectedIds
-  const anchorId = "anchorId" in meta ? meta.anchorId : null
-  const focusId = "focusId" in meta ? meta.focusId : null
-  return Array.isArray(selectedIds) &&
-    selectedIds.every((id): id is string => typeof id === "string") &&
-    (typeof anchorId === "string" || anchorId === null) &&
-    (typeof focusId === "string" || focusId === null)
-    ? { selectedIds, anchorId, focusId }
-    : null
-}
-
-export const blockSelectionReconcilePlugin = new Plugin<BlockSelectionState>({
-  key: selectionKey,
-  state: {
-    init: () => initialBlockSelectionState,
-    apply: (transaction, current) =>
-      parseSelectionMeta(transaction.getMeta(selectionKey)) ?? current,
-  },
-  props: {
-    decorations: (state) => {
-      const selected = new Set(selectionKey.getState(state)?.selectedIds ?? [])
-      const decorations: Decoration[] = []
-      state.doc.descendants((node, position) => {
-        if (selected.has(String(node.attrs["id"])))
-          decorations.push(
-            Decoration.node(position, position + node.nodeSize, {
-              class: "block-selected",
-              "aria-current": "true",
-              "data-block-selected": "true",
-            }),
-          )
-        return true
-      })
-      return DecorationSet.create(state.doc, decorations)
-    },
-  },
-  view: (view) => {
-    const project = () => {
-      const selectedIds = pluginSelection(view).selectedIds
-      view.dom.classList.toggle("block-selection-active", selectedIds.length > 0)
-      view.dom.dataset["selectedBlockIds"] = selectedIds.join(" ")
-      updates.get(view)?.()
-    }
-    project()
-    return {
-      update: (updatedView, previousState) => {
-        const previous = selectionKey.getState(previousState) ?? initialBlockSelectionState
-        const current = pluginSelection(updatedView)
-        if (!sameSelection(previous, current) || !updatedView.state.doc.eq(previousState.doc))
-          project()
-      },
-      destroy: () => updates.delete(view),
-    }
-  },
-})
+export {
+  blockSelectionReconcilePlugin,
+  type ProseMirrorSelectionMode,
+  type ProseMirrorSelectionState,
+  readBlockSelection,
+} from "./prosemirror-selection-state.js"
 
 export type BlockSelectionController = {
   readonly selectFromClick: (blockId: string, event: MouseEvent) => boolean
   readonly replace: (blockIds: readonly string[]) => void
   readonly selectedIds: () => readonly string[]
+  readonly value: () => ProseMirrorSelectionState
   readonly contains: (blockId: string) => boolean
   readonly clear: () => void
   readonly reconcile: () => void
@@ -125,6 +45,7 @@ export type BlockSelectionController = {
 export type BlockSelectionOptions = ProseMirrorClipboardOptions & {
   readonly onSelectionChange?: (blockIds: readonly string[]) => void
   readonly isContextTarget?: (target: Node) => boolean
+  readonly claim?: () => void
 }
 
 export const attachBlockSelection = (
@@ -135,39 +56,72 @@ export const attachBlockSelection = (
   let consumedModifierClick = false
   let consumedModifierPointer = false
   let consumedMarqueeClick = false
-  const dispatchSelection = (next: BlockSelectionState) => {
-    if (sameSelection(pluginSelection(view), next)) return
+  const isActive = () => options.isActive?.() ?? true
+  const claim = () => {
+    options.claim?.()
+    return isActive()
+  }
+  const dispatchSelection = (next: ProseMirrorSelectionState) => {
+    const current = readBlockSelection(view.state)
+    if (
+      current.mode === next.mode &&
+      current.anchorId === next.anchorId &&
+      current.focusId === next.focusId &&
+      current.selectedIds.length === next.selectedIds.length &&
+      current.selectedIds.every((id, index) => id === next.selectedIds[index])
+    )
+      return
     view.dispatch(
-      view.state.tr
-        .setMeta(selectionKey, next)
+      setBlockSelectionMeta(view.state, next)
         .setMeta("addToHistory", false)
         .setMeta("origin", "selection"),
     )
   }
   const apply = (intent: SelectionIntent) =>
-    dispatchSelection(reduceBlockSelection(pluginSelection(view), intent, scopeForView(view)))
-  const clear = () => apply({ kind: "clear" })
-  const replace = (blockIds: readonly string[]) =>
-    dispatchSelection(selectionStateForIds(blockIds, scopeForView(view)))
-  const reconcile = () =>
-    dispatchSelection(reconcileBlockSelection(pluginSelection(view), scopeForView(view)))
+    dispatchSelection({
+      ...reduceBlockSelection(readBlockSelection(view.state), intent, visibleSelectionScope(view)),
+      mode: intent.kind === "clear" ? "none" : "blocks",
+    })
+  const clear = () => dispatchSelection({ mode: "none", ...initialBlockSelectionState })
+  const replace = (blockIds: readonly string[]) => {
+    if (!claim()) return
+    const selected = selectionStateForIds(blockIds, visibleSelectionScope(view))
+    dispatchSelection({ ...selected, mode: selected.selectedIds.length === 0 ? "none" : "blocks" })
+  }
+  const reconcile = () => {
+    const current = readBlockSelection(view.state)
+    const selected = reconcileBlockSelection(current, visibleSelectionScope(view))
+    dispatchSelection({
+      ...selected,
+      mode: current.mode === "blocks" && selected.selectedIds.length === 0 ? "none" : current.mode,
+    })
+  }
+  const updateTextSelection = () => {
+    const current = readBlockSelection(view.state)
+    dispatchSelection({ ...current, mode: "text", selectedIds: [] })
+  }
   const selectFromClick = (blockId: string, event: MouseEvent): boolean => {
+    if (!claim()) return false
     const kind = event.shiftKey ? "range" : event.metaKey || event.ctrlKey ? "toggle" : "replace"
     apply({ kind, id: blockId })
     return kind !== "replace"
   }
   const selection = {
+    get mode(): "none" | "text" | "blocks" {
+      return readBlockSelection(view.state).mode
+    },
     get value(): readonly string[] {
-      return pluginSelection(view).selectedIds
+      const current = readBlockSelection(view.state)
+      return current.mode === "blocks" ? current.selectedIds : []
     },
   }
   const detachClipboard = attachProseMirrorClipboard(view, { ...options, selection, clear })
-  const selectionDrag = attachSelectionDrag(view, replace, clear, (active) => {
+  const selectionDrag = attachSelectionDrag(view, replace, updateTextSelection, (active) => {
     consumedMarqueeClick = active
   })
   const onClick = (event: MouseEvent) => {
-    if (!(event.target instanceof HTMLElement) || event.target.closest(".ProseMirror") !== view.dom)
-      return
+    if (!(event.target instanceof HTMLElement) || !isOwnedTarget(view, event.target)) return
+    if (!claim()) return
     if (consumedModifierClick) {
       consumedModifierClick = false
       return
@@ -178,7 +132,7 @@ export const attachBlockSelection = (
     }
     const modifier = event.shiftKey || event.metaKey || event.ctrlKey
     if (!modifier) {
-      clear()
+      updateTextSelection()
       return
     }
     if (isInteractiveTarget(event.target)) return
@@ -189,17 +143,28 @@ export const attachBlockSelection = (
     selectFromClick(blockId, event)
   }
   const onKeyDown = (event: KeyboardEvent) => {
-    if (pluginSelection(view).selectedIds.length === 0 || event.key !== "Escape") return
+    if (!isActive()) return
+    const current = readBlockSelection(view.state)
+    if (event.shiftKey && event.key.startsWith("Arrow")) {
+      updateTextSelection()
+      return
+    }
+    if (current.mode !== "blocks" || current.selectedIds.length === 0 || event.key !== "Escape")
+      return
     event.preventDefault()
     clear()
+  }
+  const onFocusIn = () => {
+    claim()
   }
   const onPointerDown = (event: PointerEvent) => {
     if (
       event.button !== 0 ||
       !(event.target instanceof HTMLElement) ||
-      event.target.closest(".ProseMirror") !== view.dom
+      !isOwnedTarget(view, event.target)
     )
       return
+    if (!claim()) return
     if (event.metaKey || event.ctrlKey || event.shiftKey) {
       if (event.target.closest("button, a, input, textarea, select") !== null) return
       const blockId = event.target.closest<HTMLElement>("[data-block-id]")?.dataset["blockId"]
@@ -215,7 +180,11 @@ export const attachBlockSelection = (
     if (isInteractiveTarget(event.target)) return
     const hitsGlyph = pointHitsGlyph(ownerDocument, event.clientX, event.clientY)
     const blockId = event.target.closest<HTMLElement>("[data-block-id]")?.dataset["blockId"]
-    if (blockId !== undefined && pluginSelection(view).selectedIds.includes(blockId) && !hitsGlyph)
+    if (
+      blockId !== undefined &&
+      readBlockSelection(view.state).selectedIds.includes(blockId) &&
+      !hitsGlyph
+    )
       return
     if (hitsGlyph) return
     clear()
@@ -231,11 +200,12 @@ export const attachBlockSelection = (
     if (
       event.button !== 0 ||
       !(event.target instanceof HTMLElement) ||
-      event.target.closest(".ProseMirror") !== view.dom ||
+      !isOwnedTarget(view, event.target) ||
       isInteractiveTarget(event.target) ||
       (!event.metaKey && !event.ctrlKey && !event.shiftKey)
     )
       return
+    if (!claim()) return
     const blockId = event.target.closest<HTMLElement>("[data-block-id]")?.dataset["blockId"]
     if (blockId !== undefined) {
       event.preventDefault()
@@ -244,35 +214,49 @@ export const attachBlockSelection = (
       selectFromClick(blockId, event)
     }
   }
+  const onPointerCancel = () => {
+    consumedModifierClick = false
+    consumedModifierPointer = false
+    consumedMarqueeClick = false
+  }
   const onDocumentPointerDown = (event: PointerEvent) => {
     if (
       !(event.target instanceof Node) ||
-      view.dom.contains(event.target) ||
+      (event.target instanceof Element
+        ? isOwnedTarget(view, event.target)
+        : event.target.parentElement !== null && isOwnedTarget(view, event.target.parentElement)) ||
       options.isContextTarget?.(event.target) === true
     )
       return
     clear()
   }
-  updates.set(view, () => options.onSelectionChange?.(pluginSelection(view).selectedIds))
+  const unsubscribeSelection = subscribeBlockSelection(view, () =>
+    options.onSelectionChange?.(selection.value),
+  )
   view.dom.addEventListener("click", onClick)
   view.dom.addEventListener("keydown", onKeyDown)
+  view.dom.addEventListener("focusin", onFocusIn)
   view.dom.addEventListener("pointerdown", onPointerDown, true)
+  view.dom.addEventListener("pointercancel", onPointerCancel, true)
   view.dom.addEventListener("mousedown", onMouseDown, true)
   ownerDocument.addEventListener("pointerdown", onDocumentPointerDown, true)
   return {
     selectFromClick,
     replace,
-    selectedIds: () => pluginSelection(view).selectedIds,
-    contains: (blockId) => pluginSelection(view).selectedIds.includes(blockId),
+    selectedIds: () => (isActive() ? selection.value : []),
+    value: () => readBlockSelection(view.state),
+    contains: (blockId) => isActive() && selection.value.includes(blockId),
     clear,
     reconcile,
     destroy: () => {
-      updates.delete(view)
+      unsubscribeSelection()
       detachClipboard()
       selectionDrag.destroy()
       view.dom.removeEventListener("click", onClick)
       view.dom.removeEventListener("keydown", onKeyDown)
+      view.dom.removeEventListener("focusin", onFocusIn)
       view.dom.removeEventListener("pointerdown", onPointerDown, true)
+      view.dom.removeEventListener("pointercancel", onPointerCancel, true)
       view.dom.removeEventListener("mousedown", onMouseDown, true)
       ownerDocument.removeEventListener("pointerdown", onDocumentPointerDown, true)
     },

@@ -17,6 +17,7 @@ export const sectionBlock: BlockRegistration = {
   nodeName: "section",
   text: false,
   container: "titled",
+  insertMenu: [{ label: "섹션", description: "하위 블록 묶음", keywords: ["section", "구역"] }],
   titleNodeName: "section_title",
   nodeSpec: {
     group: "block",
@@ -35,6 +36,7 @@ export const calloutBlock: BlockRegistration = {
   nodeName: "callout",
   text: false,
   container: "body",
+  insertMenu: [{ label: "콜아웃", description: "강조 블록 묶음", keywords: ["callout", "강조"] }],
   nodeSpec: {
     group: "block",
     content: "block*",
@@ -52,6 +54,7 @@ export const containerQuoteBlock: BlockRegistration = {
   nodeName: "container_quote",
   text: false,
   container: "body",
+  insertMenu: [{ label: "인용", description: "인용 블록 묶음", keywords: ["quote"] }],
   nodeSpec: {
     group: "block",
     content: "block*",

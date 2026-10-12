@@ -39,6 +39,18 @@ try {
   assert.ok(
     (await occurrences.locator(".structured-sync__projection [data-source-block-id]").count()) > 0,
   )
+  await occurrences
+    .first()
+    .locator(".structured-sync__projection p")
+    .evaluate((element) => element.setAttribute("data-render-sentinel", "stable"))
+  await first.waitForTimeout(2_200)
+  assert.equal(
+    await occurrences
+      .first()
+      .locator(".structured-sync__projection p")
+      .getAttribute("data-render-sentinel"),
+    "stable",
+  )
 
   const historySaved = first.waitForResponse(
     (response) => response.request().method() === "PUT" && response.url().includes("/sources/"),
@@ -59,7 +71,9 @@ try {
   await first.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
   await firstWorkspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
   await firstWorkspace.getByRole("button", { name: "제품 출시", exact: true }).click()
+  assert.equal(await occurrences.locator(".structured-sync__editor.ProseMirror").count(), 0)
   await occurrences.nth(1).locator("p").click()
+  assert.equal(await occurrences.locator(".structured-sync__editor.ProseMirror").count(), 1)
   await first.keyboard.press("ControlOrMeta+z")
   assert.notEqual(
     await occurrences.nth(1).locator("p").textContent(),
@@ -73,13 +87,29 @@ try {
 
   const second = await browser.newPage({ viewport: { width: 900, height: 900 } })
   second.on("pageerror", (error) => errors.push(error.message))
+  await second.addInitScript(() => {
+    window.__sourceRuntimeUnhandled = []
+    window.addEventListener("unhandledrejection", (event) => {
+      window.__sourceRuntimeUnhandled.push(String(event.reason))
+    })
+  })
   await second.goto(`${base}/?workspace=structured-workspace`, { waitUntil: "networkidle" })
   const secondWorkspace = second.getByLabel("문서와 데이터베이스")
   await secondWorkspace.getByRole("button", { name: "제품 출시", exact: true }).click()
   let delaySecondWrite = true
+  let rejectConflictRefresh = false
+  await second.route("**/api/workspace", async (route) => {
+    if (rejectConflictRefresh && route.request().method() === "GET") {
+      rejectConflictRefresh = false
+      await route.abort("failed")
+      return
+    }
+    await route.continue()
+  })
   await second.route("**/api/workspace/sources/*", async (route) => {
     if (delaySecondWrite && route.request().method() === "PUT") {
       delaySecondWrite = false
+      rejectConflictRefresh = true
       await new Promise((resolve) => setTimeout(resolve, 1_000))
     }
     await route.continue()
@@ -108,6 +138,7 @@ try {
   await accept.waitFor()
   await accept.click()
   assert.equal(await secondOccurrences.first().locator("p").textContent(), "원격 승자")
+  assert.deepEqual(await second.evaluate(() => window.__sourceRuntimeUnhandled), [])
   assert.deepEqual(errors, [])
   await second.close()
   console.log("PASS source runtime lifetime, one active view, history, and explicit CAS recovery")

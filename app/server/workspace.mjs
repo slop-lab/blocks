@@ -46,9 +46,15 @@ const readBody = async (request) => {
   }
   return JSON.parse(Buffer.concat(chunks).toString("utf8"))
 }
-const createIfMissing = async (repository, documentId, content) => {
+const createIfMissing = async (repository, documentId, content, schema) => {
   const existing = await repository.read(documentId)
-  if (existing !== null) return existing
+  if (existing !== null) {
+    const migrated = schema.parse(existing.content)
+    if (JSON.stringify(migrated) === JSON.stringify(existing.content)) return existing
+    return repository.update(documentId, existing.revision, migrated, {
+      actorId: "schema-migration",
+    })
+  }
   try {
     return await repository.create({ documentId, content, actorId: "sample" })
   } catch (error) {
@@ -69,20 +75,36 @@ export const createWorkspaceHandler = ({ root, host }) => {
       repositories.trees,
       sampleWorkspace.id,
       workspaceSchema.parse(sampleWorkspace),
+      workspaceSchema,
     )
     const pageRecords = await Promise.all(
       sampleDocuments.map((value) =>
-        createIfMissing(repositories.pages, value.pageId, pageDocumentSchema.parse(value)),
+        createIfMissing(
+          repositories.pages,
+          value.pageId,
+          pageDocumentSchema.parse(value),
+          pageDocumentSchema,
+        ),
       ),
     )
     const databaseRecords = await Promise.all(
       sampleDatabases.map((value) =>
-        createIfMissing(repositories.databases, value.id, databaseSchema.parse(value)),
+        createIfMissing(
+          repositories.databases,
+          value.id,
+          databaseSchema.parse(value),
+          databaseSchema,
+        ),
       ),
     )
     const sourceRecords = await Promise.all(
       sampleSources.map((value) =>
-        createIfMissing(repositories.sources, value.id, syncedSourceSchema.parse(value)),
+        createIfMissing(
+          repositories.sources,
+          value.id,
+          syncedSourceSchema.parse(value),
+          syncedSourceSchema,
+        ),
       ),
     )
     await Promise.all([pageRecords, databaseRecords, sourceRecords])
@@ -125,8 +147,12 @@ export const createWorkspaceHandler = ({ root, host }) => {
           pageId: parsed.page.id,
           version: 1,
           blocks: [
-            { id: `${parsed.page.id}-heading`, type: "heading", level: 1, text: parsed.page.title },
-            { id: `${parsed.page.id}-paragraph`, type: "paragraph", text: "" },
+            {
+              id: `${parsed.page.id}-section`,
+              type: "section",
+              heading: parsed.page.title,
+              children: [{ id: `${parsed.page.id}-paragraph`, type: "paragraph", text: "" }],
+            },
           ],
         })
         const document = await repositories.pages.create({
@@ -166,6 +192,7 @@ export const createWorkspaceHandler = ({ root, host }) => {
         return true
       }
       const [, kind, id] = match
+      await initialize()
       const parsed = updateSchema.parse(await readBody(request))
       const schemas = {
         trees: workspaceSchema,

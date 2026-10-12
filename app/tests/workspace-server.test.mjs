@@ -50,7 +50,7 @@ describe("structured workspace API", () => {
       (response) => response.json(),
     )
     const source = initial.sources[0]
-    const changed = await fetch(`${firstBase}/api/workspace/sources/${source.content.id}`, {
+    const changed = await fetch(`${firstBase}/api/workspace/sources/${source.documentId}`, {
       method: "PUT",
       headers: { cookie: author, "content-type": "application/json" },
       body: JSON.stringify({
@@ -58,7 +58,10 @@ describe("structured workspace API", () => {
         content: {
           ...source.content,
           version: source.content.version + 1,
-          blocks: [{ id: "shared-p", type: "paragraph", text: "Updated once" }],
+          section: {
+            ...source.content.section,
+            children: [{ id: "shared-p", type: "paragraph", text: "Updated once" }],
+          },
         },
       }),
     })
@@ -72,7 +75,7 @@ describe("structured workspace API", () => {
       headers: { cookie: reopenedAuthor },
     }).then((response) => response.json())
 
-    expect(reopened.sources[0].content.blocks[0].text).toBe("Updated once")
+    expect(reopened.sources[0].content.section.children[0].text).toBe("Updated once")
     expect(reopened.documents.map((record) => record.revision)).toEqual(
       initial.documents.map((record) => record.revision),
     )
@@ -176,6 +179,27 @@ describe("structured workspace API", () => {
     ])
 
     expect(responses.map((response) => response.status)).toEqual([400, 400, 400, 400])
+  })
+
+  it("creates a new canonical synced source without an existing revision", async () => {
+    root = await mkdtemp(join(tmpdir(), "structured-workspace-"))
+    const base = await open()
+    const author = await session(base, "author")
+    const source = {
+      id: "created-source",
+      version: 1,
+      section: {
+        id: "created-source-root",
+        type: "section",
+        children: [{ id: "created-source-body", type: "paragraph", text: "Canonical" }],
+      },
+    }
+
+    const created = await putEntity(base, author, "sources", source.id, { content: source })
+    const reopened = await workspace(base, author)
+
+    expect(created.status).toBe(201)
+    expect(reopened.sources.some((record) => record.content.id === source.id)).toBe(true)
   })
 
   it("rejects malformed typed database values and dangling references", async () => {

@@ -52,14 +52,18 @@ const validateTree = (tree, documentIds) => {
 
 const validatePage = (page, pageIds, databaseIds, sourceIds) => {
   if (!pageIds.has(page.pageId)) throw new TypeError(`Unknown page ${page.pageId}`)
-  for (const block of page.blocks) {
-    if (block.type === "page_ref" && !pageIds.has(block.pageId))
-      throw new TypeError(`Unknown page reference ${block.pageId}`)
-    if (block.type === "database_embed" && !databaseIds.has(block.databaseId))
-      throw new TypeError(`Unknown database reference ${block.databaseId}`)
-    if (block.type === "synced_ref" && !sourceIds.has(block.sourceId))
-      throw new TypeError(`Unknown synced source ${block.sourceId}`)
+  const visit = (blocks) => {
+    for (const block of blocks) {
+      if (block.type === "page_ref" && !pageIds.has(block.pageId))
+        throw new TypeError(`Unknown page reference ${block.pageId}`)
+      if (block.type === "database_embed" && !databaseIds.has(block.databaseId))
+        throw new TypeError(`Unknown database reference ${block.databaseId}`)
+      if (block.type === "section" && block.ref !== undefined && !sourceIds.has(block.ref.sourceId))
+        throw new TypeError(`Unknown synced source ${block.ref.sourceId}`)
+      if ("children" in block) visit(block.children)
+    }
   }
+  visit(page.blocks)
 }
 
 const validateDatabase = (database, pageIds) => {

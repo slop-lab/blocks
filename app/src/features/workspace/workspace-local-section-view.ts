@@ -49,7 +49,9 @@ export const createLocalSectionView = ({
     if (converted?.type !== "section") return
     const result = convertSectionToSyncedSource(converted, () => crypto.randomUUID())
     void data.current.onSourceCreate(result.source).then((created) => {
-      if (!created) return
+      if (created === null) return
+      if (!data.current.sources.some((source) => source.id === created.id))
+        data.current = { ...data.current, sources: [...data.current.sources, created] }
       const position = getPos()
       if (position === undefined) return
       view.dispatch(
@@ -59,7 +61,7 @@ export const createLocalSectionView = ({
           currentNode.type.create({
             ...currentNode.attrs,
             occurrenceId: result.occurrence.occurrenceId,
-            sourceId: result.source.id,
+            sourceId: created.id,
           }),
         ),
       )

@@ -10,7 +10,8 @@ export type WorkspaceNodeViewData = {
   readonly profile: ProseMirrorProfile
   readonly onOpenPage: (id: string, blockId?: string) => void
   readonly onSourceEdit: (source: SyncedSource) => void
-  readonly onSourceCreate: (source: SyncedSource) => Promise<boolean>
+  readonly onSourceCreate: (source: SyncedSource) => Promise<SyncedSource | null>
+  readonly onSourceCompositionChange: (sourceId: string, composing: boolean) => void
   readonly embeddingDepth: number
 }
 

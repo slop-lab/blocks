@@ -57,12 +57,7 @@ export const captureLinkTarget = (state: EditorState, linkMark: MarkType): LinkT
 }
 
 export const isCurrentLinkTarget = (state: EditorState, target: LinkTarget): boolean => {
-  if (
-    state.doc !== target.document ||
-    state.selection.from !== target.from ||
-    state.selection.to !== target.to
-  )
-    return false
+  if (state.doc !== target.document) return false
   const currentIds = blockIdsForRange(state.doc, target.from, target.to)
   return (
     currentIds !== null &&

@@ -1,6 +1,6 @@
 import { toggleMark } from "prosemirror-commands"
 import type { MarkType } from "prosemirror-model"
-import { NodeSelection } from "prosemirror-state"
+import { NodeSelection, TextSelection } from "prosemirror-state"
 import type { EditorView } from "prosemirror-view"
 import { safeLinkHref } from "./block-interaction-commands"
 import { captureLinkTarget, isCurrentLinkTarget, type LinkTarget } from "./link-selection"
@@ -54,8 +54,8 @@ export const attachSelectionToolbar = (
   }
 
   const linkMark = view.state.schema.marks["link"]
+  let linkTarget: LinkTarget | null = null
   if (linkMark !== undefined) {
-    let target: LinkTarget | null = null
     const linkButton = iconButton(ownerDocument, "링크 편집", "Link")
     const form = ownerDocument.createElement("form")
     form.className = "selection-toolbar__link"
@@ -80,9 +80,9 @@ export const attachSelectionToolbar = (
     form.append(input, apply, remove, cancel, error)
     linkButton.addEventListener("pointerdown", (event) => event.preventDefault())
     const openLinkForm = () => {
-      target = captureLinkTarget(view.state, linkMark)
-      if (target === null) return
-      input.value = target.href
+      linkTarget = captureLinkTarget(view.state, linkMark)
+      if (linkTarget === null) return
+      input.value = linkTarget.href
       error.textContent = ""
       form.hidden = false
       toolbar.classList.add("selection-toolbar--link-open")
@@ -104,16 +104,19 @@ export const attachSelectionToolbar = (
     view.dom.addEventListener("keydown", onLinkShortcut)
     detachLinkShortcut = () => view.dom.removeEventListener("keydown", onLinkShortcut)
     const applyTarget = (href: string | null) => {
-      if (target === null || !isCurrentLinkTarget(view.state, target)) {
+      if (linkTarget === null || !isCurrentLinkTarget(view.state, linkTarget)) {
         error.textContent = "선택한 글자가 변경되었습니다. 다시 선택해 주세요."
         return
       }
       const transaction =
         href === null
-          ? view.state.tr.removeMark(target.from, target.to, linkMark)
-          : view.state.tr.addMark(target.from, target.to, linkMark.create({ href }))
+          ? view.state.tr.removeMark(linkTarget.from, linkTarget.to, linkMark)
+          : view.state.tr.addMark(linkTarget.from, linkTarget.to, linkMark.create({ href }))
+      transaction.setSelection(
+        TextSelection.create(transaction.doc, linkTarget.from, linkTarget.to),
+      )
       view.dispatch(transaction.setMeta("origin", "local"))
-      target = null
+      linkTarget = null
       form.hidden = true
       toolbar.classList.remove("selection-toolbar--link-open")
       error.textContent = ""
@@ -135,7 +138,13 @@ export const attachSelectionToolbar = (
     })
     remove.addEventListener("click", () => applyTarget(null))
     cancel.addEventListener("click", () => {
-      target = null
+      if (linkTarget !== null && isCurrentLinkTarget(view.state, linkTarget))
+        view.dispatch(
+          view.state.tr.setSelection(
+            TextSelection.create(view.state.doc, linkTarget.from, linkTarget.to),
+          ),
+        )
+      linkTarget = null
       form.hidden = true
       toolbar.classList.remove("selection-toolbar--link-open")
       error.textContent = ""
@@ -148,11 +157,12 @@ export const attachSelectionToolbar = (
   function update(): void {
     const selection = view.state.selection
     const active = options.active?.() ?? true
+    const linkFormOpen = toolbar.classList.contains("selection-toolbar--link-open")
     const textSelection = !selection.empty && !(selection instanceof NodeSelection)
     const code = selection.$from.parent.type.spec.code === true
     if (
       !active ||
-      !textSelection ||
+      (!textSelection && !linkFormOpen) ||
       code ||
       view.composing ||
       view.dom.getClientRects().length === 0
@@ -161,8 +171,10 @@ export const attachSelectionToolbar = (
       return
     }
     toolbar.hidden = false
-    const start = view.coordsAtPos(selection.from)
-    const end = view.coordsAtPos(selection.to)
+    const from = linkFormOpen && linkTarget !== null ? linkTarget.from : selection.from
+    const to = linkFormOpen && linkTarget !== null ? linkTarget.to : selection.to
+    const start = view.coordsAtPos(from)
+    const end = view.coordsAtPos(to)
     const width = toolbar.getBoundingClientRect().width
     const viewport = ownerDocument.defaultView
     const center = (start.left + end.right) / 2

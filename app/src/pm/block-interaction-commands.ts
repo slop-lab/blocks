@@ -1,9 +1,16 @@
-import type { NodeType, Node as ProseMirrorNode } from "prosemirror-model"
+import { Fragment, type NodeType, type Node as ProseMirrorNode } from "prosemirror-model"
 import type { Command, EditorState } from "prosemirror-state"
 import { TextSelection } from "prosemirror-state"
+import { locateBlock } from "./block-structure-commands"
 import { defaultNodeForState } from "./profile-plugin"
 
 export { safeLinkHref } from "../core/links"
+export {
+  indentBlocksById,
+  moveBlockById,
+  moveBlocksById,
+  outdentBlocksById,
+} from "./block-structure-commands"
 
 export type SlashQuery = {
   readonly from: number
@@ -12,59 +19,17 @@ export type SlashQuery = {
   readonly blockId: string
 }
 
-type LocatedBlock = {
-  readonly index: number
-  readonly position: number
-  readonly node: ProseMirrorNode
-}
-
-const locateBlock = (document: ProseMirrorNode, blockId: string): LocatedBlock | null => {
-  let found: LocatedBlock | null = null
-  document.forEach((node, position, index) => {
-    if (found === null && node.attrs["id"] === blockId) found = { index, position, node }
-  })
-  return found
-}
-
 export const blockPositionById = (document: ProseMirrorNode, blockId: string): number =>
   locateBlock(document, blockId)?.position ?? -1
 
-const gapPosition = (document: ProseMirrorNode, gapIndex: number): number => {
-  let position = 0
-  for (let index = 0; index < Math.min(gapIndex, document.childCount); index += 1) {
-    position += document.child(index).nodeSize
-  }
-  return position
-}
+export const blockIndexById = (document: ProseMirrorNode, blockId: string): number =>
+  locateBlock(document, blockId)?.index ?? -1
 
-export const moveBlockById =
-  (blockId: string, targetGap: number): Command =>
-  (state, dispatch) => {
-    const source = locateBlock(state.doc, blockId)
-    if (
-      source === null ||
-      source.node.attrs["locked"] === true ||
-      targetGap < 0 ||
-      targetGap > state.doc.childCount ||
-      targetGap === source.index ||
-      targetGap === source.index + 1
-    )
-      return false
-    if (dispatch !== undefined) {
-      const originalInsertion = gapPosition(state.doc, targetGap)
-      const insertion =
-        originalInsertion > source.position
-          ? originalInsertion - source.node.nodeSize
-          : originalInsertion
-      const transaction = state.tr
-        .delete(source.position, source.position + source.node.nodeSize)
-        .insert(insertion, source.node)
-      transaction.setSelection(TextSelection.near(transaction.doc.resolve(insertion + 1)))
-      transaction.setMeta("origin", "local")
-      dispatch(transaction.scrollIntoView())
-    }
-    return true
-  }
+export const blockNodeById = (document: ProseMirrorNode, blockId: string): ProseMirrorNode | null =>
+  locateBlock(document, blockId)?.node ?? null
+
+export const blockSiblingCountById = (document: ProseMirrorNode, blockId: string): number =>
+  locateBlock(document, blockId)?.parent.childCount ?? 0
 
 export const createBlockAfter =
   (blockId: string, type?: NodeType): Command =>
@@ -89,11 +54,33 @@ export const duplicateBlockById =
     const target = locateBlock(state.doc, blockId)
     if (target === null || target.node.attrs["locked"] === true) return false
     if (dispatch !== undefined) {
-      const duplicate = target.node.type.create(
-        { ...target.node.attrs, id: crypto.randomUUID(), locked: false },
-        target.node.content,
-        target.node.marks,
-      )
+      const identities = new Map<string, string>()
+      target.node.descendants((node) => {
+        const id = node.attrs["id"]
+        if (typeof id === "string") identities.set(id, crypto.randomUUID())
+        return true
+      })
+      const rootId = target.node.attrs["id"]
+      if (typeof rootId === "string") identities.set(rootId, crypto.randomUUID())
+      const clone = (node: ProseMirrorNode): ProseMirrorNode => {
+        if (node.isText) return node
+        const attrs: Record<string, unknown> = { ...node.attrs, locked: false }
+        for (const [name, value] of Object.entries(attrs))
+          if (typeof value === "string" && identities.has(value))
+            attrs[name] = identities.get(value)
+        if (node === target.node && typeof attrs["occurrenceId"] === "string")
+          attrs["occurrenceId"] = crypto.randomUUID()
+        const children: ProseMirrorNode[] = []
+        node.content.forEach((child) => {
+          children.push(clone(child))
+        })
+        return node.type.create(
+          attrs,
+          children.length === 0 ? undefined : Fragment.fromArray(children),
+          node.marks,
+        )
+      }
+      const duplicate = clone(target.node)
       dispatch(
         state.tr
           .insert(target.position + target.node.nodeSize, duplicate)
@@ -142,7 +129,7 @@ export const setBlockTypeById =
 export const parseSlashQuery = (state: EditorState, composing = false): SlashQuery | null => {
   const { $from, empty } = state.selection
   if (composing || !empty || $from.depth === 0) return null
-  const block = $from.node(1)
+  const block = $from.parent
   if (
     !block.isTextblock ||
     block.type.spec.code === true ||

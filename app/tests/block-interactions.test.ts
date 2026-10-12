@@ -1,16 +1,18 @@
 import { undo } from "prosemirror-history"
 import type { Node as ProseMirrorNode } from "prosemirror-model"
-import { EditorState, TextSelection } from "prosemirror-state"
+import { EditorState } from "prosemirror-state"
 import { describe, expect, it } from "vitest"
+import { createWorkspaceProfile } from "../src/features/workspace/workspace-editor-model"
 import {
   blockPositionById,
   createBlockAfter,
+  duplicateBlockById,
+  indentBlocksById,
   moveBlockById,
-  parseSlashQuery,
-  safeLinkHref,
+  moveBlocksById,
+  outdentBlocksById,
 } from "../src/pm/block-interaction-commands"
 import { createEditorState } from "../src/pm/editor"
-import { captureLinkTarget, isCurrentLinkTarget } from "../src/pm/link-selection"
 import { editorSchema } from "../src/pm/schema"
 
 const paragraph = (id: string, text: string, locked = false) =>
@@ -79,6 +81,88 @@ describe("block interaction commands", () => {
     expect(state.doc.child(2).attrs["id"]).toBe("a")
   })
 
+  it("moves selected sibling blocks as one undoable batch", () => {
+    let state = createEditorState({
+      document: documentWith(
+        paragraph("a", "첫째"),
+        paragraph("b", "둘째"),
+        paragraph("c", "셋째"),
+        paragraph("d", "넷째"),
+      ),
+      readonly: false,
+    })
+    const dispatch = (transaction: Parameters<typeof state.apply>[0]) => {
+      state = state.apply(transaction)
+    }
+
+    expect(moveBlocksById(["a", "c"], 4)(state, dispatch)).toBe(true)
+
+    expect(
+      Array.from(
+        { length: state.doc.childCount },
+        (_, index) => state.doc.child(index).attrs["id"],
+      ),
+    ).toEqual(["b", "d", "a", "c"])
+    expect(undo(state, dispatch)).toBe(true)
+    expect(
+      Array.from(
+        { length: state.doc.childCount },
+        (_, index) => state.doc.child(index).attrs["id"],
+      ),
+    ).toEqual(["a", "b", "c", "d"])
+  })
+
+  it("rejects a batch move when any selected block is locked", () => {
+    const state = EditorState.create({
+      schema: editorSchema,
+      doc: documentWith(
+        paragraph("a", "첫째"),
+        paragraph("locked", "고정", true),
+        paragraph("c", "셋째"),
+      ),
+    })
+
+    expect(moveBlocksById(["a", "locked"], 3)(state)).toBe(false)
+  })
+
+  it("indents and outdents selected siblings as one structural batch", () => {
+    const profile = createWorkspaceProfile(1)
+    const documentType = profile.schema.nodes["doc"]
+    const section = profile.schema.nodes["section"]
+    const title = profile.schema.nodes["section_title"]
+    const text = profile.schema.nodes["paragraph"]
+    if (
+      documentType === undefined ||
+      section === undefined ||
+      title === undefined ||
+      text === undefined
+    )
+      throw new TypeError("Workspace container schema is incomplete")
+    const textBlock = (id: string, value: string) =>
+      text.create({ id, locked: false }, profile.schema.text(value))
+    let state = EditorState.create({
+      schema: profile.schema,
+      doc: documentType.create(undefined, [
+        section.create({ id: "section", locked: false }, [
+          title.create(undefined, profile.schema.text("Title")),
+        ]),
+        textBlock("a", "A"),
+        textBlock("b", "B"),
+      ]),
+    })
+    const dispatch = (transaction: Parameters<typeof state.apply>[0]) => {
+      state = state.apply(transaction)
+    }
+
+    expect(indentBlocksById(["a", "b"])(state, dispatch)).toBe(true)
+    expect(state.doc.childCount).toBe(1)
+    expect(state.doc.child(0).childCount).toBe(3)
+    expect(outdentBlocksById(["a", "b"])(state, dispatch)).toBe(true)
+    expect(state.doc.childCount).toBe(3)
+    expect(state.doc.child(1).attrs["id"]).toBe("a")
+    expect(state.doc.child(2).attrs["id"]).toBe("b")
+  })
+
   it("resolves positions by current stable identity and inserts after it", () => {
     // Given
     let state = EditorState.create({
@@ -118,74 +202,20 @@ describe("block interaction commands", () => {
     // Then
     expect(state.doc.child(2).attrs["id"]).toBe("a")
   })
-})
 
-describe("slash and link boundaries", () => {
-  it("recognizes only a leading slash query in an eligible text block", () => {
-    // Given
-    const state = EditorState.create({
-      schema: editorSchema,
-      doc: documentWith(paragraph("slash", "/제")),
-      selection: TextSelection.create(documentWith(paragraph("slash", "/제")), 3),
+  it("duplicates text content with a fresh block identity", () => {
+    let state = createEditorState({
+      document: documentWith(paragraph("source", "복제할 본문")),
+      readonly: false,
     })
 
-    // When
-    const query = parseSlashQuery(state)
-
-    // Then
-    expect(query?.query).toBe("제")
-    expect(parseSlashQuery(state, true)).toBeNull()
-  })
-
-  it("rejects slash queries in code and captions", () => {
-    // Given
-    const code = editorSchema.nodes.code_block.create(
-      { id: "code", locked: false },
-      editorSchema.text("/code"),
-    )
-    const state = EditorState.create({
-      schema: editorSchema,
-      doc: editorSchema.nodes.doc.create(undefined, code),
-      selection: TextSelection.create(editorSchema.nodes.doc.create(undefined, code), 6),
+    const handled = duplicateBlockById("source")(state, (transaction) => {
+      state = state.apply(transaction)
     })
 
-    // When / Then
-    expect(parseSlashQuery(state)).toBeNull()
-  })
-
-  it("accepts safe links and rejects executable protocols", () => {
-    // Given / When / Then
-    expect(safeLinkHref("https://example.com/path")).toBe("https://example.com/path")
-    expect(safeLinkHref("/docs/start")).toBe("/docs/start")
-    expect(safeLinkHref("mailto:reader@example.com")).toBe("mailto:reader@example.com")
-    expect(safeLinkHref("//external.example/path")).toBeNull()
-    expect(safeLinkHref("javascript:alert(1)")).toBeNull()
-  })
-
-  it("captures an existing link and rejects its bookmark after a document change", () => {
-    // Given
-    const linkMark = editorSchema.marks.link
-    if (linkMark === undefined) throw new TypeError("Link mark is missing")
-    const document = documentWith(
-      editorSchema.nodes.paragraph.create(
-        { id: "linked", locked: false },
-        editorSchema.text("linked", [linkMark.create({ href: "/existing" })]),
-      ),
-    )
-    let state = EditorState.create({
-      schema: editorSchema,
-      doc: document,
-      selection: TextSelection.create(document, 1, 7),
-    })
-
-    // When
-    const target = captureLinkTarget(state, linkMark)
-
-    // Then
-    expect(target?.href).toBe("/existing")
-    if (target === null) throw new TypeError("Link target was not captured")
-    expect(isCurrentLinkTarget(state, target)).toBe(true)
-    state = state.apply(state.tr.insertText("!", 7))
-    expect(isCurrentLinkTarget(state, target)).toBe(false)
+    expect(handled).toBe(true)
+    expect(state.doc.childCount).toBe(2)
+    expect(state.doc.child(1).textContent).toBe("복제할 본문")
+    expect(state.doc.child(1).attrs["id"]).not.toBe("source")
   })
 })

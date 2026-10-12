@@ -1,4 +1,3 @@
-import { InteractionContextArbiter } from "@block-editor/interactions"
 import type { Command } from "prosemirror-state"
 import type { EditorView } from "prosemirror-view"
 import { createBlockControls } from "./block-controls"
@@ -9,6 +8,7 @@ import {
   createBlockAfter,
   moveBlocksById,
 } from "./block-interaction-commands"
+import { blockTargetsFor, interactionContextFor } from "./block-interaction-context"
 import {
   type BlockInteractionOptions,
   defaultBlockClipboardPolicy,
@@ -26,30 +26,12 @@ import { attachSlashMenu } from "./slash-menu"
 
 export type { BlockInteractionOptions } from "./block-interaction-options"
 
-const documentScopes = new WeakMap<Document, InteractionContextArbiter>()
-let contextSequence = 0
-
-const defaultScope = (document: Document): InteractionContextArbiter => {
-  const existing = documentScopes.get(document)
-  if (existing !== undefined) return existing
-  const scope = new InteractionContextArbiter()
-  documentScopes.set(document, scope)
-  return scope
-}
-
 export const attachBlockInteractions = (
   view: EditorView,
   options: BlockInteractionOptions,
 ): (() => void) => {
   const ownerDocument = view.dom.ownerDocument
-  contextSequence += 1
-  const context = (options.scope ?? defaultScope(ownerDocument)).context(
-    options.contextId ?? `prosemirror:${contextSequence}`,
-  )
-  const isActive = options.isActive ?? context.isActive
-  const claim = options.claim ?? context.claim
-  const release = options.release ?? (options.isActive === undefined ? context.release : undefined)
-  const subscribeActive = options.subscribeActive ?? context.subscribe
+  const { isActive, claim, release, subscribeActive } = interactionContextFor(view, options)
   const { rail, add, grip } = createBlockControls(ownerDocument)
   const menu = createBlockMenu(ownerDocument, "블록 작업")
   const selectionStatus = createBlockSelectionStatus(view.dom)
@@ -73,11 +55,7 @@ export const attachBlockInteractions = (
   let activeId: string | null = null
   let railId: string | null = null
   let activeRect: DOMRect | null = null
-  const ownsBlock = (block: HTMLElement): boolean => block.closest(".ProseMirror") === view.dom
-  const ownedBlockById = (id: string): HTMLElement | null =>
-    Array.from(view.dom.querySelectorAll<HTMLElement>(`[data-block-id="${CSS.escape(id)}"]`)).find(
-      ownsBlock,
-    ) ?? null
+  const { ownsBlock, ownedBlockById } = blockTargetsFor(view)
 
   const hideRail = () => {
     activeId = null
@@ -231,17 +209,8 @@ export const attachBlockInteractions = (
     )
       hideRail()
   }
-  const onEditorClick = (event: MouseEvent) => {
-    if (event.target !== view.dom || options.readOnly || view.state.doc.childCount === 0) return
-    const last = view.dom.querySelector<HTMLElement>("[data-block-id]:last-child")
-    if (last === null) return
-    const id = last.dataset["blockId"]
-    if (id !== undefined && event.clientY >= last.getBoundingClientRect().bottom)
-      run(createBlockAfter(id))
-  }
   view.dom.addEventListener("focusin", refreshFromSelection)
   view.dom.addEventListener("keyup", refreshFromSelection)
-  view.dom.addEventListener("click", onEditorClick)
   view.dom.addEventListener("keydown", onContextMenuKey)
   ownerDocument.addEventListener("pointerdown", onDocumentPointerDown, true)
   ownerDocument.addEventListener("scroll", refreshActiveRail, true)
@@ -272,7 +241,6 @@ export const attachBlockInteractions = (
     rail.removeEventListener("pointerdown", onRailPointerDown)
     view.dom.removeEventListener("focusin", refreshFromSelection)
     view.dom.removeEventListener("keyup", refreshFromSelection)
-    view.dom.removeEventListener("click", onEditorClick)
     view.dom.removeEventListener("keydown", onContextMenuKey)
     ownerDocument.removeEventListener("pointerdown", onDocumentPointerDown, true)
     ownerDocument.removeEventListener("scroll", refreshActiveRail, true)

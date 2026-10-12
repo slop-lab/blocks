@@ -58,7 +58,13 @@ try {
     },
   })
   assert.equal(seeded.status(), 200)
+  const seededRecord = await seeded.json()
   await page.reload({ waitUntil: "networkidle" })
+  const pagePuts = []
+  page.on("request", (request) => {
+    if (request.method() === "PUT" && request.url().endsWith("/api/workspace/pages/research"))
+      pagePuts.push(request.postDataJSON())
+  })
 
   const workspace = page.getByLabel("문서와 데이터베이스")
   await workspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
@@ -71,6 +77,46 @@ try {
   const leafBox = await leaf.boundingBox()
   const gripBox = await grip.boundingBox()
   if (leafBox === null || gripBox === null) throw new TypeError("Missing nested rail geometry")
+  const blockCountBeforeBlankClick = await editor.locator("[data-block-id]").count()
+  const blankPoint = await editor.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    element.style.minHeight = `${rect.height + 120}px`
+    const expanded = element.getBoundingClientRect()
+    return { x: expanded.left + expanded.width / 2, y: expanded.bottom - 12 }
+  })
+  assert.equal(
+    await page.evaluate(
+      ({ x, y }) => document.elementFromPoint(x, y)?.classList.contains("ProseMirror"),
+      blankPoint,
+    ),
+    true,
+  )
+  await page.mouse.click(blankPoint.x, blankPoint.y)
+  const outerQuote = editor.locator('[data-block-id="outer-quote"]')
+  const parentBlankPoint = await outerQuote.evaluate((element) => {
+    element.style.paddingBottom = "60px"
+    const rect = element.getBoundingClientRect()
+    return { x: rect.right - 12, y: rect.bottom - 12 }
+  })
+  await page.mouse.click(parentBlankPoint.x, parentBlankPoint.y)
+  await workspace.getByRole("complementary", { name: "페이지 탐색", exact: true }).click({
+    position: { x: 4, y: 4 },
+  })
+  await workspace.locator(".structured-main").click({ position: { x: 4, y: 4 } })
+  await page.waitForTimeout(700)
+  assert.equal(await editor.locator("[data-block-id]").count(), blockCountBeforeBlankClick)
+  assert.equal(pagePuts.length, 0)
+  const unchanged = await (await page.request.get(`${base}/api/workspace`)).json()
+  assert.equal(
+    unchanged.documents.find((record) => record.documentId === "research")?.content.version,
+    seededRecord.content.version,
+  )
+  await editor.evaluate((element) => {
+    element.style.minHeight = ""
+  })
+  await outerQuote.evaluate((element) => {
+    element.style.paddingBottom = ""
+  })
   await page.mouse.move(leafBox.x + leafBox.width / 2, leafBox.y + leafBox.height / 2)
   await page.mouse.move(gripBox.x + gripBox.width / 2, gripBox.y + gripBox.height / 2, {
     steps: 25,
@@ -83,6 +129,35 @@ try {
   const menu = page.getByRole("menu", { name: "블록 작업" })
   await menu.waitFor()
   assert.equal(await menu.getAttribute("data-target-block-id"), leafId)
+  await page.evaluate(() => {
+    window.__nestedClipboardTypes = []
+    window.__nestedOriginalSetData = DataTransfer.prototype.setData
+    DataTransfer.prototype.setData = function recordNestedClipboard(type, data) {
+      window.__nestedClipboardTypes.push(type)
+      return window.__nestedOriginalSetData.call(this, type, data)
+    }
+  })
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  )
+  await page.waitForTimeout(300)
+  assert.equal(await leaf.getAttribute("data-block-selected"), "true")
+  assert.equal(await menu.getAttribute("data-target-block-id"), leafId)
+  await page.keyboard.press("Control+c")
+  await page.waitForFunction(() => window.__nestedClipboardTypes.length > 0)
+  const nestedClipboardTypes = await page.evaluate(() => {
+    DataTransfer.prototype.setData = window.__nestedOriginalSetData
+    return window.__nestedClipboardTypes
+  })
+  assert.deepEqual(nestedClipboardTypes.sort(), ["application/x-block-editor+json", "text/plain"])
+  await page.keyboard.press("Escape")
+  assert.equal(await leaf.getAttribute("data-block-selected"), "true")
+  await grip.click({ modifiers: ["Control"] })
+  assert.equal(await leaf.getAttribute("data-block-selected"), null)
+  await grip.click({ modifiers: ["Control"] })
+  assert.equal(await leaf.getAttribute("data-block-selected"), "true")
+  await grip.click()
+  await menu.waitFor()
   await menu.getByRole("menuitem", { name: "복제", exact: true }).click()
   assert.equal(await editor.locator('[data-block-id="outer-quote"]').count(), 1)
   assert.equal(await editor.locator('[data-block-id="middle-callout"]').count(), 1)

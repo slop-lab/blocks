@@ -21,6 +21,10 @@ Primary persona: a keyboard-first knowledge worker authoring mixed Korean/Englis
 | Line strong | `--line-strong` | `#c9c5bc` | Active boundaries |
 | Accent | `--accent` | `#1f5e71` | Primary actions and focus |
 | Accent soft | `--accent-soft` | `#dfecef` | Selected rows and badges |
+| Selection | `--selection` | `#2f6fb0` | Structural block selection outline |
+| Selection soft | `--selection-soft` | `#e4eef9` | Structural block selection fill |
+| Synced | `--sync` | `#6e568f` | Shared-source indicator and icon |
+| Synced soft | `--sync-soft` | `#f1edf6` | Shared-source resting surface |
 | Success | `--success` | `#356a47` | Saved/accepted |
 | Success soft | `--success-soft` | `#e6f0e8` | Status surface |
 | Warning | `--warning` | `#8a5a16` | Deferred/conflict |
@@ -97,7 +101,7 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 - The grip is the only drag origin. Its menu opens by click, `Shift+F10`, or the Context Menu key and includes duplicate, delete, move, and supported type changes. Every action resolves the stable block ID against the current document when invoked; menu position is never treated as document identity.
 - Drag shows one accent insertion rule between blocks, supports document-start and document-end gaps, and autoscrolls the nearest editor scroll owner. Cancel, Escape, pointer cancellation, and leaving the same editor clear all transient drag state. Keyboard move actions remain first-class.
 - Grip click enters ephemeral block-selection mode. Shift extends through visible order, Ctrl/Cmd toggles, Escape clears, and Delete/Backspace owns the selected structural batch. Dragging empty editor chrome draws a rectangular marquee; starting inside editable text preserves native text selection.
-- Selected blocks use `accent-soft` plus an inset accent rule. Selection state, anchor, focus, and marquee geometry are view-only and never enter document JSON or collaborative state.
+- Selected blocks use `selection-soft` plus a blue `selection` outline. Synced blocks retain a thin purple `sync` strip and a labeled sync icon when selected, while keyboard focus uses the warning token as a third independent state. Selection state, anchor, focus, and marquee geometry are view-only and never enter document JSON or collaborative state.
 
 ### Editor Popover / Command Menu
 - Structure: owner-document portal, anchored to a block control or text caret, with viewport-clamped position, whisper border, paper/elevated surface, and the documented popover shadow.
@@ -141,7 +145,7 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 
 ### Structured Workspace
 - A fixed-sidenav list/detail shell presents a nested page tree beside one paper document. The document is the only primary scroll owner; database tables may scroll inline on narrow screens.
-- Page, database, and synced-source status use the shared badge and action-button primitives. Synced occurrences use `accent-soft` with a textual shared-source label, never color alone.
+- Page, database, and synced-source status use the shared badge and action-button primitives. Synced occurrences use a subtle `sync-soft` surface, thin purple `sync` strip, icon, and the text `동기화`; blue remains reserved for structural selection and color never acts alone.
 - Headings render their authored relative level plus embedding depth, clamped to HTML h1-h6; rendering never writes the derived level back to JSON.
 - Below 768px the page tree becomes a collapsible top rail and the document keeps 16px gutters. Search and the Ctrl-K command palette remain keyboard reachable at every width.
 - Persisted page-reference blocks produce a compact backlinks region after the document. Each backlink names its source page and returns focus to the exact reference block through the URL hash.

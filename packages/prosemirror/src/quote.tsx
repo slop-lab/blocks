@@ -6,6 +6,7 @@ export const quoteBlock: BlockRegistration = {
   type: "quote",
   nodeName: "blockquote",
   text: true,
+  insertMenu: [{ label: "인용", description: "인용문", keywords: ["quote"] }],
   nodeSpec: {
     group: "block",
     content: "inline*",

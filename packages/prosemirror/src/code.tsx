@@ -6,6 +6,7 @@ export const codeBlock: BlockRegistration = {
   type: "code",
   nodeName: "code_block",
   text: true,
+  insertMenu: [{ label: "코드 블록", description: "서식 없는 코드", keywords: ["code"] }],
   nodeSpec: {
     group: "block",
     content: "text*",

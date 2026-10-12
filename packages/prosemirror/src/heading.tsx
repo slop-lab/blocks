@@ -7,6 +7,12 @@ export const headingBlock: BlockRegistration = {
   type: "heading",
   nodeName: "heading",
   text: true,
+  insertMenu: [1, 2, 3].map((level) => ({
+    label: `제목 ${level}`,
+    description: `${level}단계 제목`,
+    keywords: ["제목", "heading", `h${level}`],
+    attrs: { level },
+  })),
   nodeSpec: {
     group: "block",
     content: "inline*",

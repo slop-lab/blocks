@@ -3,6 +3,7 @@ import { blockIndexById } from "./block-interaction-commands"
 
 type DragState = {
   readonly blockId: string
+  readonly blockIds: readonly string[]
   readonly pointerId: number
   readonly start: PointerPoint
   targetGap: number
@@ -12,7 +13,8 @@ type PointerPoint = { readonly x: number; readonly y: number }
 
 type GripDragOptions = {
   readonly activeBlockId: () => string | null
-  readonly move: (blockId: string, targetGap: number) => void
+  readonly begin: (blockId: string) => readonly string[]
+  readonly move: (blockIds: readonly string[], targetGap: number) => void
 }
 
 const dragThreshold = 6
@@ -143,11 +145,21 @@ export const attachGripDrag = (
   }
   const onPointerDown = (event: PointerEvent) => {
     const blockId = options.activeBlockId()
-    if (blockId === null || grip.disabled || event.button !== 0) return
+    if (
+      blockId === null ||
+      grip.disabled ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey
+    )
+      return
     event.preventDefault()
+    const blockIds = options.begin(blockId)
+    if (blockIds.length === 0) return
     dragged = false
     const start = { x: event.clientX, y: event.clientY }
-    drag = { blockId, pointerId: event.pointerId, start, targetGap: blockIndex(blockId) }
+    drag = { blockId, blockIds, pointerId: event.pointerId, start, targetGap: blockIndex(blockId) }
     lastPoint = { x: event.clientX, y: event.clientY }
     grip.setPointerCapture(event.pointerId)
   }
@@ -178,7 +190,7 @@ export const attachGripDrag = (
     const current = drag
     const validDrop = !indicator.hidden
     finish()
-    if (validDrop) options.move(current.blockId, current.targetGap)
+    if (validDrop) options.move(current.blockIds, current.targetGap)
   }
   const onScroll = () => {
     if (lastPoint !== null) updateDropTarget(lastPoint.x, lastPoint.y)

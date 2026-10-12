@@ -185,12 +185,33 @@ try {
         ?.getAttribute("data-target-block-id") === id,
     sourceId,
   )
+  await grip.click()
+  await blockMenu.waitFor()
+  await page.keyboard.press("Escape")
+  assert.equal(await movable.getAttribute("data-block-selected"), "true")
+  assert.equal(await movable.getAttribute("aria-current"), "true")
+  const idsBeforeSingleDrag = await editor
+    .locator(":scope > [data-block-id]")
+    .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-block-id")))
   const destination = editor.locator("[data-block-id]").last()
   await grip.dragTo(destination)
+  const idsAfterSingleDrag = await editor
+    .locator(":scope > [data-block-id]")
+    .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-block-id")))
+  assert.equal(idsAfterSingleDrag.length, idsBeforeSingleDrag.length)
+  assert.equal(new Set(idsAfterSingleDrag).size, idsAfterSingleDrag.length)
   assert.equal(
     await editor.locator("[data-block-id]").last().getAttribute("data-block-id"),
     sourceId,
   )
+  await page.keyboard.press("Control+z")
+  assert.deepEqual(
+    await editor
+      .locator(":scope > [data-block-id]")
+      .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-block-id"))),
+    idsBeforeSingleDrag,
+  )
+  await page.keyboard.press("Control+Shift+z")
 
   const edgeSource = editor.locator("[data-block-id]").last()
   const edgeSourceId = await edgeSource.getAttribute("data-block-id")
@@ -214,6 +235,7 @@ try {
     edgeSourceId,
   )
 
+  await page.keyboard.press("Escape")
   const paragraph = editor.locator("p").first()
   await paragraph.dblclick()
   await page.getByRole("toolbar", { name: "선택한 글자 서식" }).waitFor()

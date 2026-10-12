@@ -1,5 +1,4 @@
-import type { ClipboardEnvelope, ClipboardPolicy } from "@block-editor/interactions"
-import type { ReferencePasteContext } from "@block-editor/interactions/prosemirror"
+import type { ClipboardPolicy } from "@block-editor/interactions"
 import type { Command } from "prosemirror-state"
 import type { EditorView } from "prosemirror-view"
 import { createBlockControls } from "./block-controls"
@@ -10,26 +9,18 @@ import {
   createBlockAfter,
   moveBlocksById,
 } from "./block-interaction-commands"
+import type { BlockInteractionOptions } from "./block-interaction-options"
 import { attachBlockKeyboard } from "./block-keyboard"
 import { createBlockMenu } from "./block-menu"
 import { blockMenuItems } from "./block-menu-items"
 import { attachRailPointerIntent } from "./block-rail-intent"
 import { attachBlockSelection } from "./block-selection"
+import { createBlockSelectionStatus } from "./block-selection-status"
 import { insertionChoices } from "./insertion-catalog"
 import { attachSelectionToolbar } from "./selection-toolbar"
 import { attachSlashMenu } from "./slash-menu"
 
-export type BlockInteractionOptions = {
-  readonly readOnly: boolean
-  readonly active?: () => boolean
-  readonly onUnavailable?: (message: string) => void
-  readonly clipboardPolicy?: ClipboardPolicy
-  readonly onDeferredCut?: (
-    blockIds: readonly string[],
-    envelope: ClipboardEnvelope,
-  ) => void | Promise<void>
-  readonly onReferencePaste?: (envelope: ClipboardEnvelope, context: ReferencePasteContext) => void
-}
+export type { BlockInteractionOptions } from "./block-interaction-options"
 
 export const attachBlockInteractions = (
   view: EditorView,
@@ -38,6 +29,7 @@ export const attachBlockInteractions = (
   const ownerDocument = view.dom.ownerDocument
   const { rail, add, grip } = createBlockControls(ownerDocument)
   const menu = createBlockMenu(ownerDocument, "블록 작업")
+  const selectionStatus = createBlockSelectionStatus(view.dom)
   const blockSelection = attachBlockSelection(view, {
     clipboard:
       options.clipboardPolicy ??
@@ -51,6 +43,7 @@ export const attachBlockInteractions = (
       ? {}
       : { onReferencePaste: options.onReferencePaste }),
     ...(options.onUnavailable === undefined ? {} : { onUnavailable: options.onUnavailable }),
+    onSelectionChange: selectionStatus.update,
   })
   let activeId: string | null = null
   let railId: string | null = null
@@ -74,6 +67,7 @@ export const attachBlockInteractions = (
     if (!handled) options.onUnavailable?.("잠긴 블록이거나 현재 위치에서 실행할 수 없습니다.")
     view.focus()
     refreshFromSelection()
+    return handled
   }
   const blockIndex = (blockId: string): number => blockIndexById(view.state.doc, blockId)
   const showMenu = (blockId: string, trigger: HTMLElement) => {
@@ -85,6 +79,7 @@ export const attachBlockInteractions = (
       run,
       selectedIds: () => blockSelection.selectedIds(),
       contains: (id) => blockSelection.contains(id),
+      replaceSelection: blockSelection.replace,
     })
     const rect = trigger.getBoundingClientRect()
     menu.element.dataset["targetBlockId"] = blockId
@@ -162,18 +157,22 @@ export const attachBlockInteractions = (
   add.addEventListener("click", () => activeId !== null && showInsertionMenu(activeId, add))
   const dragController = attachGripDrag(view, grip, {
     activeBlockId: () => activeId,
-    move: (blockId, gap) =>
-      run(
-        moveBlocksById(
-          blockSelection.contains(blockId) ? blockSelection.selectedIds() : [blockId],
-          gap,
-        ),
-      ),
+    begin: (blockId) => {
+      if (blockSelection.contains(blockId)) return [...blockSelection.selectedIds()]
+      blockSelection.replace([blockId])
+      return [blockId]
+    },
+    move: (blockIds, gap) => run(moveBlocksById(blockIds, gap)),
   })
   grip.addEventListener("click", (event) => {
     if (dragController.consumeClick()) return
-    if (activeId !== null && !blockSelection.selectFromClick(activeId, event))
-      showMenu(activeId, grip)
+    if (activeId === null) return
+    if (event.shiftKey || event.metaKey || event.ctrlKey) {
+      blockSelection.selectFromClick(activeId, event)
+      return
+    }
+    if (!blockSelection.contains(activeId)) blockSelection.replace([activeId])
+    showMenu(activeId, grip)
   })
   const detachKeyboard = attachBlockKeyboard(view, {
     activeBlockId: () => activeId,
@@ -234,6 +233,7 @@ export const attachBlockInteractions = (
     menu.destroy()
     dragController.destroy()
     blockSelection.destroy()
+    selectionStatus.destroy()
     rail.remove()
     view.dom.removeEventListener("focusin", refreshFromSelection)
     view.dom.removeEventListener("keyup", refreshFromSelection)

@@ -21,6 +21,8 @@ const createView = () => {
   const doc = editorSchema.nodes.doc.create(undefined, [
     paragraph.create({ id: "first", locked: false }, editorSchema.text("First")),
     paragraph.create({ id: "second", locked: false }, editorSchema.text("Second")),
+    paragraph.create({ id: "third", locked: false }, editorSchema.text("Third")),
+    paragraph.create({ id: "fourth", locked: false }, editorSchema.text("Fourth")),
   ])
   const view = new EditorView(document.body, {
     state: EditorState.create({ schema: editorSchema, doc }),
@@ -102,6 +104,38 @@ it("preserves structural selection when pointer-down starts on selected blank bl
   first.dispatchEvent(pointerDown)
 
   expect(controller.selectedIds()).toEqual(["first"])
+})
+
+it("preserves Ctrl toggle and Shift range across native pointer, mouse, and click ordering", () => {
+  const { view, controller } = createView()
+  const dispatchClickSequence = (
+    id: string,
+    modifiers: { ctrlKey?: boolean; shiftKey?: boolean },
+  ) => {
+    const target = view.dom.querySelector<HTMLElement>(`[data-block-id='${id}']`)
+    if (target === null) throw new TypeError(`Missing ${id} block`)
+    const pointerDown = new MouseEvent("pointerdown", {
+      button: 0,
+      bubbles: true,
+      cancelable: true,
+      ...modifiers,
+    })
+    Object.defineProperty(pointerDown, "pointerId", { value: 1 })
+    target.dispatchEvent(pointerDown)
+    for (const type of ["mousedown", "mouseup", "click"])
+      target.dispatchEvent(
+        new MouseEvent(type, { button: 0, bubbles: true, cancelable: true, ...modifiers }),
+      )
+  }
+
+  dispatchClickSequence("second", { ctrlKey: true })
+  expect(controller.selectedIds()).toEqual(["second"])
+
+  dispatchClickSequence("fourth", { shiftKey: true })
+  expect(controller.selectedIds()).toEqual(["second", "third", "fourth"])
+
+  dispatchClickSequence("second", { ctrlKey: true })
+  expect(controller.selectedIds()).toEqual(["third", "fourth"])
 })
 
 it("routes Mod-K to link editing when the active editor owns a text range", () => {

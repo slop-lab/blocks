@@ -233,4 +233,148 @@ describe("structured workspace API", () => {
     expect(malformedDatabase.status).toBe(400)
     expect(danglingPage.status).toBe(400)
   })
+
+  it("rejects dangling and cyclic references across the complete source graph", async () => {
+    root = await mkdtemp(join(tmpdir(), "structured-workspace-"))
+    const base = await open()
+    const author = await session(base, "author")
+
+    const dangling = await putEntity(base, author, "sources", "dangling-source", {
+      content: {
+        id: "dangling-source",
+        version: 1,
+        section: {
+          id: "dangling-root",
+          type: "section",
+          children: [
+            {
+              id: "dangling-ref",
+              type: "section",
+              occurrenceId: "dangling-occurrence",
+              ref: { sourceId: "missing-source" },
+              children: [],
+            },
+          ],
+        },
+      },
+    })
+    expect(dangling.status).toBe(400)
+
+    const danglingPage = await putEntity(base, author, "sources", "dangling-page-source", {
+      content: {
+        id: "dangling-page-source",
+        version: 1,
+        section: {
+          id: "dangling-page-root",
+          type: "section",
+          children: [{ id: "dangling-page-ref", type: "page_ref", pageId: "missing-page" }],
+        },
+      },
+    })
+    const danglingDatabase = await putEntity(base, author, "sources", "dangling-db-source", {
+      content: {
+        id: "dangling-db-source",
+        version: 1,
+        section: {
+          id: "dangling-db-root",
+          type: "section",
+          children: [
+            {
+              id: "dangling-db-ref",
+              type: "database_embed",
+              databaseId: "missing-database",
+              layout: "table",
+            },
+          ],
+        },
+      },
+    })
+    expect([danglingPage.status, danglingDatabase.status]).toEqual([400, 400])
+
+    const sourceA = {
+      id: "source-a",
+      version: 1,
+      section: {
+        id: "source-a-root",
+        type: "section",
+        children: [{ id: "home-p", type: "paragraph", text: "IDs are document-scoped" }],
+      },
+    }
+    const sourceB = {
+      id: "source-b",
+      version: 1,
+      section: { id: "source-b-root", type: "section", children: [] },
+    }
+    expect(
+      (await putEntity(base, author, "sources", sourceA.id, { content: sourceA })).status,
+    ).toBe(201)
+    expect(
+      (await putEntity(base, author, "sources", sourceB.id, { content: sourceB })).status,
+    ).toBe(201)
+    const state = await workspace(base, author)
+    const records = new Map(state.sources.map((record) => [record.documentId, record]))
+    const reference = (source, target) => ({
+      ...source,
+      version: source.version + 1,
+      section: {
+        ...source.section,
+        children: [
+          {
+            id: `${source.id}-ref`,
+            type: "section",
+            occurrenceId: `${source.id}-occurrence`,
+            ref: { sourceId: target },
+            children: [],
+          },
+        ],
+      },
+    })
+    const outcomes = await Promise.all([
+      putEntity(base, author, "sources", sourceA.id, {
+        expectedRevision: records.get(sourceA.id).revision,
+        content: reference(sourceA, sourceB.id),
+      }),
+      putEntity(base, author, "sources", sourceB.id, {
+        expectedRevision: records.get(sourceB.id).revision,
+        content: reference(sourceB, sourceA.id),
+      }),
+    ])
+
+    expect(outcomes.map((response) => response.status).sort()).toEqual([200, 400])
+  })
+
+  it("persists opaque extension payloads unchanged beside edited known blocks", async () => {
+    root = await mkdtemp(join(tmpdir(), "structured-workspace-"))
+    const base = await open()
+    const author = await session(base, "author")
+    const initial = await workspace(base, author)
+    const page = initial.documents.find((record) => record.documentId === "home")
+    const opaque = {
+      id: "vendor-diagram",
+      type: "vendor.diagram",
+      attrs: { viewport: { x: 12, y: 8 } },
+      content: [{ kind: "vendor.label", metadata: { color: "orange" } }],
+      children: [{ id: "vendor-node", type: "vendor.node", attrs: { rank: 1 } }],
+    }
+
+    const saved = await putEntity(base, author, "pages", page.documentId, {
+      expectedRevision: page.revision,
+      content: {
+        ...page.content,
+        version: page.content.version + 1,
+        blocks: [
+          opaque,
+          ...page.content.blocks.map((block) =>
+            block.id === "home-h" ? { ...block, heading: "Known neighbor edited" } : block,
+          ),
+        ],
+      },
+    })
+    expect(saved.status).toBe(200)
+
+    const reopened = await workspace(base, author)
+    const persisted = reopened.documents.find((record) => record.documentId === "home").content
+    expect(persisted.blocks[0]).toEqual(opaque)
+    expect(JSON.stringify(persisted.blocks)).toContain("Known neighbor edited")
+  })
 })

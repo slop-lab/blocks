@@ -93,6 +93,55 @@ it("switches native character selection to text mode without structural IDs", ()
   expect(controller.selectedIds()).toEqual([])
 })
 
+it("ignores a retained native range while a declared context control has focus", () => {
+  const control = document.createElement("button")
+  document.body.append(control)
+  const { view, controller } = createSelectionView({
+    isContextTarget: (target) => control === target || control.contains(target),
+  })
+  const text = view.dom.querySelector("p")?.firstChild
+  if (text === undefined || text === null) throw new TypeError("Missing paragraph text")
+  const range = document.createRange()
+  range.setStart(text, 1)
+  range.setEnd(text, 3)
+  document.getSelection()?.removeAllRanges()
+  document.getSelection()?.addRange(range)
+  controller.replace(["first"])
+  control.focus()
+
+  document.dispatchEvent(new Event("selectionchange"))
+
+  expect(controller.value().mode).toBe("blocks")
+  expect(controller.selectedIds()).toEqual(["first"])
+  control.remove()
+})
+
+it("ignores a retained native range during declared context pointer activation", () => {
+  const control = document.createElement("button")
+  document.body.append(control)
+  const { view, controller } = createSelectionView({
+    isContextTarget: (target) => control === target || control.contains(target),
+  })
+  const text = view.dom.querySelector("p")?.firstChild
+  if (text === undefined || text === null) throw new TypeError("Missing paragraph text")
+  const range = document.createRange()
+  range.setStart(text, 1)
+  range.setEnd(text, 3)
+  document.getSelection()?.removeAllRanges()
+  document.getSelection()?.addRange(range)
+  controller.replace(["first"])
+
+  control.dispatchEvent(
+    new PointerEvent("pointerdown", { pointerId: 11, button: 0, bubbles: true }),
+  )
+  document.dispatchEvent(new Event("selectionchange"))
+
+  expect(controller.value().mode).toBe("blocks")
+  expect(controller.selectedIds()).toEqual(["first"])
+  document.dispatchEvent(new PointerEvent("pointerup", { pointerId: 11, bubbles: true }))
+  control.remove()
+})
+
 it("switches Shift-Arrow routing from blocks to native text selection", () => {
   const { view, controller } = createSelectionView()
   controller.replace(["first", "second"])

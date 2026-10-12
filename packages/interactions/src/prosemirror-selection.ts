@@ -1,5 +1,6 @@
 import type { EditorView } from "prosemirror-view"
 import { attachProseMirrorClipboard } from "./prosemirror-clipboard.js"
+import { attachSelectionContextBoundary } from "./prosemirror-selection-context.js"
 import { attachSelectionDrag } from "./prosemirror-selection-drag.js"
 import {
   isInteractiveTarget,
@@ -40,7 +41,6 @@ export const attachBlockSelection = (
   view: EditorView,
   options: BlockSelectionOptions,
 ): BlockSelectionController => {
-  const ownerDocument = view.dom.ownerDocument
   let consumedModifierClick = false
   let consumedModifierPointer = false
   let consumedMarqueeClick = false
@@ -104,8 +104,20 @@ export const attachBlockSelection = (
     },
   }
   const detachClipboard = attachProseMirrorClipboard(view, { ...options, selection, clear })
-  const selectionDrag = attachSelectionDrag(view, replace, updateTextSelection, (active) => {
-    consumedMarqueeClick = active
+  const contextBoundary = attachSelectionContextBoundary({
+    view,
+    clear,
+    ...(options.isContextTarget === undefined ? {} : { isContextTarget: options.isContextTarget }),
+    ...(options.release === undefined ? {} : { release: options.release }),
+  })
+  const selectionDrag = attachSelectionDrag({
+    view,
+    replace,
+    activateText: updateTextSelection,
+    shouldAcceptNativeTextSelection: contextBoundary.shouldAcceptNativeTextSelection,
+    onFinish: (active) => {
+      consumedMarqueeClick = active
+    },
   })
   const onClick = (event: MouseEvent) => {
     if (!(event.target instanceof HTMLElement) || !isOwnedTarget(view, event.target)) return
@@ -142,9 +154,7 @@ export const attachBlockSelection = (
     event.preventDefault()
     clear()
   }
-  const onFocusIn = () => {
-    claim()
-  }
+  const onFocusIn = () => claim()
   const onPointerDown = (event: PointerEvent) => {
     if (
       event.button !== 0 ||
@@ -166,7 +176,7 @@ export const attachBlockSelection = (
       return
     }
     if (isInteractiveTarget(event.target)) return
-    const hitsGlyph = pointHitsGlyph(ownerDocument, event.clientX, event.clientY)
+    const hitsGlyph = pointHitsGlyph(view.dom.ownerDocument, event.clientX, event.clientY)
     const blockId = event.target.closest<HTMLElement>("[data-block-id]")?.dataset["blockId"]
     if (
       blockId !== undefined &&
@@ -207,18 +217,6 @@ export const attachBlockSelection = (
     consumedModifierPointer = false
     consumedMarqueeClick = false
   }
-  const onDocumentPointerDown = (event: PointerEvent) => {
-    if (
-      !(event.target instanceof Node) ||
-      (event.target instanceof Element
-        ? isOwnedTarget(view, event.target)
-        : event.target.parentElement !== null && isOwnedTarget(view, event.target.parentElement)) ||
-      options.isContextTarget?.(event.target) === true
-    )
-      return
-    clear()
-    options.release?.()
-  }
   const unsubscribeSelection = subscribeBlockSelection(view, () =>
     options.onSelectionChange?.(selection.value),
   )
@@ -228,7 +226,6 @@ export const attachBlockSelection = (
   view.dom.addEventListener("pointerdown", onPointerDown, true)
   view.dom.addEventListener("pointercancel", onPointerCancel, true)
   view.dom.addEventListener("mousedown", onMouseDown, true)
-  ownerDocument.addEventListener("pointerdown", onDocumentPointerDown, true)
   return {
     selectFromClick,
     activateText: updateTextSelection,
@@ -241,6 +238,7 @@ export const attachBlockSelection = (
     destroy: () => {
       unsubscribeSelection()
       detachClipboard()
+      contextBoundary.destroy()
       selectionDrag.destroy()
       view.dom.removeEventListener("click", onClick)
       view.dom.removeEventListener("keydown", onKeyDown)
@@ -248,7 +246,6 @@ export const attachBlockSelection = (
       view.dom.removeEventListener("pointerdown", onPointerDown, true)
       view.dom.removeEventListener("pointercancel", onPointerCancel, true)
       view.dom.removeEventListener("mousedown", onMouseDown, true)
-      ownerDocument.removeEventListener("pointerdown", onDocumentPointerDown, true)
     },
   }
 }

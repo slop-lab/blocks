@@ -6,12 +6,16 @@ type SelectionDrag = {
   readonly destroy: () => void
 }
 
-export const attachSelectionDrag = (
-  view: EditorView,
-  replace: (ids: readonly string[]) => void,
-  updateTextSelection: () => void,
-  onFinish: (active: boolean) => void,
-): SelectionDrag => {
+type SelectionDragOptions = {
+  readonly view: EditorView
+  readonly replace: (ids: readonly string[]) => void
+  readonly activateText: () => void
+  readonly onFinish: (active: boolean) => void
+  readonly shouldAcceptNativeTextSelection: () => boolean
+}
+
+export const attachSelectionDrag = (options: SelectionDragOptions): SelectionDrag => {
+  const { view } = options
   const ownerDocument = view.dom.ownerDocument
   const element = ownerDocument.createElement("div")
   element.className = "block-selection-marquee"
@@ -43,16 +47,17 @@ export const attachSelectionDrag = (
       width: `${right - left}px`,
       height: `${bottom - top}px`,
     })
-    replace(intersectingLeafIds(view, { left, top, right, bottom }))
+    options.replace(intersectingLeafIds(view, { left, top, right, bottom }))
   }
   const onNativeSelectionChange = () => {
+    if (!options.shouldAcceptNativeTextSelection()) return
     const native = ownerDocument.getSelection()
     if (native === null || native.isCollapsed || native.rangeCount !== 1) return
     const range = native.getRangeAt(0)
     if (!view.dom.contains(range.startContainer) || !view.dom.contains(range.endContainer)) return
     const intersected = ownedLeafBlockElements(view).filter((block) => range.intersectsNode(block))
     if (intersected.length < 2) {
-      updateTextSelection()
+      options.activateText()
       return
     }
     const fullySelected = intersected.every((block) => {
@@ -64,10 +69,10 @@ export const attachSelectionDrag = (
       )
     })
     if (!fullySelected) {
-      updateTextSelection()
+      options.activateText()
       return
     }
-    replace(
+    options.replace(
       intersected.flatMap((block) => {
         const id = block.dataset["blockId"]
         return id === undefined ? [] : [id]
@@ -77,7 +82,7 @@ export const attachSelectionDrag = (
   const finish = (event: PointerEvent, completed: boolean) => {
     if (marquee === null || event.pointerId !== marquee.pointerId) return
     if (view.dom.hasPointerCapture(event.pointerId)) view.dom.releasePointerCapture(event.pointerId)
-    onFinish(completed && marquee.active)
+    options.onFinish(completed && marquee.active)
     marquee = null
     element.hidden = true
   }

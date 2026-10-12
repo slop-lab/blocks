@@ -6,10 +6,12 @@ import type { SourceEntry, SourceOccurrence } from "./workspace-source-attachmen
 export const dispatchSourceTransaction = (
   entry: SourceEntry,
   occurrence: SourceOccurrence,
-  profile: ProseMirrorProfile,
-  transaction: Transaction,
+  input: {
+    readonly profile: ProseMirrorProfile
+    readonly transaction: Transaction
+  },
 ): void => {
-  const result = entry.runtime.state.applyTransaction(transaction)
+  const result = entry.runtime.state.applyTransaction(input.transaction)
   if (result.transactions.length === 0) return
   occurrence.bookmark = {
     anchor: result.state.selection.anchor,
@@ -24,7 +26,7 @@ export const dispatchSourceTransaction = (
     (candidate) => candidate.documentId === entry.runtime.sourceId,
   )
   if (record === undefined) return
-  const converted = snapshotToPageDocument(pmToSnapshot(result.state.doc, profile), {
+  const converted = snapshotToPageDocument(pmToSnapshot(result.state.doc, input.profile), {
     pageId: record.content.id,
     version: record.content.version,
     blocks: [record.content.section],

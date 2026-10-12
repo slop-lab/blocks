@@ -185,7 +185,7 @@ export class WorkspaceSourceAttachments {
       dispatchTransaction: (transaction) => {
         const occurrence = this.active(entry)
         if (occurrence !== null)
-          dispatchSourceTransaction(entry, occurrence, this.profile, transaction)
+          dispatchSourceTransaction(entry, occurrence, { profile: this.profile, transaction })
       },
     })
     entry.view = view

@@ -1,5 +1,4 @@
 import type { EditorView } from "prosemirror-view"
-import type { BlockSelection } from "./index.js"
 import { intersectingLeafIds, ownedLeafBlockElements } from "./prosemirror-selection-hit.js"
 
 type SelectionDrag = {
@@ -9,9 +8,9 @@ type SelectionDrag = {
 
 export const attachSelectionDrag = (
   view: EditorView,
-  selection: BlockSelection,
-  visibleIds: () => readonly string[],
-  render: () => void,
+  replace: (ids: readonly string[]) => void,
+  clear: () => void,
+  onFinish: (active: boolean) => void,
 ): SelectionDrag => {
   const ownerDocument = view.dom.ownerDocument
   const element = ownerDocument.createElement("div")
@@ -44,10 +43,7 @@ export const attachSelectionDrag = (
       width: `${right - left}px`,
       height: `${bottom - top}px`,
     })
-    selection.apply({ kind: "clear" }, visibleIds())
-    for (const id of intersectingLeafIds(view, { left, top, right, bottom }))
-      selection.apply({ kind: "toggle", id }, visibleIds())
-    render()
+    replace(intersectingLeafIds(view, { left, top, right, bottom }))
   }
   const onNativeSelectionChange = () => {
     const native = ownerDocument.getSelection()
@@ -55,7 +51,10 @@ export const attachSelectionDrag = (
     const range = native.getRangeAt(0)
     if (!view.dom.contains(range.startContainer) || !view.dom.contains(range.endContainer)) return
     const intersected = ownedLeafBlockElements(view).filter((block) => range.intersectsNode(block))
-    if (intersected.length < 2) return
+    if (intersected.length < 2) {
+      clear()
+      return
+    }
     const fullySelected = intersected.every((block) => {
       const blockRange = ownerDocument.createRange()
       blockRange.selectNodeContents(block)
@@ -64,17 +63,21 @@ export const attachSelectionDrag = (
         range.compareBoundaryPoints(Range.END_TO_END, blockRange) >= 0
       )
     })
-    if (!fullySelected) return
-    selection.apply({ kind: "clear" }, visibleIds())
-    for (const block of intersected) {
-      const id = block.dataset["blockId"]
-      if (id !== undefined) selection.apply({ kind: "toggle", id }, visibleIds())
+    if (!fullySelected) {
+      clear()
+      return
     }
-    render()
+    replace(
+      intersected.flatMap((block) => {
+        const id = block.dataset["blockId"]
+        return id === undefined ? [] : [id]
+      }),
+    )
   }
   const finish = (event: PointerEvent) => {
     if (marquee === null || event.pointerId !== marquee.pointerId) return
     if (view.dom.hasPointerCapture(event.pointerId)) view.dom.releasePointerCapture(event.pointerId)
+    onFinish(marquee.active)
     marquee = null
     element.hidden = true
   }

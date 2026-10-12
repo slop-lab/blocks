@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
 import { attachBlockSelection } from "@block-editor/interactions/prosemirror"
-import { EditorState, TextSelection } from "prosemirror-state"
+import { TextSelection } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { afterEach, describe, expect, it } from "vitest"
+import { createEditorState } from "../src/pm/editor"
 import { editorSchema } from "../src/pm/schema"
 import { attachSelectionToolbar } from "../src/pm/selection-toolbar"
 
@@ -25,7 +26,7 @@ const createView = () => {
     paragraph.create({ id: "fourth", locked: false }, editorSchema.text("Fourth")),
   ])
   const view = new EditorView(document.body, {
-    state: EditorState.create({ schema: editorSchema, doc }),
+    state: createEditorState({ document: doc, readonly: false }),
   })
   views.push(view)
   const controller = attachBlockSelection(view, {
@@ -77,7 +78,7 @@ describe("native multi-block text selection", () => {
   })
 })
 
-it("replaces selection with an explicit preview and exposes semantic DOM state", () => {
+it("replaces selection through the production plugin and exposes semantic DOM state", () => {
   const { view, controller } = createView()
 
   controller.replace(["first", "second"])
@@ -85,6 +86,36 @@ it("replaces selection with an explicit preview and exposes semantic DOM state",
   expect(controller.selectedIds()).toEqual(["first", "second"])
   expect(view.dom.querySelectorAll("[data-block-selected='true']")).toHaveLength(2)
   expect(view.dom.querySelectorAll("[aria-current='true']")).toHaveLength(2)
+})
+
+it("clears structural selection when a native character selection becomes active", () => {
+  const { view, controller } = createView()
+  controller.replace(["first"])
+  const paragraph = view.dom.querySelector("p")
+  const text = paragraph?.firstChild
+  if (text === undefined || text === null) throw new TypeError("Missing paragraph text")
+  const range = document.createRange()
+  range.setStart(text, 1)
+  range.setEnd(text, 3)
+  const native = document.getSelection()
+  native?.removeAllRanges()
+  native?.addRange(range)
+
+  document.dispatchEvent(new Event("selectionchange"))
+
+  expect(controller.selectedIds()).toEqual([])
+  expect(native?.toString()).toBe("ir")
+})
+
+it("clears structural selection when pointer routing leaves the editing context", () => {
+  const { controller } = createView()
+  const outside = document.createElement("button")
+  document.body.append(outside)
+  controller.replace(["first"])
+
+  outside.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0 }))
+
+  expect(controller.selectedIds()).toEqual([])
 })
 
 it("preserves structural selection when pointer-down starts on selected blank block surface", () => {
@@ -143,12 +174,9 @@ it("routes Mod-K to link editing when the active editor owns a text range", () =
   const doc = editorSchema.nodes.doc.create(undefined, [
     paragraph.create({ id: "linked", locked: false }, editorSchema.text("Linked text")),
   ])
+  const initial = createEditorState({ document: doc, readonly: false })
   const view = new EditorView(document.body, {
-    state: EditorState.create({
-      schema: editorSchema,
-      doc,
-      selection: TextSelection.create(doc, 1, 7),
-    }),
+    state: initial.apply(initial.tr.setSelection(TextSelection.create(doc, 1, 7))),
   })
   views.push(view)
   detachments.push(attachSelectionToolbar(view, { readOnly: false }))

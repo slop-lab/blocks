@@ -3,6 +3,7 @@ import {
   cloneForest,
   flattenTree,
   moveForest,
+  planTreeWrap,
   type TreeNode,
 } from "@block-editor/containers"
 import {
@@ -35,6 +36,103 @@ const tree: readonly TestNode[] = [
 ]
 
 describe("recursive container operations", () => {
+  it("Given contiguous siblings, When wrapping is planned, Then the exact range is returned", () => {
+    const plan = planTreeWrap(tree, ["a-1", "a-2"])
+
+    expect(plan).toEqual({
+      kind: "exact",
+      selectedIds: ["a-1", "a-2"],
+      coveredIds: ["a-1", "a-2"],
+      additionalIds: [],
+      parentPath: ["section-a"],
+      range: { from: 0, to: 2 },
+      rootIds: ["a-1", "a-2"],
+    })
+  })
+
+  it("Given sibling gaps, When wrapping is planned, Then intervening subtrees are explicit", () => {
+    const forest: readonly TreeNode[] = [
+      { id: "a", children: [] },
+      { id: "b", children: [{ id: "b-child", children: [] }] },
+      { id: "c", children: [] },
+    ]
+
+    expect(planTreeWrap(forest, ["a", "c"])).toEqual({
+      kind: "expanded",
+      selectedIds: ["a", "c"],
+      coveredIds: ["a", "b", "b-child", "c"],
+      additionalIds: ["b", "b-child"],
+      parentPath: [],
+      range: { from: 0, to: 3 },
+      rootIds: ["a", "b", "c"],
+    })
+  })
+
+  it("Given selections at different depths, When wrapping is planned, Then their minimal connected cover is returned", () => {
+    const forest: readonly TreeNode[] = [
+      {
+        id: "left",
+        children: [
+          { id: "left-a", children: [] },
+          { id: "left-b", children: [] },
+        ],
+      },
+      { id: "middle", children: [] },
+      { id: "right", children: [{ id: "right-a", children: [] }] },
+    ]
+
+    const plan = planTreeWrap(forest, ["left-b", "right-a"])
+
+    expect(plan.kind).toBe("expanded")
+    if (plan.kind !== "expanded") return
+    expect(plan.parentPath).toEqual([])
+    expect(plan.rootIds).toEqual(["left", "middle", "right"])
+    expect(plan.coveredIds).toEqual(["left", "left-a", "left-b", "middle", "right", "right-a"])
+    expect(plan.additionalIds).toEqual(["left", "left-a", "middle", "right"])
+  })
+
+  it("Given an ancestor and descendant, When wrapping is planned, Then the ancestor subtree is one exact root", () => {
+    const plan = planTreeWrap(tree, ["section-a", "a-2"])
+
+    expect(plan.kind).toBe("exact")
+    if (plan.kind !== "exact") return
+    expect(plan.selectedIds).toEqual(["section-a"])
+    expect(plan.coveredIds).toEqual(["section-a", "a-1", "a-2"])
+    expect(plan.additionalIds).toEqual([])
+    expect(plan.rootIds).toEqual(["section-a"])
+  })
+
+  it("Given invalid or protected input, When wrapping is planned, Then no partial plan is returned", () => {
+    const mixed: readonly TreeNode[] = [
+      { id: "one", boundary: "page", children: [] },
+      { id: "two", boundary: "source", children: [] },
+    ]
+    const cyclic = { id: "cycle", children: [] as readonly TreeNode[] }
+    Object.defineProperty(cyclic, "children", { value: [cyclic] })
+
+    expect(planTreeWrap(tree, [])).toEqual({ kind: "invalid", reason: "empty-selection" })
+    expect(planTreeWrap(tree, ["missing"])).toEqual({
+      kind: "invalid",
+      reason: "missing-id",
+      ids: ["missing"],
+    })
+    expect(planTreeWrap(tree, ["section-b", "locked"])).toEqual({
+      kind: "invalid",
+      reason: "locked",
+      ids: ["locked"],
+    })
+    expect(planTreeWrap(mixed, ["one", "two"])).toEqual({
+      kind: "invalid",
+      reason: "mixed-boundary",
+      boundaries: ["page", "source"],
+    })
+    expect(planTreeWrap([cyclic], ["cycle"])).toEqual({
+      kind: "invalid",
+      reason: "cycle",
+      ids: ["cycle"],
+    })
+  })
+
   it("Given nested blocks, When selection contains an ancestor and descendant, Then it keeps only the ancestor", () => {
     expect(canonicalSelection(tree, ["a-2", "section-a", "section-b"])).toEqual([
       "section-a",

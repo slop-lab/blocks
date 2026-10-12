@@ -5,6 +5,13 @@ export type TreeNode = Readonly<Record<string, unknown>> & {
   readonly boundary?: string
 }
 
+export {
+  expandTreeWrapSelection,
+  planTreeWrap,
+  type TreeWrapPlan,
+  type TreeWrapRange,
+} from "./wrap-plan.js"
+
 export type FlatTreeNode = {
   readonly node: TreeNode
   readonly depth: number

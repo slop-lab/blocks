@@ -169,16 +169,42 @@ try {
   const newPageEditor = workspace.getByLabel("구조화 문서 편집기").last()
   const emptyParagraph = newPageEditor.locator("p").last()
   await emptyParagraph.click()
-  await page.keyboard.insertText("/quote")
-  await page.keyboard.press("ArrowDown")
+  await page.keyboard.insertText("첫째")
   await page.keyboard.press("Enter")
-  const quote = newPageEditor.locator("blockquote")
-  await quote.waitFor()
-  await page.keyboard.insertText("회고 인용")
+  await page.keyboard.insertText("둘째")
+  await page.keyboard.press("Enter")
+  await page.keyboard.insertText("셋째")
+  const wrapParagraphs = newPageEditor.locator("p[data-block-id]")
+  await wrapParagraphs.first().click({ modifiers: ["Control"] })
+  await wrapParagraphs.nth(2).click({ modifiers: ["Control"] })
+  await wrapParagraphs.nth(2).hover()
+  const workspaceGrip = page.locator(".block-control--grip:visible")
+  await workspaceGrip.click()
+  const blockMenu = page.getByRole("menu", { name: "블록 작업" })
+  await blockMenu.getByRole("menuitem", { name: "선택 범위 확장 (1개의 중간 블록 포함)" }).click()
+  assert.equal(await newPageEditor.locator(".block-selected").count(), 3)
+  await page.getByRole("status").filter({ hasText: "3개 블록 선택됨" }).waitFor()
+  await wrapParagraphs.nth(2).hover()
+  await workspaceGrip.click()
+  await blockMenu.getByRole("menuitem", { name: "선택 영역 감싸기 → 섹션" }).click()
+  const wrappedSection = newPageEditor.locator(".structured-section").last()
+  await wrappedSection.waitFor()
+  assert.deepEqual(await wrappedSection.locator("p").allTextContents(), ["첫째", "둘째", "셋째"])
+  await page.waitForFunction(
+    () =>
+      Array.from(document.querySelectorAll(".structured-section"))
+        .at(-1)
+        ?.getAttribute("data-block-selected") === "true",
+  )
+  assert.equal(await wrappedSection.getAttribute("data-block-selected"), "true")
+  await page.keyboard.press("ControlOrMeta+z")
+  assert.equal(await newPageEditor.locator("p[data-block-id]").count(), 3)
+  await page.keyboard.press("ControlOrMeta+Shift+z")
+  await wrappedSection.waitFor()
   await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
   await page.reload({ waitUntil: "networkidle" })
   await workspace.getByRole("button", { name: "출시 회고", exact: true }).click()
-  await workspace.locator("blockquote", { hasText: "회고 인용" }).waitFor()
+  await workspace.locator(".structured-section", { hasText: "둘째" }).last().waitFor()
 
   await second.close()
 
@@ -204,6 +230,48 @@ try {
       .evaluate((element) => element.getBoundingClientRect().height)) >= 44,
   )
   await workspace.getByRole("button", { name: "제품 출시", exact: true }).click()
+  await page.setViewportSize({ width: 1280, height: 900 })
+  const localVisualBlock = workspace
+    .locator(".structured-prosemirror > .structured-section")
+    .first()
+  const localVisualId = await localVisualBlock.getAttribute("data-block-id")
+  const localVisualBox = await localVisualBlock.boundingBox()
+  if (localVisualBox === null) throw new TypeError("Missing local visual block geometry")
+  await page.mouse.move(localVisualBox.x + 2, localVisualBox.y + localVisualBox.height / 2)
+  await page.waitForFunction(
+    (id) =>
+      document
+        .querySelector(".block-controls:not([hidden])")
+        ?.getAttribute("data-target-block-id") === id,
+    localVisualId,
+  )
+  const visualGrip = page.locator(".block-control--grip:visible")
+  await visualGrip.click()
+  await page.getByRole("menu", { name: "블록 작업" }).waitFor()
+  await page.keyboard.press("Escape")
+  assert.equal(await localVisualBlock.getAttribute("data-block-selected"), "true")
+  const syncedVisualBlock = occurrences.first()
+  await syncedVisualBlock
+    .locator("header > span:not([data-sync-label])")
+    .click({ modifiers: ["Control"] })
+  assert.equal(await localVisualBlock.getAttribute("data-block-selected"), "true")
+  assert.equal(await syncedVisualBlock.getAttribute("data-block-selected"), "true")
+  const combinedColors = await syncedVisualBlock.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return {
+      background: style.backgroundColor,
+      strip: style.borderInlineStartColor,
+      outline: style.outlineColor,
+    }
+  })
+  assert.notEqual(combinedColors.strip, combinedColors.outline)
+  assert.notEqual(combinedColors.background, "rgba(0, 0, 0, 0)")
+  await page.screenshot({
+    path: "/tmp/structured-workspace-selected-sync-1280.png",
+    fullPage: true,
+  })
+  await page.keyboard.press("Escape")
+  await page.setViewportSize({ width: 375, height: 900 })
   assert.ok(
     (await workspace
       .getByRole("button", { name: "행 추가" })
@@ -237,7 +305,7 @@ try {
   }
   assert.deepEqual(errors, [])
   console.log(
-    "PASS nested headings, paste policy, backlinks, durable database edits, synced occurrences, second-client refresh, archive/restore, favorites, page creation, and responsive screenshots",
+    "PASS nested headings, paste policy, backlinks, durable edits, synced occurrences, expanded wrapping with undo/redo, page creation, and responsive screenshots",
   )
 } finally {
   await browser.close()

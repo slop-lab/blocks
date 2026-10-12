@@ -41,8 +41,21 @@ export const createSyncedSectionView = ({
   dom.dataset["occurrenceId"] = occurrenceId
   dom.contentEditable = "false"
   const header = view.dom.ownerDocument.createElement("header")
+  const badge = view.dom.ownerDocument.createElement("span")
+  badge.className = "structured-sync__badge"
+  badge.dataset["syncLabel"] = "true"
+  const icon = view.dom.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "svg")
+  icon.setAttribute("viewBox", "0 0 16 16")
+  icon.setAttribute("aria-hidden", "true")
+  const iconPath = view.dom.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "path")
+  iconPath.setAttribute(
+    "d",
+    "M3 5.5A4 4 0 0 1 10 3l1-1v4H7l1.4-1.4A2 2 0 0 0 5 5.5M13 10.5A4 4 0 0 1 6 13l-1 1v-4h4l-1.4 1.4A2 2 0 0 0 11 10.5",
+  )
+  iconPath.setAttribute("fill", "currentColor")
+  icon.append(iconPath)
+  badge.append(icon, "동기화")
   const label = view.dom.ownerDocument.createElement("span")
-  label.dataset["syncLabel"] = "true"
   const duplicate = nodeViewButton(view.dom.ownerDocument, "복제", () => {
     const position = getPos()
     if (position === undefined) return
@@ -80,16 +93,16 @@ export const createSyncedSectionView = ({
         .scrollIntoView(),
     )
   })
-  header.append(label, duplicate, unlink)
+  header.append(badge, label, duplicate, unlink)
   const host = view.dom.ownerDocument.createElement("div")
   host.className = "structured-sync__content"
   dom.append(header, host)
   const source = data.current.sources.find((candidate) => candidate.id === sourceId)
   if (source === undefined) {
-    label.textContent = `동기화된 섹션 · ${sourceId} · 원본 없음`
+    label.textContent = `${sourceId} · 원본 없음`
     return { dom }
   }
-  label.textContent = `동기화된 섹션 · v${source.version}`
+  label.textContent = `v${source.version}`
   let sourceVersion = source.version
   let emitted = JSON.stringify(source.section)
   let composing = false
@@ -179,7 +192,7 @@ export const createSyncedSectionView = ({
         profile: data.current.profile,
       }),
     )
-    label.textContent = `동기화된 섹션 · v${current.version}`
+    label.textContent = `v${current.version}`
   }
   const destroy = () => {
     dom.removeEventListener("pointerdown", activate, true)

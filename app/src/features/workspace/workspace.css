@@ -235,13 +235,32 @@
 .structured-sync {
   margin-block: var(--space-4);
   padding: var(--space-4);
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line);
+  border-inline-start: var(--space-1) solid var(--sync);
   border-radius: 8px;
-  background: var(--accent-soft);
+  background: var(--sync-soft);
+}
+.structured-sync.block-selected {
+  border-color: color-mix(in srgb, var(--selection) 48%, var(--line));
+  border-inline-start-color: var(--sync);
+  outline: var(--drop-rule-size) solid var(--selection);
+  outline-offset: var(--drop-rule-size);
+  background: color-mix(in srgb, var(--selection-soft) 68%, var(--sync-soft));
+}
+.structured-sync__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--sync);
+  font-weight: 650;
+}
+.structured-sync__badge svg {
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
 }
 .structured-sync header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) repeat(2, auto);
+  grid-template-columns: auto minmax(0, 1fr) repeat(2, auto);
   align-items: center;
   gap: var(--space-2);
   color: var(--ink-muted);

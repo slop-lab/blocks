@@ -1,4 +1,5 @@
-import type { NodeType } from "prosemirror-model"
+import { Fragment, type NodeType } from "prosemirror-model"
+import { TextSelection } from "prosemirror-state"
 import type { EditorView } from "prosemirror-view"
 import { parseSlashQuery } from "./block-interaction-commands"
 import { createBlockMenu, type MenuController, type MenuItem } from "./block-menu"
@@ -9,6 +10,7 @@ type SlashChoice = {
   readonly keywords: string
   readonly type: NodeType
   readonly attrs?: Readonly<Record<string, unknown>>
+  readonly wrap?: boolean
 }
 
 const choicesFor = (view: EditorView): readonly SlashChoice[] => {
@@ -42,7 +44,12 @@ const choicesFor = (view: EditorView): readonly SlashChoice[] => {
       type: nodes["heading"],
       attrs: { level: 3 },
     },
-    { label: "인용", keywords: "인용 quote", type: nodes["blockquote"] },
+    {
+      label: "인용",
+      keywords: "인용 quote",
+      type: nodes["blockquote"] ?? nodes["container_quote"],
+      wrap: nodes["blockquote"] === undefined,
+    },
     { label: "코드 블록", keywords: "코드 code", type: nodes["code_block"] },
   ]
   const choices: SlashChoice[] = []
@@ -53,6 +60,7 @@ const choicesFor = (view: EditorView): readonly SlashChoice[] => {
       keywords: definition.keywords,
       type: definition.type,
       ...(definition.attrs === undefined ? {} : { attrs: definition.attrs }),
+      ...(definition.wrap === undefined ? {} : { wrap: definition.wrap }),
     })
   }
   return choices
@@ -63,7 +71,19 @@ const applyChoice = (view: EditorView, choice: SlashChoice): void => {
   if (query === null) return
   const position = query.from - 1
   const node = view.state.doc.nodeAt(position)
-  if (node === null || !choice.type.validContent(node.content.cut(query.to - query.from))) return
+  if (node === null) return
+  const content = node.content.cut(query.to - query.from)
+  if (choice.wrap === true) {
+    const child = node.type.create({ ...node.attrs, id: crypto.randomUUID() }, content, node.marks)
+    if (!choice.type.validContent(Fragment.from(child))) return
+    const wrapped = choice.type.create({ ...node.attrs }, child)
+    const transaction = view.state.tr.replaceWith(position, position + node.nodeSize, wrapped)
+    transaction.setSelection(TextSelection.near(transaction.doc.resolve(position + 2)))
+    view.dispatch(transaction.setMeta("origin", "local").scrollIntoView())
+    view.focus()
+    return
+  }
+  if (!choice.type.validContent(content)) return
   const transaction = view.state.tr.delete(query.from, query.to)
   transaction.setNodeMarkup(position, choice.type, { ...node.attrs, ...choice.attrs })
   view.dispatch(transaction.setMeta("origin", "local").scrollIntoView())

@@ -8,6 +8,7 @@ import {
   filterAndSortRows,
   groupDatabaseRows,
   headingLevelAtDepth,
+  isOpaqueWorkspaceBlock,
   movePage,
   pageDocumentSchema,
   patchDatabaseRow,
@@ -298,5 +299,99 @@ describe("legacy workspace migration", () => {
         children: [{ id: "p", type: "paragraph", text: "Shared" }],
       },
     })
+  })
+})
+
+describe("opaque workspace extensions", () => {
+  it("preserves unknown blocks and known blocks with unsupported extension fields", () => {
+    const unknown = {
+      id: "diagram",
+      type: "vendor.diagram",
+      attrs: { theme: "dark" },
+      content: [{ kind: "vendor.token", metadata: { color: "red" } }],
+      children: [{ id: "nested", type: "vendor.node", metadata: { rank: 1 } }],
+    }
+    const extendedKnown = {
+      id: "extended",
+      type: "paragraph",
+      text: "Preserve me",
+      vendorMetadata: { revision: 7 },
+    }
+
+    const parsed = pageDocumentSchema.parse({
+      pageId: "extensions",
+      version: 1,
+      blocks: [unknown, extendedKnown],
+    })
+
+    expect(parsed.blocks).toEqual([unknown, extendedKnown])
+  })
+
+  it("preserves a known block with an unknown mark as opaque", () => {
+    const block = {
+      id: "colored",
+      type: "paragraph",
+      text: "Colored",
+      content: [
+        { kind: "text", text: "Colored", marks: [{ type: "color", attrs: { value: "red" } }] },
+      ],
+    }
+
+    expect(
+      pageDocumentSchema.parse({ pageId: "marks", version: 1, blocks: [block] }).blocks[0],
+    ).toEqual(block)
+  })
+
+  it("rejects malformed required fields for known block types instead of masking them as opaque", () => {
+    expect(
+      pageDocumentSchema.safeParse({
+        pageId: "invalid",
+        version: 1,
+        blocks: [{ id: "bad", type: "paragraph", text: 42, vendorMetadata: true }],
+      }).success,
+    ).toBe(false)
+    expect(
+      pageDocumentSchema.safeParse({
+        pageId: "invalid-mark",
+        version: 1,
+        blocks: [
+          {
+            id: "bad-mark",
+            type: "paragraph",
+            text: "Bad",
+            vendorMetadata: true,
+            content: [{ kind: "text", text: "Bad", marks: [{ type: "link", attrs: {} }] }],
+          },
+        ],
+      }).success,
+    ).toBe(false)
+  })
+
+  it("allows opaque source children but keeps the canonical source root known and bounded", () => {
+    const child = { id: "extension", type: "vendor.source-child", metadata: { stable: true } }
+    const parsed = syncedSourceSchema.parse({
+      id: "source-with-extension",
+      version: 1,
+      section: { id: "source-root", type: "section", children: [child] },
+    })
+    expect(
+      parsed.section.type === "section" && !isOpaqueWorkspaceBlock(parsed.section)
+        ? parsed.section.children[0]
+        : undefined,
+    ).toEqual(child)
+    expect(
+      syncedSourceSchema.safeParse({
+        id: "opaque-root",
+        version: 1,
+        section: { id: "root", type: "vendor.root", metadata: {} },
+      }).success,
+    ).toBe(false)
+
+    let nested: Record<string, unknown> = { id: "leaf", type: "paragraph", text: "leaf" }
+    for (let depth = 0; depth < 65; depth += 1)
+      nested = { id: `section-${depth}`, type: "section", children: [nested] }
+    expect(
+      pageDocumentSchema.safeParse({ pageId: "too-deep", version: 1, blocks: [nested] }).success,
+    ).toBe(false)
   })
 })

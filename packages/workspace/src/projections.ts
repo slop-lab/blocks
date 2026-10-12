@@ -1,4 +1,5 @@
 import type { SectionBlock, SyncedSource, WorkspaceBlock } from "./schemas.js"
+import { isOpaqueWorkspaceBlock } from "./schemas.js"
 
 export const headingLevelAtDepth = (authoredLevel: number, embeddingDepth: number): number =>
   Math.min(6, Math.max(1, authoredLevel + Math.max(0, embeddingDepth)))
@@ -46,6 +47,7 @@ export const snapshotSyncedSource = (
   createId: () => string,
 ): readonly WorkspaceBlock[] => {
   const clone = (block: WorkspaceBlock): WorkspaceBlock => {
+    if (isOpaqueWorkspaceBlock(block)) return block
     switch (block.type) {
       case "paragraph":
       case "code":
@@ -65,5 +67,7 @@ export const snapshotSyncedSource = (
         return block satisfies never
     }
   }
-  return source.section.type === "section" ? source.section.children.map(clone) : []
+  return source.section.type === "section" && !isOpaqueWorkspaceBlock(source.section)
+    ? source.section.children.map(clone)
+    : []
 }

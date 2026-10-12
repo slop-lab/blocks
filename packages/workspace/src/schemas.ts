@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { withinRawWorkspaceBlockBudget, withinWorkspaceBlockBudget } from "./block-budget.js"
 import {
   blockSchema,
   legacyBlockSchema,
@@ -6,6 +7,7 @@ import {
   pageDocumentSchema,
 } from "./blocks.js"
 import { entityIdSchema } from "./ids.js"
+import { isOpaqueWorkspaceBlock } from "./opaque.js"
 
 export { entityIdSchema }
 
@@ -61,12 +63,20 @@ export const databaseSchema = z
 const currentSourceSchema = z
   .object({ id: entityIdSchema, version: z.number().int().positive(), section: blockSchema })
   .strict()
-  .refine((value) => value.section.type === "section", {
+  .refine((value) => value.section.type === "section" && !isOpaqueWorkspaceBlock(value.section), {
     path: ["section"],
     message: "Source root must be a section",
   })
+  .refine((value) => withinWorkspaceBlockBudget([value.section]), {
+    path: ["section"],
+    message: "Workspace block budget exceeded",
+  })
   .superRefine((value, context) => {
-    const visit = (block: z.infer<typeof blockSchema>): void => {
+    const stack: z.infer<typeof blockSchema>[] = [value.section]
+    while (stack.length > 0) {
+      const block = stack.pop()
+      if (block === undefined) break
+      if (isOpaqueWorkspaceBlock(block)) continue
       if (block.type === "section") {
         if (block.ref?.sourceId === value.id)
           context.addIssue({
@@ -82,9 +92,8 @@ const currentSourceSchema = z
           })
       }
       if (block.type === "section" || block.type === "callout" || block.type === "quote")
-        for (const child of block.children) visit(child)
+        stack.push(...block.children)
     }
-    visit(value.section)
   })
 const legacySourceSchema = z
   .object({
@@ -94,6 +103,13 @@ const legacySourceSchema = z
   })
   .strict()
 export const syncedSourceSchema = z.preprocess((input) => {
+  if (
+    typeof input === "object" &&
+    input !== null &&
+    "section" in input &&
+    !withinRawWorkspaceBlockBudget([input.section])
+  )
+    return { ...input, section: null }
   const legacy = legacySourceSchema.safeParse(input)
   return legacy.success
     ? {
@@ -116,5 +132,6 @@ export type DatabaseRow = z.infer<typeof databaseRowSchema>
 export type DatabaseProperty = z.infer<typeof propertySchema>
 export type SyncedSource = z.infer<typeof syncedSourceSchema>
 
-export type { InlineContent, SectionBlock, WorkspaceBlock } from "./blocks.js"
-export { blockSchema, pageDocumentSchema }
+export type { InlineContent, KnownWorkspaceBlock, SectionBlock, WorkspaceBlock } from "./blocks.js"
+export type { OpaqueWorkspaceBlock } from "./opaque.js"
+export { blockSchema, isOpaqueWorkspaceBlock, pageDocumentSchema }

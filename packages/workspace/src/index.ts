@@ -1,4 +1,4 @@
-export type { InlineContent } from "./blocks.js"
+export type { InlineContent, KnownWorkspaceBlock } from "./blocks.js"
 export type { DatabaseRowGroup } from "./database.js"
 export {
   addDatabaseProperty,
@@ -28,6 +28,7 @@ export type {
   Database,
   DatabaseProperty,
   DatabaseRow,
+  OpaqueWorkspaceBlock,
   Page,
   PageDocument,
   SectionBlock,
@@ -39,6 +40,7 @@ export {
   blockSchema,
   databaseSchema,
   entityIdSchema,
+  isOpaqueWorkspaceBlock,
   pageDocumentSchema,
   pageSchema,
   propertySchema,

@@ -1,5 +1,8 @@
 import { z } from "zod"
+import { withinRawWorkspaceBlockBudget, withinWorkspaceBlockBudget } from "./block-budget.js"
 import { entityIdSchema } from "./ids.js"
+import { isOpaqueWorkspaceBlock, type OpaqueWorkspaceBlock } from "./opaque.js"
+import { createWorkspaceBlockSchema } from "./opaque-block-schema.js"
 
 const simpleMarkSchema = z.object({ type: z.enum(["strong", "em", "code"]) }).strict()
 const linkMarkSchema = z
@@ -52,13 +55,14 @@ export type ContainerBlock = {
   readonly type: "callout" | "quote"
   readonly children: readonly WorkspaceBlock[]
 }
-export type WorkspaceBlock =
+export type KnownWorkspaceBlock =
   | ParagraphBlock
   | CodeBlock
   | PageReferenceBlock
   | DatabaseEmbedBlock
   | SectionBlock
   | ContainerBlock
+export type WorkspaceBlock = KnownWorkspaceBlock | OpaqueWorkspaceBlock
 
 const paragraphBlockSchema = z
   .object({
@@ -83,7 +87,7 @@ const databaseEmbedBlockSchema = z
   })
   .strict()
 
-export const blockSchema: z.ZodType<WorkspaceBlock> = z.lazy(() =>
+const knownBlockSchema: z.ZodType<KnownWorkspaceBlock> = z.lazy(() =>
   z.discriminatedUnion("type", [
     paragraphBlockSchema,
     codeBlockSchema,
@@ -109,6 +113,8 @@ export const blockSchema: z.ZodType<WorkspaceBlock> = z.lazy(() =>
       .strict(),
   ]),
 )
+
+export const blockSchema = createWorkspaceBlockSchema(knownBlockSchema, inlineMarkSchema)
 
 const legacyHeadingSchema = z
   .object({
@@ -203,7 +209,7 @@ export const migrateLegacyBlocks = (blocks: readonly LegacyBlock[]): readonly Wo
     else parent.children.push(migrated)
   }
   const stripLevel = (block: WorkspaceBlock | SectionBuilder): WorkspaceBlock => {
-    if (block.type !== "section") return block
+    if (block.type !== "section" || isOpaqueWorkspaceBlock(block)) return block
     return {
       id: block.id,
       type: "section",
@@ -231,8 +237,19 @@ const currentPageSchema = z
     blocks: z.array(blockSchema).max(2_000),
   })
   .strict()
+  .refine((value) => withinWorkspaceBlockBudget(value.blocks), {
+    path: ["blocks"],
+    message: "Workspace block budget exceeded",
+  })
 
 export const pageDocumentSchema = z.preprocess((input) => {
+  if (
+    typeof input === "object" &&
+    input !== null &&
+    "blocks" in input &&
+    !withinRawWorkspaceBlockBudget(input.blocks)
+  )
+    return { ...input, blocks: null }
   const legacy = legacyPageSchema.safeParse(input)
   return legacy.success
     ? { ...legacy.data, blocks: migrateLegacyBlocks(legacy.data.blocks) }

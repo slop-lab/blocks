@@ -23,6 +23,10 @@
       "types": "./dist/heading.d.ts",
       "import": "./dist/heading.js"
     },
+    "./containers": {
+      "types": "./dist/containers.d.ts",
+      "import": "./dist/containers.js"
+    },
     "./quote": {
       "types": "./dist/quote.d.ts",
       "import": "./dist/quote.js"

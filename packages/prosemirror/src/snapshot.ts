@@ -28,6 +28,8 @@ const supportedMark = (raw: unknown): boolean => {
 const canEdit = (block: BlockSnapshot, profile: ProseMirrorProfile): boolean => {
   const registration = profile.registrations.get(block.type)
   if (registration === undefined) return false
+  if (registration.container !== undefined)
+    return (block.children ?? []).every((child) => canEdit(child, profile))
   if (!registration.text) return block.content.length === 0
   return block.content.every(
     (inline) =>
@@ -85,20 +87,40 @@ export const snapshotToPm = (
 ): ProseMirrorNode => {
   const { format, blocks, ...documentExtras } = document
   void format
+  const convert = (block: BlockSnapshot): ProseMirrorNode => {
+    const registration = profile.registrations.get(block.type)
+    if (!canEdit(block, profile) || registration === undefined) return opaqueNode(block, profile)
+    const nodeType = profile.schema.nodes[registration.nodeName]
+    if (nodeType === undefined) return opaqueNode(block, profile)
+    if (registration.container !== undefined) {
+      const children: ProseMirrorNode[] = []
+      if (registration.container === "titled" && block.content.length > 0) {
+        const titleName = registration.titleNodeName
+        if (titleName === undefined) throw new TypeError(`Missing title node for ${block.type}`)
+        children.push(
+          requireNode(profile, titleName).create(
+            undefined,
+            block.content.flatMap((inline) =>
+              inline.kind === "text"
+                ? [profile.schema.text(inline.text, marksFrom(inline.marks, profile))]
+                : [],
+            ),
+          ),
+        )
+      }
+      children.push(...(block.children ?? []).map(convert))
+      return nodeType.create(attrsFor(block), children)
+    }
+    const content = block.content.flatMap((inline) =>
+      inline.kind === "text"
+        ? [profile.schema.text(inline.text, marksFrom(inline.marks, profile))]
+        : [],
+    )
+    return nodeType.create(attrsFor(block), nodeType.isLeaf ? undefined : content)
+  }
   return requireNode(profile, "doc").create(
     { documentExtras: structuredClone(documentExtras) },
-    blocks.map((block) => {
-      const registration = profile.registrations.get(block.type)
-      if (!canEdit(block, profile) || registration === undefined) return opaqueNode(block, profile)
-      const nodeType = profile.schema.nodes[registration.nodeName]
-      if (nodeType === undefined) return opaqueNode(block, profile)
-      const content = block.content.flatMap((inline) =>
-        inline.kind === "text"
-          ? [profile.schema.text(inline.text, marksFrom(inline.marks, profile))]
-          : [],
-      )
-      return nodeType.create(attrsFor(block), nodeType.isLeaf ? undefined : content)
-    }),
+    blocks.map(convert),
   )
 }
 
@@ -117,56 +139,67 @@ export const pmToSnapshot = (
 ): BlockDocument => {
   const extras = document.attrs["documentExtras"]
   const documentExtras = typeof extras === "object" && extras !== null ? extras : {}
+  const convert = (node: ProseMirrorNode): BlockSnapshot => {
+    if (node.type.name === "opaque") {
+      const raw = node.attrs["raw"]
+      if (typeof raw === "string") {
+        try {
+          const original = decodeDocument({
+            format: "block-editor/v0.3",
+            blocks: [JSON.parse(raw)],
+          }).blocks[0]
+          if (original !== undefined) return original
+        } catch (error) {
+          if (!(error instanceof DocumentCodecError) && !(error instanceof SyntaxError)) throw error
+        }
+      }
+    }
+    const registration = profile.registrationsByNode.get(node.type.name)
+    const mappedType = registration?.type ?? node.type.name
+    const stored = node.attrs["snapshotAttrs"]
+    const attrs: Record<string, unknown> =
+      typeof stored === "object" && stored !== null ? { ...stored } : {}
+    for (const name of Object.keys(registration?.nodeSpec.attrs ?? {})) {
+      if (!["id", "locked", "snapshotAttrs", "blockExtras", "snapshotType"].includes(name))
+        attrs[name] = node.attrs[name]
+    }
+    const content: InlineSnapshot[] = []
+    const children: BlockSnapshot[] = []
+    node.content.forEach((child) => {
+      if (child.isText)
+        content.push({ kind: "text", text: child.text ?? "", marks: child.marks.map(markSnapshot) })
+      else if (
+        registration?.container === "titled" &&
+        child.type.name === registration.titleNodeName
+      )
+        child.content.forEach((inline) => {
+          if (inline.isText)
+            content.push({
+              kind: "text",
+              text: inline.text ?? "",
+              marks: inline.marks.map(markSnapshot),
+            })
+        })
+      else if (registration?.container !== undefined) children.push(convert(child))
+    })
+    const id = node.attrs["id"]
+    const blockExtras =
+      typeof node.attrs["blockExtras"] === "object" && node.attrs["blockExtras"] !== null
+        ? node.attrs["blockExtras"]
+        : {}
+    return {
+      ...blockExtras,
+      id: typeof id === "string" ? id : crypto.randomUUID(),
+      type: mappedType,
+      attrs,
+      content,
+      ...(registration?.container === undefined ? {} : { children }),
+      ...(node.attrs["locked"] === true ? { locked: true } : {}),
+    }
+  }
   return {
     ...documentExtras,
     format: "block-editor/v0.3",
-    blocks: document.content.content.map((node): BlockSnapshot => {
-      if (node.type.name === "opaque") {
-        const raw = node.attrs["raw"]
-        if (typeof raw === "string") {
-          try {
-            const original = decodeDocument({
-              format: "block-editor/v0.3",
-              blocks: [JSON.parse(raw)],
-            }).blocks[0]
-            if (original !== undefined) return original
-          } catch (error) {
-            if (!(error instanceof DocumentCodecError) && !(error instanceof SyntaxError))
-              throw error
-          }
-        }
-      }
-      const registration = profile.registrationsByNode.get(node.type.name)
-      const mappedType = registration?.type ?? node.type.name
-      const stored = node.attrs["snapshotAttrs"]
-      const attrs: Record<string, unknown> =
-        typeof stored === "object" && stored !== null ? { ...stored } : {}
-      for (const name of Object.keys(registration?.nodeSpec.attrs ?? {})) {
-        if (!["id", "locked", "snapshotAttrs", "blockExtras", "snapshotType"].includes(name))
-          attrs[name] = node.attrs[name]
-      }
-      const content: InlineSnapshot[] = []
-      node.content.forEach((child) => {
-        if (child.isText)
-          content.push({
-            kind: "text",
-            text: child.text ?? "",
-            marks: child.marks.map(markSnapshot),
-          })
-      })
-      const id = node.attrs["id"]
-      const blockExtras =
-        typeof node.attrs["blockExtras"] === "object" && node.attrs["blockExtras"] !== null
-          ? node.attrs["blockExtras"]
-          : {}
-      return {
-        ...blockExtras,
-        id: typeof id === "string" ? id : crypto.randomUUID(),
-        type: mappedType,
-        attrs,
-        content,
-        ...(node.attrs["locked"] === true ? { locked: true } : {}),
-      }
-    }),
+    blocks: document.content.content.map(convert),
   }
 }

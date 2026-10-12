@@ -5,6 +5,8 @@ export type BlockRegistration = BlockDefinition & {
   readonly nodeName: string
   readonly nodeSpec: NodeSpec
   readonly referenceAttrs?: readonly string[]
+  readonly container?: "titled" | "body"
+  readonly titleNodeName?: string
 }
 
 export type ProseMirrorProfile = {

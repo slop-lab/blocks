@@ -7,7 +7,8 @@ import { captureLinkTarget, isCurrentLinkTarget, type LinkTarget } from "./link-
 
 export type SelectionToolbarOptions = {
   readonly readOnly: boolean
-  readonly active?: () => boolean
+  readonly isActive?: () => boolean
+  readonly onElement?: (element: HTMLElement | null) => void
 }
 
 const iconButton = (ownerDocument: Document, label: string, text: string): HTMLButtonElement => {
@@ -32,6 +33,7 @@ export const attachSelectionToolbar = (
   toolbar.ariaLabel = "선택한 글자 서식"
   toolbar.hidden = true
   ownerDocument.body.append(toolbar)
+  options.onElement?.(toolbar)
   let detachLinkShortcut: () => void = () => {}
 
   const runMark = (mark: MarkType) => {
@@ -156,7 +158,7 @@ export const attachSelectionToolbar = (
 
   function update(): void {
     const selection = view.state.selection
-    const active = options.active?.() ?? true
+    const active = options.isActive?.() ?? true
     const linkFormOpen = toolbar.classList.contains("selection-toolbar--link-open")
     const textSelection = !selection.empty && !(selection instanceof NodeSelection)
     const code = selection.$from.parent.type.spec.code === true
@@ -210,6 +212,7 @@ export const attachSelectionToolbar = (
     ownerDocument.defaultView?.visualViewport?.removeEventListener("resize", schedule)
     ownerDocument.defaultView?.visualViewport?.removeEventListener("scroll", schedule)
     detachLinkShortcut()
+    options.onElement?.(null)
     toolbar.remove()
   }
 }

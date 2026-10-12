@@ -48,7 +48,8 @@ export const proseMirrorAttachmentFactory = createAttachmentFactory<ProseMirrorA
     })
     const detachInteractions = attachBlockInteractions(view, {
       readOnly: false,
-      active: context.active,
+      isActive: context.active,
+      claim: context.onActivate,
     })
     context.onReady(view)
     return () => {

@@ -37,6 +37,12 @@ export const CompositeWorkspace = ({
     () => JSON.stringify(initial.saved) !== JSON.stringify(initial.draft),
   )
   const [activeContext, setActiveContext] = useState<CompositeContext>("prose")
+  const activeContextRef = useRef<CompositeContext>(activeContext)
+  activeContextRef.current = activeContext
+  const claimContext = (context: CompositeContext) => {
+    activeContextRef.current = context
+    setActiveContext(context)
+  }
   const [proseView, setProseView] = useState<EditorView | null>(null)
   const [codeView, setCodeView] = useState<CodeView | null>(null)
   const [status, setStatus] = useState("일정 표를 편집할 수 있습니다.")
@@ -120,7 +126,7 @@ export const CompositeWorkspace = ({
           </header>
           <ProseMirrorSurface
             document={proseDocument}
-            active={() => activeContext === "prose"}
+            active={() => activeContextRef.current === "prose"}
             onChange={(document) => {
               proseDocumentRef.current = document
               setProseDocument(document)
@@ -132,7 +138,7 @@ export const CompositeWorkspace = ({
             }}
             onReady={setProseView}
             onActivate={() => {
-              setActiveContext("prose")
+              claimContext("prose")
               setStatus("일정 표를 편집하고 있습니다. Tab으로 다음 칸으로 이동할 수 있습니다.")
             }}
           />
@@ -169,7 +175,7 @@ export const CompositeWorkspace = ({
             }}
             onReady={setCodeView}
             onActivate={() => {
-              setActiveContext("code")
+              claimContext("code")
               setStatus("여행 준비 데이터를 편집하고 있습니다.")
             }}
           />

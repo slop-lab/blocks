@@ -206,3 +206,64 @@ it("reserves repair-like original IDs before allocating recursive duplicate repl
     occurrenceId: "occurrence-x",
   })
 })
+
+it("round-trips opaque workspace payloads while editing a known neighbor", () => {
+  const opaque = {
+    id: "diagram",
+    type: "vendor.diagram",
+    attrs: { canvas: { width: 640 } },
+    content: [{ kind: "vendor.label", text: "Raw label", metadata: { locale: "ko" } }],
+    children: [{ id: "shape", type: "vendor.shape", attrs: { x: 12, y: 20 } }],
+  }
+  const original = pageDocumentSchema.parse({
+    pageId: "opaque-page",
+    version: 1,
+    blocks: [
+      opaque,
+      { id: "known", type: "paragraph", text: "Before" },
+      {
+        id: "known-extension",
+        type: "paragraph",
+        text: "Unsupported mark",
+        content: [
+          {
+            kind: "text",
+            text: "Unsupported mark",
+            marks: [{ type: "color", attrs: { value: "orange" } }],
+          },
+        ],
+      },
+    ],
+  })
+  const snapshot = pageDocumentToSnapshot(original)
+  const session = new ModelSession({
+    modelId: original.pageId,
+    document: snapshot,
+    epoch: 1,
+    version: original.version,
+    readOnly: false,
+    profile: createWorkspaceProfile(0),
+  })
+  const editedSnapshot = {
+    ...session.snapshot,
+    blocks: session.snapshot.blocks.map((block) =>
+      block.id === "known"
+        ? { ...block, content: [{ kind: "text" as const, text: "After", marks: [] }] }
+        : block,
+    ),
+  }
+
+  const edited = snapshotToPageDocument(editedSnapshot, original)
+
+  expect(edited.blocks[0]).toEqual(opaque)
+  expect(edited.blocks[1]).toEqual({ id: "known", type: "paragraph", text: "After" })
+  expect(edited.blocks[2]).toEqual(original.blocks[2])
+  expect(session.state.doc.child(0).type.name).toBe("opaque")
+  expect(session.state.doc.child(2).type.name).toBe("opaque")
+  expect(snapshot.blocks[0]).toMatchObject({
+    id: "diagram",
+    type: "workspace.opaque",
+    originalType: "vendor.diagram",
+    locked: true,
+  })
+})

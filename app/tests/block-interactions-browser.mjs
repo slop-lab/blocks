@@ -96,6 +96,26 @@ try {
     true,
   )
   await editor.focus()
+  await page.evaluate(() => {
+    window.__blockClipboardTypes = []
+    window.__originalClipboardSetData = DataTransfer.prototype.setData
+    DataTransfer.prototype.setData = function recordClipboardType(type, data) {
+      window.__blockClipboardTypes.push(type)
+      return window.__originalClipboardSetData.call(this, type, data)
+    }
+  })
+  await page.keyboard.press("Control+c")
+  await page.waitForFunction(() => window.__blockClipboardTypes.length > 0)
+  const clipboardTypes = await page.evaluate(() => {
+    DataTransfer.prototype.setData = window.__originalClipboardSetData
+    return window.__blockClipboardTypes
+  })
+  assert.ok(
+    clipboardTypes.includes("application/x-block-editor+json"),
+    `clipboard types: ${clipboardTypes.join(", ")}`,
+  )
+  assert.ok(clipboardTypes.includes("text/plain"))
+  assert.equal(clipboardTypes.includes("text/html"), false)
   await page.keyboard.press("Control+x")
   assert.equal(await editor.locator("[data-block-id]").count(), countBeforeCut - 1)
   await page.keyboard.press("Control+v")
@@ -134,13 +154,13 @@ try {
   assert.equal(
     await editor.locator(".block-selected").count(),
     1,
-    `selected ids: ${await editor.getAttribute("data-selected-block-ids")}`,
+    "Ctrl-click selects exactly one block",
   )
   await clickWith(thirdSelectable, "Shift")
   assert.equal(
-    (await editor.getAttribute("data-selected-block-ids"))?.split(" ").length,
+    await editor.locator(".block-selected").count(),
     4,
-    `range ids: ${await editor.getAttribute("data-selected-block-ids")}`,
+    "Shift-click extends selection through document order",
   )
   assert.equal(await editor.locator(".block-selected").count(), 4)
   await clickWith(secondSelectable, "Control")
@@ -174,7 +194,10 @@ try {
       }),
     true,
   )
-  await page.keyboard.press("Escape")
+  const countBeforeOutsideClick = await editor.locator("[data-block-id]").count()
+  await page.locator("aside[aria-label='예제 탐색']").click({ position: { x: 4, y: 4 } })
+  assert.equal(await editor.locator(".block-selected").count(), 0)
+  assert.equal(await editor.locator("[data-block-id]").count(), countBeforeOutsideClick)
 
   const movable = editor.locator("[data-block-id]").first()
   const sourceId = await movable.getAttribute("data-block-id")

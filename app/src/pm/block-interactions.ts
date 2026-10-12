@@ -1,4 +1,4 @@
-import type { ClipboardPolicy } from "@block-editor/interactions"
+import { InteractionContextArbiter } from "@block-editor/interactions"
 import type { Command } from "prosemirror-state"
 import type { EditorView } from "prosemirror-view"
 import { createBlockControls } from "./block-controls"
@@ -9,12 +9,16 @@ import {
   createBlockAfter,
   moveBlocksById,
 } from "./block-interaction-commands"
-import type { BlockInteractionOptions } from "./block-interaction-options"
+import {
+  type BlockInteractionOptions,
+  defaultBlockClipboardPolicy,
+} from "./block-interaction-options"
 import { attachBlockKeyboard } from "./block-keyboard"
 import { createBlockMenu } from "./block-menu"
 import { blockMenuItems } from "./block-menu-items"
 import { attachRailPointerIntent } from "./block-rail-intent"
 import { attachBlockSelection } from "./block-selection"
+import { createBlockSelectionContext } from "./block-selection-context"
 import { createBlockSelectionStatus } from "./block-selection-status"
 import { insertionChoices } from "./insertion-catalog"
 import { attachSelectionToolbar } from "./selection-toolbar"
@@ -22,28 +26,46 @@ import { attachSlashMenu } from "./slash-menu"
 
 export type { BlockInteractionOptions } from "./block-interaction-options"
 
+const documentScopes = new WeakMap<Document, InteractionContextArbiter>()
+let contextSequence = 0
+
+const defaultScope = (document: Document): InteractionContextArbiter => {
+  const existing = documentScopes.get(document)
+  if (existing !== undefined) return existing
+  const scope = new InteractionContextArbiter()
+  documentScopes.set(document, scope)
+  return scope
+}
+
 export const attachBlockInteractions = (
   view: EditorView,
   options: BlockInteractionOptions,
 ): (() => void) => {
   const ownerDocument = view.dom.ownerDocument
+  contextSequence += 1
+  const context = (options.scope ?? defaultScope(ownerDocument)).context(
+    options.contextId ?? `prosemirror:${contextSequence}`,
+  )
+  const isActive = options.isActive ?? context.isActive
+  const claim = options.claim ?? context.claim
+  const subscribeActive = options.subscribeActive ?? context.subscribe
   const { rail, add, grip } = createBlockControls(ownerDocument)
   const menu = createBlockMenu(ownerDocument, "블록 작업")
   const selectionStatus = createBlockSelectionStatus(view.dom)
+  const selectionContext = createBlockSelectionContext([rail, menu.element])
   const blockSelection = attachBlockSelection(view, {
-    clipboard:
-      options.clipboardPolicy ??
-      ({
-        namespace: "block-editor/default",
-        cut: "remove-after-write",
-        paste: () => "clone",
-      } satisfies ClipboardPolicy),
+    clipboard: options.clipboardPolicy ?? defaultBlockClipboardPolicy,
     ...(options.onDeferredCut === undefined ? {} : { onDeferredCut: options.onDeferredCut }),
+    ...(options.interactionContext === undefined
+      ? {}
+      : { interactionContext: options.interactionContext }),
     ...(options.onReferencePaste === undefined
       ? {}
       : { onReferencePaste: options.onReferencePaste }),
     ...(options.onUnavailable === undefined ? {} : { onUnavailable: options.onUnavailable }),
-    isContextTarget: (target) => rail.contains(target) || menu.element.contains(target),
+    isActive,
+    claim,
+    isContextTarget: selectionContext.contains,
     onSelectionChange: selectionStatus.update,
   })
   let activeId: string | null = null
@@ -106,12 +128,7 @@ export const attachBlockInteractions = (
   }
   const showRail = (block: HTMLElement) => {
     const blockId = block.dataset["blockId"]
-    if (
-      blockId === undefined ||
-      !ownsBlock(block) ||
-      options.readOnly ||
-      options.active?.() === false
-    ) {
+    if (blockId === undefined || !ownsBlock(block) || options.readOnly || !isActive()) {
       hideRail()
       return
     }
@@ -138,6 +155,7 @@ export const attachBlockInteractions = (
     if (locked) menu.close()
   }
   const refreshFromSelection = () => {
+    claim()
     const { $from } = view.state.selection
     let id: unknown
     for (let depth = $from.depth; depth > 0 && typeof id !== "string"; depth -= 1)
@@ -196,7 +214,10 @@ export const attachBlockInteractions = (
     targetId: () => railId,
     activeRect: () => activeRect,
     ownsBlock,
-    show: showRail,
+    show: (block) => {
+      claim()
+      showRail(block)
+    },
   })
   const onDocumentPointerDown = (event: PointerEvent) => {
     if (!(event.target instanceof Node)) return
@@ -225,8 +246,17 @@ export const attachBlockInteractions = (
   ownerDocument.defaultView?.visualViewport?.addEventListener("resize", refreshActiveRail)
   ownerDocument.defaultView?.visualViewport?.addEventListener("scroll", refreshActiveRail)
   const detachSlash = options.readOnly ? () => undefined : attachSlashMenu(view)
-  const detachFormat = attachSelectionToolbar(view, options)
+  const detachFormat = attachSelectionToolbar(view, {
+    ...options,
+    onElement: selectionContext.updateToolbar,
+  })
+  const detachActive = subscribeActive((active) => {
+    if (active) return
+    blockSelection.clear()
+    hideRail()
+  })
   return () => {
+    detachActive()
     detachSlash()
     detachFormat()
     detachKeyboard()

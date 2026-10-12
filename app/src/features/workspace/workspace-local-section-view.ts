@@ -1,5 +1,5 @@
 import { pmToSnapshot } from "@block-editor/prosemirror"
-import { convertSectionToSyncedSource } from "@block-editor/workspace"
+import { convertSectionToSyncedSource, isOpaqueWorkspaceBlock } from "@block-editor/workspace"
 import type { Node as ProseMirrorNode } from "prosemirror-model"
 import type { EditorView, NodeView } from "prosemirror-view"
 import { snapshotToPageDocument } from "./workspace-editor-model"
@@ -46,7 +46,7 @@ export const createLocalSectionView = ({
       version: 1,
       blocks: [],
     }).blocks[0]
-    if (converted?.type !== "section") return
+    if (converted?.type !== "section" || isOpaqueWorkspaceBlock(converted)) return
     const result = convertSectionToSyncedSource(converted, () => crypto.randomUUID())
     void data.current.onSourceCreate(result.source).then((created) => {
       if (created === null) return

@@ -1,13 +1,8 @@
-import { SourceRuntimeRegistry } from "@block-editor/bindings"
 import type { Node as ProseMirrorNode } from "prosemirror-model"
-import type { EditorState } from "prosemirror-state"
 import type { NodeView, NodeViewConstructor } from "prosemirror-view"
 import { createLocalSectionView } from "./workspace-local-section-view"
-import {
-  type NestedEditor,
-  nodeViewButton,
-  type WorkspaceNodeViewData,
-} from "./workspace-node-view-types"
+import { nodeViewButton, type WorkspaceNodeViewData } from "./workspace-node-view-types"
+import type { WorkspaceSourceRuntime } from "./workspace-source-runtime"
 import { createSyncedSectionView } from "./workspace-synced-section-view"
 
 export type WorkspaceNodeViews = {
@@ -37,37 +32,11 @@ const atomicView = (
   }
 }
 
-export const createWorkspaceNodeViews = (data: {
-  current: WorkspaceNodeViewData
-}): WorkspaceNodeViews => {
+export const createWorkspaceNodeViews = (
+  data: { current: WorkspaceNodeViewData },
+  sourceController: WorkspaceSourceRuntime,
+): WorkspaceNodeViews => {
   const renders = new Set<() => void>()
-  const nestedEditors = new Map<string, NestedEditor>()
-  const sourceRuntimes = new SourceRuntimeRegistry<EditorState, ProseMirrorNode>({
-    contentOf: (state) => state.doc,
-    replaceContent: (state, document) =>
-      state.apply(
-        state.tr
-          .replaceWith(0, state.doc.content.size, document.content)
-          .setMeta("addToHistory", false)
-          .setMeta("origin", "remote"),
-      ),
-  })
-  let activeOccurrence: string | null = null
-  const activity = {
-    current: () => activeOccurrence,
-    activate: (occurrenceId: string) => {
-      activeOccurrence = occurrenceId
-      for (const editor of nestedEditors.values()) editor.view.setProps({})
-    },
-    deactivate: (occurrenceId: string) => {
-      if (activeOccurrence !== occurrenceId) return
-      activeOccurrence = null
-      for (const editor of nestedEditors.values()) {
-        editor.view.setProps({})
-        editor.refresh()
-      }
-    },
-  }
   const nodeViews: Readonly<Record<string, NodeViewConstructor>> = {
     workspace_page_ref: (node, view) =>
       atomicView(
@@ -105,9 +74,8 @@ export const createWorkspaceNodeViews = (data: {
             view,
             getPos,
             data,
-            editors: nestedEditors,
-            activity,
-            runtimes: sourceRuntimes,
+            sourceController,
+            renders,
           }),
     section_title: (_node, view, getPos) => {
       const position = getPos()
@@ -126,13 +94,9 @@ export const createWorkspaceNodeViews = (data: {
     nodeViews,
     refresh: () => {
       for (const render of renders) render()
-      for (const editor of nestedEditors.values()) editor.refresh()
     },
     destroy: () => {
       renders.clear()
-      for (const editor of nestedEditors.values()) editor.destroy()
-      nestedEditors.clear()
-      sourceRuntimes.clear()
     },
   }
 }

@@ -1,10 +1,14 @@
 import { z } from "zod"
+import {
+  blockSchema,
+  legacyBlockSchema,
+  migrateLegacyBlocks,
+  pageDocumentSchema,
+} from "./blocks.js"
+import { entityIdSchema } from "./ids.js"
 
-export const entityIdSchema = z
-  .string()
-  .min(1)
-  .max(80)
-  .regex(/^[a-zA-Z0-9_-]+$/u)
+export { entityIdSchema }
+
 export const pageSchema = z
   .object({
     id: entityIdSchema,
@@ -14,6 +18,7 @@ export const pageSchema = z
     archived: z.boolean(),
   })
   .strict()
+
 export const workspaceSchema = z
   .object({
     id: entityIdSchema,
@@ -22,63 +27,7 @@ export const workspaceSchema = z
   })
   .strict()
 
-export const textBlockSchema = z
-  .object({ id: entityIdSchema, type: z.literal("paragraph"), text: z.string().max(20_000) })
-  .strict()
-export const headingBlockSchema = z
-  .object({
-    id: entityIdSchema,
-    type: z.literal("heading"),
-    level: z.number().int().min(1).max(6),
-    text: z.string().max(2_000),
-  })
-  .strict()
-export const quoteBlockSchema = z
-  .object({ id: entityIdSchema, type: z.literal("quote"), text: z.string().max(20_000) })
-  .strict()
-export const codeBlockSchema = z
-  .object({ id: entityIdSchema, type: z.literal("code"), text: z.string().max(50_000) })
-  .strict()
-export const pageReferenceBlockSchema = z
-  .object({ id: entityIdSchema, type: z.literal("page_ref"), pageId: entityIdSchema })
-  .strict()
-export const syncedReferenceBlockSchema = z
-  .object({
-    id: entityIdSchema,
-    type: z.literal("synced_ref"),
-    occurrenceId: entityIdSchema,
-    sourceId: entityIdSchema,
-  })
-  .strict()
-export const databaseEmbedBlockSchema = z
-  .object({
-    id: entityIdSchema,
-    type: z.literal("database_embed"),
-    databaseId: entityIdSchema,
-    layout: z.enum(["table", "kanban"]),
-  })
-  .strict()
-export const blockSchema = z.discriminatedUnion("type", [
-  textBlockSchema,
-  headingBlockSchema,
-  quoteBlockSchema,
-  codeBlockSchema,
-  pageReferenceBlockSchema,
-  syncedReferenceBlockSchema,
-  databaseEmbedBlockSchema,
-])
-export const pageDocumentSchema = z
-  .object({
-    pageId: entityIdSchema,
-    version: z.number().int().positive(),
-    blocks: z.array(blockSchema).max(2_000),
-  })
-  .strict()
-
-const basePropertySchema = z.object({
-  id: entityIdSchema,
-  name: z.string().trim().min(1).max(80),
-})
+const basePropertySchema = z.object({ id: entityIdSchema, name: z.string().trim().min(1).max(80) })
 export const propertySchema = z.discriminatedUnion("type", [
   basePropertySchema.extend({ type: z.literal("text") }).strict(),
   basePropertySchema.extend({ type: z.literal("number") }).strict(),
@@ -109,15 +58,34 @@ export const databaseSchema = z
   })
   .strict()
 
-export const syncedSourceSchema = z
+const currentSourceSchema = z
+  .object({ id: entityIdSchema, version: z.number().int().positive(), section: blockSchema })
+  .strict()
+  .refine((value) => value.section.type === "section", {
+    path: ["section"],
+    message: "Source root must be a section",
+  })
+const legacySourceSchema = z
   .object({
     id: entityIdSchema,
     version: z.number().int().positive(),
-    blocks: z.array(
-      z.union([textBlockSchema, headingBlockSchema, quoteBlockSchema, codeBlockSchema]),
-    ),
+    blocks: z.array(legacyBlockSchema),
   })
   .strict()
+export const syncedSourceSchema = z.preprocess((input) => {
+  const legacy = legacySourceSchema.safeParse(input)
+  return legacy.success
+    ? {
+        id: legacy.data.id,
+        version: legacy.data.version,
+        section: {
+          id: `${legacy.data.id}-root`,
+          type: "section",
+          children: migrateLegacyBlocks(legacy.data.blocks),
+        },
+      }
+    : input
+}, currentSourceSchema)
 
 export type Workspace = z.infer<typeof workspaceSchema>
 export type Page = z.infer<typeof pageSchema>
@@ -126,3 +94,6 @@ export type Database = z.infer<typeof databaseSchema>
 export type DatabaseRow = z.infer<typeof databaseRowSchema>
 export type DatabaseProperty = z.infer<typeof propertySchema>
 export type SyncedSource = z.infer<typeof syncedSourceSchema>
+
+export type { InlineContent, SectionBlock, WorkspaceBlock } from "./blocks.js"
+export { blockSchema, pageDocumentSchema }

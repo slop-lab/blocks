@@ -1,8 +1,11 @@
+export type { InlineContent } from "./blocks.js"
+export type { DatabaseRowGroup } from "./database.js"
 export {
   addDatabaseProperty,
   addDatabaseRow,
   DatabaseValueError,
   filterAndSortRows,
+  groupDatabaseRows,
   patchDatabaseRow,
   removeDatabaseProperty,
 } from "./database.js"
@@ -14,8 +17,9 @@ export {
   restorePage,
   WorkspaceHierarchyError,
 } from "./hierarchy.js"
-export type { SyncedOccurrence } from "./projections.js"
+export type { SyncedOccurrence, SyncedSectionConversion } from "./projections.js"
 export {
+  convertSectionToSyncedSource,
   copySyncedOccurrence,
   headingLevelAtDepth,
   snapshotSyncedSource,
@@ -26,8 +30,10 @@ export type {
   DatabaseRow,
   Page,
   PageDocument,
+  SectionBlock,
   SyncedSource,
   Workspace,
+  WorkspaceBlock,
 } from "./schemas.js"
 export {
   blockSchema,

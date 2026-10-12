@@ -1,20 +1,53 @@
-import { Plugin } from "prosemirror-state"
-import type { EditorView } from "prosemirror-view"
+import { Plugin, PluginKey } from "prosemirror-state"
+import { Decoration, DecorationSet, type EditorView } from "prosemirror-view"
 import { BlockSelection } from "./index.js"
 import {
   attachProseMirrorClipboard,
   type ProseMirrorClipboardOptions,
 } from "./prosemirror-clipboard.js"
+import { attachSelectionDrag } from "./prosemirror-selection-drag.js"
+import {
+  isInteractiveTarget,
+  ownedBlockElements,
+  pointHitsGlyph,
+} from "./prosemirror-selection-hit.js"
 
 const updates = new WeakMap<EditorView, () => void>()
+const selectionKey = new PluginKey<readonly string[]>("block-editor-selection")
 
-export const blockSelectionReconcilePlugin = new Plugin({
+export const blockSelectionReconcilePlugin = new Plugin<readonly string[]>({
+  key: selectionKey,
+  state: {
+    init: (): readonly string[] => [],
+    apply: (transaction, value) => {
+      const meta: unknown = transaction.getMeta(selectionKey)
+      return Array.isArray(meta) ? meta.filter((id): id is string => typeof id === "string") : value
+    },
+  },
+  props: {
+    decorations: (state) => {
+      const selected = new Set(selectionKey.getState(state) ?? [])
+      const decorations: Decoration[] = []
+      state.doc.descendants((node, position) => {
+        if (selected.has(String(node.attrs["id"])))
+          decorations.push(
+            Decoration.node(position, position + node.nodeSize, { class: "block-selected" }),
+          )
+        return true
+      })
+      return DecorationSet.create(state.doc, decorations)
+    },
+  },
   view: (view) => {
     const ownerWindow = view.dom.ownerDocument.defaultView
     let frame = 0
     return {
       update: (updatedView, previousState) => {
-        if (updatedView.state.doc.eq(previousState.doc)) return
+        if (
+          updatedView.state.doc.eq(previousState.doc) &&
+          updatedView.state.selection.eq(previousState.selection)
+        )
+          return
         ownerWindow?.cancelAnimationFrame(frame)
         frame = ownerWindow?.requestAnimationFrame(() => updates.get(updatedView)?.()) ?? 0
       },
@@ -39,48 +72,42 @@ export type BlockSelectionOptions = ProseMirrorClipboardOptions & {
   readonly onSelectionChange?: (blockIds: readonly string[]) => void
 }
 
-const blockElements = (view: EditorView): readonly HTMLElement[] =>
-  Array.from(view.dom.querySelectorAll<HTMLElement>("[data-block-id]")).filter(
-    (element) => element.closest(".ProseMirror") === view.dom,
-  )
-
-const leafBlockElements = (view: EditorView): readonly HTMLElement[] =>
-  blockElements(view).filter(
-    (element) =>
-      !Array.from(element.querySelectorAll<HTMLElement>("[data-block-id]")).some(
-        (child) => child.closest(".ProseMirror") === view.dom,
-      ),
-  )
-
-const interactiveTarget = (target: HTMLElement): boolean =>
-  target.closest("button, a, input, textarea, select, [contenteditable='false']") !== null
-
 export const attachBlockSelection = (
   view: EditorView,
   options: BlockSelectionOptions,
 ): BlockSelectionController => {
   const ownerDocument = view.dom.ownerDocument
   const selection = new BlockSelection()
-  let marquee: {
-    readonly pointerId: number
-    readonly startX: number
-    readonly startY: number
-  } | null = null
-  const marqueeElement = ownerDocument.createElement("div")
-  marqueeElement.className = "block-selection-marquee"
-  marqueeElement.hidden = true
-  ownerDocument.body.append(marqueeElement)
+  let consumedModifierClick = false
+  let consumedModifierPointer = false
+  let renderFrame = 0
 
   const visibleIds = (): readonly string[] =>
-    blockElements(view).flatMap((element) =>
+    ownedBlockElements(view).flatMap((element) =>
       element.dataset["blockId"] === undefined ? [] : [element.dataset["blockId"]],
     )
   const render = () => {
     const selected = new Set(selection.value)
-    for (const element of blockElements(view))
+    for (const element of ownedBlockElements(view))
       element.classList.toggle("block-selected", selected.has(element.dataset["blockId"] ?? ""))
     view.dom.classList.toggle("block-selection-active", selected.size > 0)
+    view.dom.dataset["selectedBlockIds"] = selection.value.join(" ")
+    const decorated = selectionKey.getState(view.state) ?? []
+    if (
+      decorated.length !== selection.value.length ||
+      decorated.some((id, index) => id !== selection.value[index])
+    )
+      view.dispatch(
+        view.state.tr
+          .setMeta(selectionKey, selection.value)
+          .setMeta("addToHistory", false)
+          .setMeta("origin", "selection"),
+      )
     options.onSelectionChange?.(selection.value)
+  }
+  const renderAfterNativeEvent = () => {
+    ownerDocument.defaultView?.cancelAnimationFrame(renderFrame)
+    renderFrame = ownerDocument.defaultView?.requestAnimationFrame(render) ?? 0
   }
   const reconcile = () => {
     selection.reconcile(visibleIds())
@@ -97,15 +124,20 @@ export const attachBlockSelection = (
     return kind !== "replace"
   }
   const detachClipboard = attachProseMirrorClipboard(view, { ...options, selection, clear })
+  const selectionDrag = attachSelectionDrag(view, selection, visibleIds, render)
   const onClick = (event: MouseEvent) => {
     if (!(event.target instanceof HTMLElement) || event.target.closest(".ProseMirror") !== view.dom)
       return
+    if (consumedModifierClick) {
+      consumedModifierClick = false
+      return
+    }
     const modifier = event.shiftKey || event.metaKey || event.ctrlKey
     if (!modifier) {
       if (selection.value.length > 0) clear()
       return
     }
-    if (interactiveTarget(event.target)) return
+    if (isInteractiveTarget(event.target)) return
     const block = event.target.closest<HTMLElement>("[data-block-id]")
     const blockId = block?.dataset["blockId"]
     if (blockId === undefined) return
@@ -121,72 +153,57 @@ export const attachBlockSelection = (
     }
   }
   const onPointerDown = (event: PointerEvent) => {
-    if (event.button !== 0 || event.target !== view.dom) return
-    marquee = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY }
-    view.dom.setPointerCapture(event.pointerId)
-    marqueeElement.hidden = false
-  }
-  const onPointerMove = (event: PointerEvent) => {
-    if (marquee === null || event.pointerId !== marquee.pointerId) return
-    const left = Math.min(marquee.startX, event.clientX)
-    const top = Math.min(marquee.startY, event.clientY)
-    const right = Math.max(marquee.startX, event.clientX)
-    const bottom = Math.max(marquee.startY, event.clientY)
-    Object.assign(marqueeElement.style, {
-      left: `${left}px`,
-      top: `${top}px`,
-      width: `${right - left}px`,
-      height: `${bottom - top}px`,
-    })
-    const ids = blockElements(view).flatMap((element) => {
-      const rect = element.getBoundingClientRect()
-      const id = element.dataset["blockId"]
-      return id !== undefined &&
-        rect.right >= left &&
-        rect.left <= right &&
-        rect.bottom >= top &&
-        rect.top <= bottom
-        ? [id]
-        : []
-    })
-    selection.apply({ kind: "clear" }, visibleIds())
-    for (const id of ids) selection.apply({ kind: "toggle", id }, visibleIds())
-    render()
-  }
-  const onNativeSelectionChange = () => {
-    const native = ownerDocument.getSelection()
-    if (native === null || native.isCollapsed || native.rangeCount !== 1) return
-    const range = native.getRangeAt(0)
-    if (!view.dom.contains(range.startContainer) || !view.dom.contains(range.endContainer)) return
-    const intersected = leafBlockElements(view).filter((element) => range.intersectsNode(element))
-    if (intersected.length < 2) return
-    const fullySelected = intersected.every((element) => {
-      const blockRange = ownerDocument.createRange()
-      blockRange.selectNodeContents(element)
-      return (
-        range.compareBoundaryPoints(Range.START_TO_START, blockRange) <= 0 &&
-        range.compareBoundaryPoints(Range.END_TO_END, blockRange) >= 0
-      )
-    })
-    if (!fullySelected) return
-    selection.apply({ kind: "clear" }, visibleIds())
-    for (const element of intersected) {
-      const id = element.dataset["blockId"]
-      if (id !== undefined) selection.apply({ kind: "toggle", id }, visibleIds())
+    if (
+      event.button !== 0 ||
+      !(event.target instanceof HTMLElement) ||
+      event.target.closest(".ProseMirror") !== view.dom ||
+      isInteractiveTarget(event.target)
+    )
+      return
+    if (event.metaKey || event.ctrlKey || event.shiftKey) {
+      const blockId = event.target.closest<HTMLElement>("[data-block-id]")?.dataset["blockId"]
+      if (blockId !== undefined) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        consumedModifierClick = true
+        consumedModifierPointer = true
+        selectFromClick(blockId, event)
+        renderAfterNativeEvent()
+      }
+      return
     }
-    render()
+    if (selection.value.length > 0) clear()
+    if (pointHitsGlyph(ownerDocument, event.clientX, event.clientY)) return
+    selectionDrag.start(event)
   }
-  const finishMarquee = () => {
-    marquee = null
-    marqueeElement.hidden = true
+  const onMouseDown = (event: MouseEvent) => {
+    if (consumedModifierPointer) {
+      consumedModifierPointer = false
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      return
+    }
+    if (
+      event.button !== 0 ||
+      !(event.target instanceof HTMLElement) ||
+      event.target.closest(".ProseMirror") !== view.dom ||
+      isInteractiveTarget(event.target) ||
+      (!event.metaKey && !event.ctrlKey && !event.shiftKey)
+    )
+      return
+    const blockId = event.target.closest<HTMLElement>("[data-block-id]")?.dataset["blockId"]
+    if (blockId !== undefined) {
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      consumedModifierClick = true
+      selectFromClick(blockId, event)
+    }
   }
   updates.set(view, reconcile)
   view.dom.addEventListener("click", onClick)
   view.dom.addEventListener("keydown", onKeyDown)
-  view.dom.addEventListener("pointerdown", onPointerDown)
-  ownerDocument.addEventListener("pointermove", onPointerMove)
-  ownerDocument.addEventListener("pointerup", finishMarquee)
-  ownerDocument.addEventListener("selectionchange", onNativeSelectionChange)
+  view.dom.addEventListener("pointerdown", onPointerDown, true)
+  view.dom.addEventListener("mousedown", onMouseDown, true)
   return {
     selectFromClick,
     selectedIds: () => selection.value,
@@ -195,14 +212,13 @@ export const attachBlockSelection = (
     reconcile,
     destroy: () => {
       updates.delete(view)
+      ownerDocument.defaultView?.cancelAnimationFrame(renderFrame)
       detachClipboard()
-      marqueeElement.remove()
+      selectionDrag.destroy()
       view.dom.removeEventListener("click", onClick)
       view.dom.removeEventListener("keydown", onKeyDown)
-      view.dom.removeEventListener("pointerdown", onPointerDown)
-      ownerDocument.removeEventListener("pointermove", onPointerMove)
-      ownerDocument.removeEventListener("pointerup", finishMarquee)
-      ownerDocument.removeEventListener("selectionchange", onNativeSelectionChange)
+      view.dom.removeEventListener("pointerdown", onPointerDown, true)
+      view.dom.removeEventListener("mousedown", onMouseDown, true)
     },
   }
 }

@@ -86,9 +86,15 @@
   pointer-events: none;
 }
 
-.block-selected {
-  background: var(--accent-soft);
-  box-shadow: inset var(--drop-rule-size) 0 0 var(--accent);
+.ProseMirror .block-selected {
+  background-color: var(--accent-soft);
+  box-shadow:
+    inset var(--drop-rule-size) 0 0 var(--accent),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.block-selected > [data-block-id] {
+  background-color: color-mix(in srgb, var(--paper) 64%, transparent);
 }
 
 .block-selection-marquee {

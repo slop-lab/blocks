@@ -3,15 +3,15 @@ import {
   InteractionContextArbiter,
   type InteractionContextHandle,
 } from "@block-editor/interactions"
-import { type ProseMirrorProfile, pmToSnapshot } from "@block-editor/prosemirror"
+import type { ProseMirrorProfile } from "@block-editor/prosemirror"
 import type { SyncedSource } from "@block-editor/workspace"
 import type { Node as ProseMirrorNode } from "prosemirror-model"
-import { type EditorState, Selection, TextSelection, type Transaction } from "prosemirror-state"
+import { type EditorState, Selection, TextSelection } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { attachBlockInteractions } from "../../pm/block-interactions"
 import type { EntityRecord } from "./workspace-api"
-import { snapshotToPageDocument } from "./workspace-editor-model"
 import type { WorkspaceNodeViewData } from "./workspace-node-view-types"
+import { dispatchSourceTransaction } from "./workspace-source-editor-dispatch"
 import { renderSourceProjection } from "./workspace-source-projector"
 
 export type SourceDataPointer = { readonly current: WorkspaceNodeViewData }
@@ -24,6 +24,8 @@ export type SourceOccurrence = {
   bookmark: Bookmark | null
   composing: boolean
   compositionTimer: ReturnType<typeof setTimeout> | undefined
+  renderedDocument: ProseMirrorNode | null
+  renderedDepth: number | null
 }
 export type SourceEntry = {
   readonly runtime: SourceRuntime<EditorState, ProseMirrorNode>
@@ -31,7 +33,7 @@ export type SourceEntry = {
   view: EditorView | null
   detachInteractions: (() => void) | null
   remoteRecord: EntityRecord<SyncedSource> | null
-  unsubscribe: () => void
+  unsubscribe: (() => void) | null
 }
 export type SourceAttachment = {
   readonly activate: (event: PointerEvent) => void
@@ -72,6 +74,8 @@ export class WorkspaceSourceAttachments {
       bookmark: null,
       composing: false,
       compositionTimer: undefined,
+      renderedDocument: null,
+      renderedDepth: null,
     }
     entry.occurrences.set(occurrenceId, occurrence)
     const detachRuntime = entry.runtime.attach(occurrenceId)
@@ -80,7 +84,10 @@ export class WorkspaceSourceAttachments {
     return {
       activate: (event) => this.activate(entry, occurrence, event),
       deactivate: (event) => this.deactivate(entry, occurrence, event),
-      refresh: (record) => this.receive(entry, record),
+      refresh: (record) => {
+        this.receive(entry, record)
+        this.render(entry, occurrence)
+      },
       destroy: () => {
         this.stopComposition(entry, occurrence)
         this.deactivate(entry, occurrence)
@@ -92,12 +99,19 @@ export class WorkspaceSourceAttachments {
   }
 
   render(entry: SourceEntry, occurrence: SourceOccurrence): void {
-    renderSourceProjection(entry.runtime.state, occurrence.projection)
+    const document = entry.runtime.state.doc
+    const depth = occurrence.data.current.embeddingDepth
+    if (occurrence.renderedDocument === document && occurrence.renderedDepth === depth) return
+    renderSourceProjection(entry.runtime.state, occurrence.projection, depth)
+    occurrence.renderedDocument = document
+    occurrence.renderedDepth = depth
   }
 
   dispose(entry: SourceEntry): void {
     entry.detachInteractions?.()
     entry.view?.destroy()
+    entry.detachInteractions = null
+    entry.view = null
   }
 
   private activate(entry: SourceEntry, occurrence: SourceOccurrence, event: PointerEvent): void {
@@ -168,7 +182,11 @@ export class WorkspaceSourceAttachments {
         compositionstart: () => this.composition(entry, true),
         compositionend: () => this.endComposition(entry),
       },
-      dispatchTransaction: (transaction) => this.dispatch(entry, transaction),
+      dispatchTransaction: (transaction) => {
+        const occurrence = this.active(entry)
+        if (occurrence !== null)
+          dispatchSourceTransaction(entry, occurrence, this.profile, transaction)
+      },
     })
     entry.view = view
     entry.detachInteractions = attachBlockInteractions(view, {
@@ -227,39 +245,5 @@ export class WorkspaceSourceAttachments {
 
   private context(entry: SourceEntry, occurrenceId: string): InteractionContextHandle {
     return this.interactionContext(`source:${entry.runtime.sourceId}:${occurrenceId}`)
-  }
-
-  private dispatch(entry: SourceEntry, transaction: Transaction): void {
-    const occurrence = this.active(entry)
-    if (occurrence === null) return
-    const result = entry.runtime.state.applyTransaction(transaction)
-    if (result.transactions.length === 0) return
-    occurrence.bookmark = {
-      anchor: result.state.selection.anchor,
-      head: result.state.selection.head,
-    }
-    if (!result.transactions.some((applied) => applied.docChanged)) {
-      entry.runtime.updateState(occurrence.id, result.state)
-      return
-    }
-    entry.runtime.updateLocal(occurrence.id, result.state, crypto.randomUUID())
-    const record = occurrence.data.current.sources.find(
-      (candidate) => candidate.documentId === entry.runtime.sourceId,
-    )
-    if (record === undefined) return
-    const converted = snapshotToPageDocument(pmToSnapshot(result.state.doc, this.profile), {
-      pageId: record.content.id,
-      version: record.content.version,
-      blocks: [record.content.section],
-    }).blocks[0]
-    const pending = entry.runtime.pendingSave()
-    if (converted?.type !== "section" || pending === null) return
-    occurrence.data.current.onSourceEdit({
-      sourceId: entry.runtime.sourceId,
-      baselineRevision: pending.baselineRevision,
-      generation: pending.generation,
-      causeId: pending.causeId,
-      content: { ...record.content, version: record.content.version + 1, section: converted },
-    })
   }
 }

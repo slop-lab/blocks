@@ -28,6 +28,14 @@ it("stores none, blocks, and text modes in the production plugin authority", () 
   view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 2, 4)))
 
   expect(controller.value()).toEqual({
+    mode: "blocks",
+    selectedIds: ["first", "second"],
+    anchorId: "first",
+    focusId: "second",
+  })
+
+  controller.activateText()
+  expect(controller.value()).toEqual({
     mode: "text",
     selectedIds: [],
     anchorId: "first",

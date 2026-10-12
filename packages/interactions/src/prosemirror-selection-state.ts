@@ -101,8 +101,6 @@ export const blockSelectionReconcilePlugin = new Plugin<ProseMirrorSelectionStat
     apply: (transaction, current) => {
       const explicit = parseSelectionMeta(transaction.getMeta(selectionKey))
       if (explicit !== null) return normalize(explicit, transaction.doc)
-      if (transaction.selectionSet)
-        return normalize({ ...current, mode: "text", selectedIds: [] }, transaction.doc)
       return transaction.docChanged ? normalize(current, transaction.doc) : current
     },
   },

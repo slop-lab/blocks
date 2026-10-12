@@ -1,8 +1,5 @@
 import type { EditorView } from "prosemirror-view"
-import {
-  attachProseMirrorClipboard,
-  type ProseMirrorClipboardOptions,
-} from "./prosemirror-clipboard.js"
+import { attachProseMirrorClipboard } from "./prosemirror-clipboard.js"
 import { attachSelectionDrag } from "./prosemirror-selection-drag.js"
 import {
   isInteractiveTarget,
@@ -16,6 +13,10 @@ import {
   setBlockSelectionMeta,
   subscribeBlockSelection,
 } from "./prosemirror-selection-state.js"
+import type {
+  BlockSelectionController,
+  BlockSelectionOptions,
+} from "./prosemirror-selection-types.js"
 import {
   initialBlockSelectionState,
   reconcileBlockSelection,
@@ -30,24 +31,10 @@ export {
   type ProseMirrorSelectionState,
   readBlockSelection,
 } from "./prosemirror-selection-state.js"
-
-export type BlockSelectionController = {
-  readonly selectFromClick: (blockId: string, event: MouseEvent) => boolean
-  readonly replace: (blockIds: readonly string[]) => void
-  readonly selectedIds: () => readonly string[]
-  readonly value: () => ProseMirrorSelectionState
-  readonly contains: (blockId: string) => boolean
-  readonly clear: () => void
-  readonly reconcile: () => void
-  readonly destroy: () => void
-}
-
-export type BlockSelectionOptions = ProseMirrorClipboardOptions & {
-  readonly onSelectionChange?: (blockIds: readonly string[]) => void
-  readonly isContextTarget?: (target: Node) => boolean
-  readonly claim?: () => void
-  readonly release?: () => void
-}
+export type {
+  BlockSelectionController,
+  BlockSelectionOptions,
+} from "./prosemirror-selection-types.js"
 
 export const attachBlockSelection = (
   view: EditorView,
@@ -244,6 +231,7 @@ export const attachBlockSelection = (
   ownerDocument.addEventListener("pointerdown", onDocumentPointerDown, true)
   return {
     selectFromClick,
+    activateText: updateTextSelection,
     replace,
     selectedIds: () => (isActive() ? selection.value : []),
     value: () => readBlockSelection(view.state),

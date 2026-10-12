@@ -15,6 +15,7 @@ it("lets native text copy proceed without the block MIME from an earlier block s
   const { view, controller } = createSelectionView()
   controller.replace(["first"])
   view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 2, 4)))
+  controller.activateText()
   const copy = clipboardEvent("copy")
 
   view.dom.dispatchEvent(copy.event)

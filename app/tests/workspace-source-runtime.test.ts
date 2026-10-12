@@ -48,12 +48,45 @@ afterEach(() => {
 describe("WorkspaceSourceRuntime occurrence lifecycle", () => {
   it("Given the final occurrence is detached, When the retention window expires, Then a remount opens the latest source record", () => {
     vi.useFakeTimers()
+    const runtime = new WorkspaceSourceRuntime({ inactiveRetentionMs: 30_000 })
+    const firstHost = document.createElement("div")
+    const first = runtime.attach(record(1, "Initial"), "first", firstHost, dataPointer(runtime, 1))
+
+    first.destroy()
+    vi.runAllTimers()
+    const secondHost = document.createElement("div")
+    runtime.attach(record(2, "Remote replacement"), "second", secondHost, dataPointer(runtime, 1))
+
+    expect(secondHost.querySelector("p")?.textContent).toBe("Remote replacement")
+    runtime.dispose()
+  })
+
+  it("Given default workspace-lifetime retention, When all timers run and the same revision remounts, Then the canonical runtime is retained", () => {
+    vi.useFakeTimers()
     const runtime = new WorkspaceSourceRuntime()
     const firstHost = document.createElement("div")
     const first = runtime.attach(record(1, "Initial"), "first", firstHost, dataPointer(runtime, 1))
 
     first.destroy()
     vi.runAllTimers()
+    const secondHost = document.createElement("div")
+    runtime.attach(
+      record(1, "Replacement must be ignored"),
+      "second",
+      secondHost,
+      dataPointer(runtime, 1),
+    )
+
+    expect(secondHost.querySelector("p")?.textContent).toBe("Initial")
+    runtime.dispose()
+  })
+
+  it("Given a parked retained runtime, When a newer source record remounts, Then it applies before projection attachment", () => {
+    const runtime = new WorkspaceSourceRuntime()
+    const firstHost = document.createElement("div")
+    const first = runtime.attach(record(1, "Initial"), "first", firstHost, dataPointer(runtime, 1))
+
+    first.destroy()
     const secondHost = document.createElement("div")
     runtime.attach(record(2, "Remote replacement"), "second", secondHost, dataPointer(runtime, 1))
 

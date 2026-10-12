@@ -30,6 +30,10 @@ export type SourceConflictResult =
       readonly baselineRevision: number
     }
 
+export type WorkspaceSourceRuntimeOptions = {
+  readonly inactiveRetentionMs?: number
+}
+
 export class WorkspaceSourceRuntime {
   readonly profile = createWorkspaceProfile(0)
   private readonly registry = new SourceRuntimeRegistry<EditorState, ProseMirrorNode>({
@@ -50,6 +54,8 @@ export class WorkspaceSourceRuntime {
     this.receive(entry, record),
   )
 
+  constructor(private readonly options: WorkspaceSourceRuntimeOptions = {}) {}
+
   interactionContext(id: string): InteractionContextHandle {
     return this.attachments.interactionContext(id)
   }
@@ -63,6 +69,7 @@ export class WorkspaceSourceRuntime {
     clearTimeout(this.evictionTimers.get(sourceRecord.documentId))
     this.evictionTimers.delete(sourceRecord.documentId)
     const entry = this.entry(sourceRecord)
+    this.receive(entry, sourceRecord)
     this.subscribeEntry(entry)
     const attachment = this.attachments.attach(entry, occurrenceId, host, data)
     return {
@@ -92,6 +99,17 @@ export class WorkspaceSourceRuntime {
       entry.remoteRecord = null
     this.emitStatus(request.sourceId)
     if (entry.occurrences.size === 0) this.scheduleEviction(entry)
+  }
+
+  registerSubmitted(request: SourceEditRequest): void {
+    const entry = this.entries.get(request.sourceId)
+    entry?.runtime.registerSubmitted({
+      sourceId: request.sourceId,
+      generation: request.generation,
+      causeId: request.causeId,
+      baselineRevision: request.baselineRevision,
+      content: this.documentOf(request.content),
+    })
   }
 
   receiveRemote(record: EntityRecord<SyncedSource>): void {
@@ -195,7 +213,9 @@ export class WorkspaceSourceRuntime {
     clearTimeout(this.evictionTimers.get(sourceId))
     this.evictionTimers.delete(sourceId)
     if (entry.runtime.dirty || entry.remoteRecord !== null) return
-    const timer = setTimeout(() => this.evict(sourceId, entry), 30_000)
+    const retention = this.options.inactiveRetentionMs
+    if (retention === undefined) return
+    const timer = setTimeout(() => this.evict(sourceId, entry), retention)
     this.evictionTimers.set(sourceId, timer)
   }
 

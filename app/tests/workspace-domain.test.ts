@@ -2,15 +2,19 @@ import {
   addDatabaseProperty,
   addDatabaseRow,
   archivePage,
+  convertSectionToSyncedSource,
   copySyncedOccurrence,
   createPage,
   filterAndSortRows,
+  groupDatabaseRows,
   headingLevelAtDepth,
   movePage,
+  pageDocumentSchema,
   patchDatabaseRow,
   removeDatabaseProperty,
   restorePage,
   snapshotSyncedSource,
+  syncedSourceSchema,
   workspaceSchema,
 } from "@block-editor/workspace"
 import { describe, expect, it } from "vitest"
@@ -93,6 +97,17 @@ describe("typed database projection", () => {
     expect(rows.map((row) => row.id)).toEqual(["r1"])
   })
 
+  it("groups rows by configured status and moves a row through the typed patch", () => {
+    const groups = groupDatabaseRows(database, "status")
+    const moved = patchDatabaseRow(database, "r2", "status", "Done")
+
+    expect(groups.map((group) => [group.status, group.rows.map((row) => row.id)])).toEqual([
+      ["Todo", ["r2"]],
+      ["Done", ["r1"]],
+    ])
+    expect(groupDatabaseRows(moved, "status")[1]?.rows.map((row) => row.id)).toEqual(["r1", "r2"])
+  })
+
   it("adds and removes typed properties without changing row identities", () => {
     const withOwner = addDatabaseProperty(database, {
       id: "owner",
@@ -116,12 +131,111 @@ describe("synced source references", () => {
       {
         id: "shared-intro",
         version: 3,
-        blocks: [{ id: "shared-block", type: "paragraph", text: "One source" }],
+        section: {
+          id: "shared-root",
+          type: "section",
+          children: [{ id: "shared-block", type: "paragraph", text: "One source" }],
+        },
       },
       () => "local-block",
     )
 
     expect(duplicate).toEqual({ id: "o2", sourceId: "shared-intro" })
     expect(snapshot).toEqual([{ id: "local-block", type: "paragraph", text: "One source" }])
+  })
+
+  it("moves one local section into one canonical source and leaves one occurrence", () => {
+    const ids = ["source", "source-root", "occurrence"]
+    const converted = convertSectionToSyncedSource(
+      {
+        id: "local",
+        type: "section",
+        heading: "Shared notes",
+        children: [{ id: "body", type: "paragraph", text: "Canonical content" }],
+      },
+      () => ids.shift() ?? "unexpected",
+    )
+
+    expect(converted.source).toEqual({
+      id: "source",
+      version: 1,
+      section: {
+        id: "source-root",
+        type: "section",
+        heading: "Shared notes",
+        children: [{ id: "body", type: "paragraph", text: "Canonical content" }],
+      },
+    })
+    expect(converted.occurrence).toEqual({
+      id: "local",
+      type: "section",
+      occurrenceId: "occurrence",
+      ref: { sourceId: "source" },
+      children: [],
+    })
+  })
+})
+
+describe("legacy workspace migration", () => {
+  it("Given legacy headings and synced references, When parsed, Then nested sections preserve IDs and source identity", () => {
+    const migrated = pageDocumentSchema.parse({
+      pageId: "legacy",
+      version: 1,
+      blocks: [
+        { id: "heading-a", type: "heading", level: 2, text: "A" },
+        { id: "body-a", type: "paragraph", text: "Body A" },
+        { id: "heading-b", type: "heading", level: 3, text: "B" },
+        { id: "body-b", type: "quote", text: "Body B" },
+        { id: "shared", type: "synced_ref", occurrenceId: "occurrence", sourceId: "source" },
+      ],
+    })
+
+    expect(migrated.blocks).toEqual([
+      {
+        id: "heading-a",
+        type: "section",
+        heading: "A",
+        children: [
+          { id: "body-a", type: "paragraph", text: "Body A" },
+          {
+            id: "heading-b",
+            type: "section",
+            heading: "B",
+            children: [
+              {
+                id: "body-b",
+                type: "quote",
+                children: [{ id: "body-b-content", type: "paragraph", text: "Body B" }],
+              },
+              {
+                id: "shared",
+                type: "section",
+                occurrenceId: "occurrence",
+                ref: { sourceId: "source" },
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+    ])
+  })
+
+  it("Given a legacy source, When parsed, Then its content becomes one canonical source section", () => {
+    expect(
+      syncedSourceSchema.parse({
+        id: "source",
+        version: 4,
+        blocks: [{ id: "p", type: "paragraph", text: "Shared" }],
+      }),
+    ).toEqual({
+      id: "source",
+      version: 4,
+      section: {
+        id: "source-root",
+        type: "section",
+        children: [{ id: "p", type: "paragraph", text: "Shared" }],
+      },
+    })
   })
 })

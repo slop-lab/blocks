@@ -7,6 +7,10 @@ export class DatabaseValueError extends Error {
 type Filter = { readonly propertyId: string; readonly equals: unknown }
 type Sort = { readonly propertyId: string; readonly direction: "asc" | "desc" }
 type ViewQuery = { readonly query: string; readonly filter?: Filter; readonly sort?: Sort }
+export type DatabaseRowGroup = {
+  readonly status: string
+  readonly rows: readonly DatabaseRow[]
+}
 
 const accepts = (property: DatabaseProperty, value: unknown): boolean => {
   if (value === null) return true
@@ -100,4 +104,17 @@ export const filterAndSortRows = (database: Database, view: ViewQuery): readonly
     )
     return result === 0 ? left.id.localeCompare(right.id) : result * direction
   })
+}
+
+export const groupDatabaseRows = (
+  database: Database,
+  statusPropertyId: string,
+): readonly DatabaseRowGroup[] => {
+  const property = database.properties.find((candidate) => candidate.id === statusPropertyId)
+  if (property?.type !== "status")
+    throw new DatabaseValueError(`Unknown status property ${statusPropertyId}`)
+  return property.options.map((status) => ({
+    status,
+    rows: database.rows.filter((row) => row.values[statusPropertyId] === status),
+  }))
 }

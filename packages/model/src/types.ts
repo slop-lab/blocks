@@ -19,7 +19,8 @@ export type BlockSnapshot = Readonly<Record<string, unknown>> & {
   readonly schemaVersion?: unknown
   readonly attrs: Readonly<Record<string, unknown>>
   readonly content: readonly InlineSnapshot[]
-  readonly locked?: boolean
+  readonly children?: readonly BlockSnapshot[] | undefined
+  readonly locked?: boolean | undefined
 }
 
 export type BlockDocument = Readonly<Record<string, unknown>> & {

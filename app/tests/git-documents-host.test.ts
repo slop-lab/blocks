@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process"
 import { once } from "node:events"
-import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import type { Server } from "node:http"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -13,7 +13,7 @@ const execute = promisify(execFile)
 const roots: string[] = []
 const servers: Server[] = []
 
-const setup = async () => {
+const setup = async (serveAssets = false) => {
   const root = await mkdtemp(join(tmpdir(), "git-documents-host-"))
   roots.push(root)
   const env = { ...process.env, GIT_MASTER: "1", GIT_CONFIG_NOSYSTEM: "1" }
@@ -25,7 +25,12 @@ const setup = async () => {
   await git("add", ".gitignore")
   await git("commit", "-m", "Initialize")
   const documents = await GitDocuments.open({ repo: root, data: join(root, ".runtime") })
-  const server = createGitDocumentsServer({ documents })
+  const assetsRoot = join(root, "browser-assets")
+  if (serveAssets) {
+    await mkdir(assetsRoot)
+    await writeFile(join(assetsRoot, "index.html"), "<!doctype html><title>Documents</title>")
+  }
+  const server = createGitDocumentsServer({ documents, ...(serveAssets ? { assetsRoot } : {}) })
   servers.push(server)
   server.listen(0, "127.0.0.1")
   await once(server, "listening")
@@ -97,5 +102,19 @@ describe("Git documents host", () => {
 
     expect(forbidden.status).toBe(403)
     expect(unknown.status).toBe(404)
+  })
+
+  it("reserves SPA fallback for extensionless browser routes", async () => {
+    const { base } = await setup(true)
+
+    const route = await fetch(`${base}/documents/welcome`)
+    const missingScript = await fetch(`${base}/assets/missing.js`)
+    const legacyFavicon = await fetch(`${base}/favicon.ico`)
+
+    expect(route.status).toBe(200)
+    expect(route.headers.get("content-type")).toContain("text/html")
+    expect(missingScript.status).toBe(404)
+    expect(missingScript.headers.get("content-type")).not.toContain("text/html")
+    expect(legacyFavicon.status).toBe(204)
   })
 })

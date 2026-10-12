@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@block-editor/git-documents": "workspace:*",
+    "@block-editor/server-bindings": "workspace:*",
     "zod": "^4.1.11"
   },
   "devDependencies": {

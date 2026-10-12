@@ -17,6 +17,7 @@ export const captionBlock: BlockRegistration = {
   type: "ownership.caption",
   nodeName: "ownership_caption",
   text: true,
+  insertMenu: [{ label: "본문", description: "표현 설명", keywords: ["문단", "text"] }],
   nodeSpec: {
     group: "block",
     content: "inline*",

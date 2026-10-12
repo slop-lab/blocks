@@ -36,8 +36,18 @@ try {
     await page.keyboard.press("Control+Shift+z")
     assert.match(await board.textContent(), /연속입력검증/)
     const blocksBeforeAdd = await board.locator("[data-block-id]").count()
-    await board.locator("[data-block-id]").first().hover()
-    await page.getByRole("button", { name: "이 블록 뒤에 문단 추가", exact: true }).click()
+    const firstBlock = board.locator("[data-block-id]").first()
+    const firstBlockId = await firstBlock.getAttribute("data-block-id")
+    await firstBlock.hover()
+    await page.waitForFunction(
+      (id) =>
+        document
+          .querySelector(".block-controls:not([hidden])")
+          ?.getAttribute("data-target-block-id") === id,
+      firstBlockId,
+    )
+    await page.getByRole("button", { name: "이 블록 뒤에 블록 추가", exact: true }).click()
+    await page.getByRole("menuitem", { name: "본문", exact: true }).click()
     assert.equal(await board.locator("[data-block-id]").count(), blocksBeforeAdd + 1)
     await page.getByRole("button", { name: "표현 저장", exact: true }).click()
     const before = await board.locator("article").count()

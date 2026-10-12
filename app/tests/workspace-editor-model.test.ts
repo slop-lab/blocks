@@ -149,3 +149,60 @@ it("keeps every block visible while repairing duplicate durable IDs at the edito
       }),
   ).not.toThrow()
 })
+
+it("reserves repair-like original IDs before allocating recursive duplicate replacements", () => {
+  const document = {
+    pageId: "collision-draft",
+    version: 1,
+    blocks: [
+      { id: "x", type: "paragraph" as const, text: "First" },
+      {
+        id: "x",
+        type: "quote" as const,
+        children: [
+          { id: "x__duplicate_1", type: "paragraph" as const, text: "Reserved" },
+          {
+            id: "deep",
+            type: "callout" as const,
+            children: [
+              { id: "x", type: "paragraph" as const, text: "Deep duplicate" },
+              {
+                id: "source-occurrence",
+                type: "section" as const,
+                occurrenceId: "occurrence-x",
+                ref: { sourceId: "x" },
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+
+  const first = pageDocumentToSnapshot(document)
+  const second = pageDocumentToSnapshot(document)
+  const ids: string[] = []
+  first.blocks.forEach((block) => {
+    const visit = (current: typeof block): void => {
+      ids.push(current.id)
+      current.children?.forEach(visit)
+    }
+    visit(block)
+  })
+
+  expect(ids).toEqual([
+    "x",
+    "x__duplicate_2",
+    "x__duplicate_1",
+    "deep",
+    "x__duplicate_3",
+    "source-occurrence",
+  ])
+  expect(new Set(ids).size).toBe(ids.length)
+  expect(first).toEqual(second)
+  expect(first.blocks[1]?.children?.[1]?.children?.[1]?.attrs).toEqual({
+    sourceId: "x",
+    occurrenceId: "occurrence-x",
+  })
+})

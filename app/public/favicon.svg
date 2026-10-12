@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="문서 작업실">
+  <rect width="64" height="64" rx="14" fill="#f5f3ee"/>
+  <path d="M18 11h23l9 9v33H18z" fill="#fffefa" stroke="#24231f" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M41 11v10h9" fill="none" stroke="#24231f" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M25 30h18M25 38h14M25 46h10" fill="none" stroke="#1f5e71" stroke-width="4" stroke-linecap="round"/>
+</svg>

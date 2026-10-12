@@ -1,4 +1,5 @@
 import type { EditorView } from "prosemirror-view"
+import { blockIndexById } from "./block-interaction-commands"
 
 type DragState = {
   readonly blockId: string
@@ -34,13 +35,7 @@ export const attachGripDrag = (
   let scrollFrame = 0
   let scrollOwner: HTMLElement | null = null
 
-  const blockIndex = (blockId: string): number => {
-    let found = -1
-    view.state.doc.forEach((node, _position, index) => {
-      if (node.attrs["id"] === blockId) found = index
-    })
-    return found
-  }
+  const blockIndex = (blockId: string): number => blockIndexById(view.state.doc, blockId)
   const finish = (resetClick = false) => {
     if (drag !== null && grip.hasPointerCapture(drag.pointerId))
       grip.releasePointerCapture(drag.pointerId)
@@ -78,11 +73,17 @@ export const attachGripDrag = (
   const updateDropTarget = (clientX: number, clientY: number) => {
     if (drag === null) return
     const hit = ownerDocument.elementFromPoint(clientX, clientY)
-    let target: Element | null = hit
-    while (target !== null && target.parentElement !== view.dom) target = target.parentElement
+    const target = hit?.closest("[data-block-id]") ?? null
     if (target instanceof HTMLElement && target.matches("[data-block-id]")) {
       const id = target.dataset["blockId"]
       if (id === undefined) return
+      const source = view.dom.querySelector<HTMLElement>(
+        `[data-block-id="${CSS.escape(drag.blockId)}"]`,
+      )
+      if (source === null || source.parentElement !== target.parentElement) {
+        indicator.hidden = true
+        return
+      }
       const index = blockIndex(id)
       if (index < 0) {
         indicator.hidden = true

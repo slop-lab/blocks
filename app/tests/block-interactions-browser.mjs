@@ -17,6 +17,7 @@ const browser = await chromium.launch({
 
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: base })
   const errors = []
   page.on("pageerror", (error) => errors.push(error.message))
   await page.goto(base, { waitUntil: "networkidle" })
@@ -69,6 +70,26 @@ try {
   const countBeforeDuplicate = await editor.locator("[data-block-id]").count()
   await blockMenu.getByRole("menuitem", { name: /복제/ }).click()
   assert.equal(await editor.locator("[data-block-id]").count(), countBeforeDuplicate + 1)
+
+  const countBeforeCut = await editor.locator("[data-block-id]").count()
+  const cutTarget = editor.locator(":scope > [data-block-id]:not(:has([data-block-id]))").first()
+  await cutTarget.hover()
+  await grip.click()
+  await blockMenu.waitFor()
+  await page.keyboard.press("Escape")
+  assert.equal(
+    await cutTarget.evaluate((element) => element.classList.contains("block-selected")),
+    true,
+  )
+  await editor.focus()
+  await page.keyboard.press("Control+x")
+  assert.equal(await editor.locator("[data-block-id]").count(), countBeforeCut - 1)
+  await page.keyboard.press("Control+v")
+  assert.equal(await editor.locator("[data-block-id]").count(), countBeforeCut)
+  const idsAfterPaste = await editor
+    .locator("[data-block-id]")
+    .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-block-id")))
+  assert.equal(new Set(idsAfterPaste).size, idsAfterPaste.length)
 
   const movable = editor.locator("[data-block-id]").first()
   const sourceId = await movable.getAttribute("data-block-id")
@@ -218,7 +239,7 @@ try {
   assert.equal(await page.locator(".block-controls:not([hidden])").count(), 0)
   assert.deepEqual(errors, [])
   console.log(
-    "PASS controls, links, jitter drag, held-edge scroll, stale selection and readonly boundaries",
+    "PASS controls, links, cut/paste bookmark, jitter drag, held-edge scroll, stale selection and readonly boundaries",
   )
 } finally {
   await browser.close()

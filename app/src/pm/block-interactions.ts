@@ -1,16 +1,22 @@
+import type { ClipboardEnvelope, ClipboardPolicy } from "@block-editor/interactions"
+import type { ReferencePasteContext } from "@block-editor/interactions/prosemirror"
 import type { Command } from "prosemirror-state"
 import type { EditorView } from "prosemirror-view"
 import { createBlockControls } from "./block-controls"
 import { attachGripDrag } from "./block-drag"
 import {
+  blockIndexById,
+  blockNodeById,
   createBlockAfter,
-  deleteBlockById,
   duplicateBlockById,
+  indentBlocksById,
   moveBlockById,
-  setBlockTypeById,
+  moveBlocksById,
+  outdentBlocksById,
 } from "./block-interaction-commands"
-import { createBlockMenu, type MenuItem } from "./block-menu"
-import { profileForState } from "./profile-plugin"
+import { createBlockMenu } from "./block-menu"
+import { blockMenuItems } from "./block-menu-items"
+import { attachBlockSelection } from "./block-selection"
 import { attachSelectionToolbar } from "./selection-toolbar"
 import { attachSlashMenu } from "./slash-menu"
 
@@ -18,6 +24,12 @@ export type BlockInteractionOptions = {
   readonly readOnly: boolean
   readonly active?: () => boolean
   readonly onUnavailable?: (message: string) => void
+  readonly clipboardPolicy?: ClipboardPolicy
+  readonly onDeferredCut?: (
+    blockIds: readonly string[],
+    envelope: ClipboardEnvelope,
+  ) => void | Promise<void>
+  readonly onReferencePaste?: (envelope: ClipboardEnvelope, context: ReferencePasteContext) => void
 }
 
 const blockElement = (target: EventTarget | null): HTMLElement | null => {
@@ -32,6 +44,20 @@ export const attachBlockInteractions = (
   const ownerDocument = view.dom.ownerDocument
   const { rail, add, grip } = createBlockControls(ownerDocument)
   const menu = createBlockMenu(ownerDocument, "블록 작업")
+  const blockSelection = attachBlockSelection(view, {
+    clipboard:
+      options.clipboardPolicy ??
+      ({
+        namespace: "block-editor/default",
+        cut: "remove-after-write",
+        paste: () => "clone",
+      } satisfies ClipboardPolicy),
+    ...(options.onDeferredCut === undefined ? {} : { onDeferredCut: options.onDeferredCut }),
+    ...(options.onReferencePaste === undefined
+      ? {}
+      : { onReferencePaste: options.onReferencePaste }),
+    ...(options.onUnavailable === undefined ? {} : { onUnavailable: options.onUnavailable }),
+  })
   let activeId: string | null = null
   let railId: string | null = null
 
@@ -48,57 +74,17 @@ export const attachBlockInteractions = (
     view.focus()
     refreshFromSelection()
   }
-  const blockIndex = (blockId: string): number => {
-    let found = -1
-    view.state.doc.forEach((node, _position, index) => {
-      if (node.attrs["id"] === blockId) found = index
-    })
-    return found
-  }
+  const blockIndex = (blockId: string): number => blockIndexById(view.state.doc, blockId)
   const showMenu = (blockId: string, trigger: HTMLElement) => {
     const index = blockIndex(blockId)
     if (index < 0) return
-    const schema = view.state.schema
-    const profile = profileForState(view.state)
-    const defaultRegistration = profile?.registrations.get(profile.defaultTextType)
-    const definitions: readonly {
-      readonly label: string
-      readonly name: string
-      readonly attrs: Readonly<Record<string, unknown>>
-    }[] = [
-      { label: "본문", name: defaultRegistration?.nodeName ?? "paragraph", attrs: {} },
-      { label: "제목 1", name: "heading", attrs: { level: 1 } },
-      { label: "제목 2", name: "heading", attrs: { level: 2 } },
-      { label: "제목 3", name: "heading", attrs: { level: 3 } },
-      { label: "인용", name: "blockquote", attrs: {} },
-      { label: "코드 블록", name: "code_block", attrs: {} },
-    ]
-    const types: MenuItem[] = []
-    for (const definition of definitions) {
-      const type = schema.nodes[definition.name]
-      if (type !== undefined)
-        types.push({
-          label: definition.label,
-          action: () => run(setBlockTypeById(blockId, type, definition.attrs)),
-        })
-    }
-    const items: readonly MenuItem[] = [
-      {
-        label: "위로 이동",
-        hint: "Alt+↑",
-        disabled: index === 0,
-        action: () => run(moveBlockById(blockId, index - 1)),
-      },
-      {
-        label: "아래로 이동",
-        hint: "Alt+↓",
-        disabled: index === view.state.doc.childCount - 1,
-        action: () => run(moveBlockById(blockId, index + 2)),
-      },
-      { label: "복제", hint: "Mod+Shift+D", action: () => run(duplicateBlockById(blockId)) },
-      ...types,
-      { label: "삭제", danger: true, action: () => run(deleteBlockById(blockId)) },
-    ]
+    const items = blockMenuItems({
+      view,
+      blockId,
+      run,
+      selectedIds: () => blockSelection.selectedIds(),
+      contains: (id) => blockSelection.contains(id),
+    })
     const rect = trigger.getBoundingClientRect()
     menu.open({ point: { x: rect.left, y: rect.bottom + 4 }, items, trigger })
   }
@@ -109,7 +95,7 @@ export const attachBlockInteractions = (
       return
     }
     const index = blockIndex(blockId)
-    const node = index < 0 ? null : view.state.doc.child(index)
+    const node = index < 0 ? null : blockNodeById(view.state.doc, blockId)
     if (node === null) {
       hideRail()
       return
@@ -145,13 +131,30 @@ export const attachBlockInteractions = (
   add.addEventListener("click", () => activeId !== null && run(createBlockAfter(activeId)))
   const dragController = attachGripDrag(view, grip, {
     activeBlockId: () => activeId,
-    move: (blockId, gap) => run(moveBlockById(blockId, gap)),
+    move: (blockId, gap) =>
+      run(
+        moveBlocksById(
+          blockSelection.contains(blockId) ? blockSelection.selectedIds() : [blockId],
+          gap,
+        ),
+      ),
   })
-  grip.addEventListener("click", () => {
+  grip.addEventListener("click", (event) => {
     if (dragController.consumeClick()) return
-    if (activeId !== null) showMenu(activeId, grip)
+    if (activeId !== null && !blockSelection.selectFromClick(activeId, event))
+      showMenu(activeId, grip)
   })
   const onKeyDown = (event: KeyboardEvent) => {
+    if (blockSelection.selectedIds().length > 0 && event.key === "Tab") {
+      event.preventDefault()
+      event.stopPropagation()
+      run(
+        event.shiftKey
+          ? outdentBlocksById(blockSelection.selectedIds())
+          : indentBlocksById(blockSelection.selectedIds()),
+      )
+      return
+    }
     if (
       activeId !== null &&
       event.altKey &&
@@ -160,7 +163,19 @@ export const attachBlockInteractions = (
       event.preventDefault()
       event.stopPropagation()
       const index = blockIndex(activeId)
-      run(moveBlockById(activeId, event.key === "ArrowUp" ? index - 1 : index + 2))
+      const selectedIds = blockSelection.contains(activeId)
+        ? blockSelection.selectedIds()
+        : [activeId]
+      run(
+        selectedIds.length === 1
+          ? moveBlockById(activeId, event.key === "ArrowUp" ? index - 1 : index + 2)
+          : moveBlocksById(
+              selectedIds,
+              event.key === "ArrowUp"
+                ? Math.max(0, Math.min(...selectedIds.map(blockIndex)) - 1)
+                : Math.max(...selectedIds.map(blockIndex)) + 2,
+            ),
+      )
       return
     }
     if (
@@ -220,6 +235,7 @@ export const attachBlockInteractions = (
     detachFormat()
     menu.destroy()
     dragController.destroy()
+    blockSelection.destroy()
     rail.remove()
     view.dom.removeEventListener("pointerover", onPointerOver)
     view.dom.removeEventListener("focusin", refreshFromSelection)

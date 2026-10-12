@@ -169,6 +169,10 @@ export class WorkspaceSaveQueue {
     this.entries.clear()
   }
 
+  resume(): void {
+    this.disposed = false
+  }
+
   private schedule(entry: QueueEntry, delay: number): void {
     clearTimeout(entry.timer)
     if (this.composingTargets.has(targetKey(entry.target)) || this.disposed || entry.paused) {

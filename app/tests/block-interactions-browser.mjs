@@ -120,6 +120,7 @@ try {
   const secondSelectable = selectable.nth(1)
   const thirdSelectable = selectable.nth(2)
   const clickWith = async (target, modifier) => {
+    await target.waitFor({ state: "visible" })
     const box = await target.boundingBox()
     if (box === null) throw new TypeError("Missing selection target geometry")
     await page.keyboard.down(modifier)

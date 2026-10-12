@@ -122,6 +122,15 @@
   display: none;
 }
 
+@media (min-width: 768px) {
+  .block-selection-status {
+    position: fixed;
+    z-index: 30;
+    inset: auto auto var(--space-4) var(--space-4);
+    margin: 0;
+  }
+}
+
 .block-selection-marquee[hidden] {
   display: none;
 }

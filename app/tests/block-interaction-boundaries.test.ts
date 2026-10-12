@@ -108,4 +108,25 @@ describe("slash and link boundaries", () => {
     state = state.apply(state.tr.insertText("!", 7))
     expect(isCurrentLinkTarget(state, target)).toBe(false)
   })
+
+  it("captures a link range inside a nested workspace quote", () => {
+    const profile = createWorkspaceProfile(0)
+    const quote = profile.schema.nodes["container_quote"]
+    const paragraph = profile.schema.nodes["paragraph"]
+    const linkMark = profile.schema.marks["link"]
+    if (quote === undefined || paragraph === undefined || linkMark === undefined)
+      throw new TypeError("Workspace link schema is incomplete")
+    const document = profile.schema.topNodeType.create(undefined, [
+      quote.create({ id: "quote", locked: false }, [
+        paragraph.create({ id: "nested", locked: false }, profile.schema.text("linked")),
+      ]),
+    ])
+    const state = EditorState.create({
+      schema: profile.schema,
+      doc: document,
+      selection: TextSelection.create(document, 2, 8),
+    })
+
+    expect(captureLinkTarget(state, linkMark)?.blockIds).toEqual(["nested"])
+  })
 })

@@ -15,14 +15,13 @@ const blockIdsForRange = (
   to: number,
 ): readonly string[] | null => {
   const blockIds: string[] = []
-  let complete = true
-  document.forEach((node, position) => {
-    if (from >= position + node.nodeSize || to <= position) return
+  document.nodesBetween(from, to, (node) => {
+    if (!node.isTextblock) return true
     const blockId = node.attrs["id"]
     if (typeof blockId === "string") blockIds.push(blockId)
-    else complete = false
+    return false
   })
-  return complete && blockIds.length > 0 ? blockIds : null
+  return blockIds.length > 0 ? blockIds : null
 }
 
 const commonLinkHref = (

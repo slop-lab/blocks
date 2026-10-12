@@ -4,6 +4,8 @@ import { WorkspaceDatabase } from "./WorkspaceDatabase"
 import { WorkspaceEditor } from "./WorkspaceEditor"
 import type { EntityRecord } from "./workspace-api"
 import { embeddedDatabaseIds } from "./workspace-editor-model"
+import type { SourceEditRequest } from "./workspace-node-view-types"
+import type { WorkspaceSourceRuntime } from "./workspace-source-runtime"
 
 type Props = {
   readonly workspace: Workspace
@@ -13,9 +15,13 @@ type Props = {
   readonly sources: readonly EntityRecord<SyncedSource>[]
   readonly onDocument: (document: PageDocument) => void
   readonly onDatabase: (database: Database) => void
-  readonly onSourceEdit: (source: SyncedSource) => void
+  readonly onSourceEdit: (request: SourceEditRequest) => void
   readonly onSourceCreate: (source: SyncedSource) => Promise<EntityRecord<SyncedSource> | null>
   readonly onSourceCompositionChange: (sourceId: string, composing: boolean) => void
+  readonly onSourceConflictResolve: (
+    sourceId: string,
+    resolution: "accept-remote" | "keep-local",
+  ) => void
   readonly backlinks: readonly {
     readonly blockId: string
     readonly pageId: string
@@ -25,6 +31,7 @@ type Props = {
   readonly onCompositionChange?: (composing: boolean) => void
   readonly pasteMode: "clone" | "reference"
   readonly onPasteMode: (mode: "clone" | "reference") => void
+  readonly sourceController: WorkspaceSourceRuntime
 }
 
 export const WorkspaceDocument = (props: Props) => {
@@ -94,9 +101,11 @@ export const WorkspaceDocument = (props: Props) => {
         onSourceEdit={props.onSourceEdit}
         onSourceCreate={props.onSourceCreate}
         onSourceCompositionChange={props.onSourceCompositionChange}
+        onSourceConflictResolve={props.onSourceConflictResolve}
         onOpenPage={props.onOpenPage}
         onCompositionChange={props.onCompositionChange ?? (() => {})}
         pasteMode={props.pasteMode}
+        sourceController={props.sourceController}
       />
       {embeddedDatabaseIds(props.document.blocks).map((databaseId) => {
         const database = props.databases.find((candidate) => candidate.id === databaseId)

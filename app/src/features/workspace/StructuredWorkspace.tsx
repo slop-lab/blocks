@@ -6,11 +6,13 @@ import { WorkspaceDialogs } from "./WorkspaceDialogs"
 import { WorkspaceDocument } from "./WorkspaceDocument"
 import { WorkspaceTree } from "./WorkspaceTree"
 import { pageReferenceTargets } from "./workspace-editor-model"
+import { WorkspaceSourceRuntime } from "./workspace-source-runtime"
 import "./workspace.css"
 import "./workspace-overlays.css"
 
 export const StructuredWorkspace = () => {
-  const persistence = useWorkspacePersistence()
+  const [sourceController] = useState(() => new WorkspaceSourceRuntime())
+  const persistence = useWorkspacePersistence(sourceController)
   const [activeId, setActiveId] = useState("home")
   const [query, setQuery] = useState("")
   const [createOpen, setCreateOpen] = useState(false)
@@ -32,6 +34,8 @@ export const StructuredWorkspace = () => {
     window.addEventListener("keydown", command)
     return () => window.removeEventListener("keydown", command)
   }, [])
+
+  useEffect(() => () => sourceController.dispose(), [sourceController])
 
   const payload = persistence.payload
   const active = payload?.documents.find((record) => record.content.pageId === activeId)
@@ -82,6 +86,7 @@ export const StructuredWorkspace = () => {
           databases={payload.databases.map((record) => record.content)}
           sources={payload.sources}
           pasteMode={pasteMode}
+          sourceController={sourceController}
           onPasteMode={(mode) => {
             setPasteMode(mode)
             localStorage.setItem("structured-paste-mode", mode)
@@ -112,6 +117,7 @@ export const StructuredWorkspace = () => {
           onSourceCompositionChange={(sourceId, composing) =>
             persistence.setComposing({ kind: "sources", id: sourceId }, composing)
           }
+          onSourceConflictResolve={persistence.resolveSourceConflict}
           onCompositionChange={(composing) =>
             persistence.setComposing({ kind: "pages", id: active.documentId }, composing)
           }

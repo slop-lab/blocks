@@ -1,17 +1,15 @@
 import type { Database, PageDocument, SyncedSource, Workspace } from "@block-editor/workspace"
 import { Fragment } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useRef } from "react"
 import { parseInternalTarget } from "../../core/links"
 import { attachBlockInteractions } from "../../pm/block-interactions"
 import { ModelSession } from "../../pm/session"
 import type { EntityRecord } from "./workspace-api"
-import {
-  createWorkspaceProfile,
-  pageDocumentToSnapshot,
-  snapshotToPageDocument,
-} from "./workspace-editor-model"
+import { pageDocumentToSnapshot, snapshotToPageDocument } from "./workspace-editor-model"
+import type { SourceEditRequest } from "./workspace-node-view-types"
 import { createWorkspaceNodeViews } from "./workspace-node-views"
+import type { WorkspaceSourceRuntime } from "./workspace-source-runtime"
 
 type Props = {
   readonly workspace: Workspace
@@ -20,12 +18,17 @@ type Props = {
   readonly databases: readonly Database[]
   readonly sources: readonly EntityRecord<SyncedSource>[]
   readonly onDocument: (document: PageDocument) => void
-  readonly onSourceEdit: (source: SyncedSource) => void
+  readonly onSourceEdit: (request: SourceEditRequest) => void
   readonly onSourceCreate: (source: SyncedSource) => Promise<EntityRecord<SyncedSource> | null>
   readonly onSourceCompositionChange: (sourceId: string, composing: boolean) => void
+  readonly onSourceConflictResolve: (
+    sourceId: string,
+    resolution: "accept-remote" | "keep-local",
+  ) => void
   readonly onOpenPage: (id: string, blockId?: string) => void
   readonly onCompositionChange: (composing: boolean) => void
   readonly pasteMode: "clone" | "reference"
+  readonly sourceController: WorkspaceSourceRuntime
   readonly autoFocus?: boolean
 }
 
@@ -38,7 +41,7 @@ export const WorkspaceEditor = (props: Props) => {
   const emittedRef = useRef("")
   const propsRef = useRef(props)
   propsRef.current = props
-  const profile = useMemo(() => createWorkspaceProfile(props.depth), [props.depth])
+  const profile = props.sourceController.profile
   const dataRef = useRef({
     workspace: props.workspace,
     databases: props.databases,
@@ -48,6 +51,7 @@ export const WorkspaceEditor = (props: Props) => {
     onSourceEdit: props.onSourceEdit,
     onSourceCreate: props.onSourceCreate,
     onSourceCompositionChange: props.onSourceCompositionChange,
+    onSourceConflictResolve: props.onSourceConflictResolve,
     embeddingDepth: props.depth,
   })
   dataRef.current = {
@@ -59,6 +63,7 @@ export const WorkspaceEditor = (props: Props) => {
     onSourceEdit: props.onSourceEdit,
     onSourceCreate: props.onSourceCreate,
     onSourceCompositionChange: props.onSourceCompositionChange,
+    onSourceConflictResolve: props.onSourceConflictResolve,
     embeddingDepth: props.depth,
   }
 
@@ -80,7 +85,7 @@ export const WorkspaceEditor = (props: Props) => {
     })
     const release = session.attach()
     if (release === null) throw new TypeError("Workspace editor session is already attached")
-    const workspaceViews = createWorkspaceNodeViews(dataRef)
+    const workspaceViews = createWorkspaceNodeViews(dataRef, propsRef.current.sourceController)
     let compositionTimer: ReturnType<typeof setTimeout> | undefined
     const view = new EditorView(target, {
       state: session.state,
@@ -116,8 +121,15 @@ export const WorkspaceEditor = (props: Props) => {
       emittedRef.current = JSON.stringify(document)
       propsRef.current.onDocument(document)
     })
+    const interactionContext = propsRef.current.sourceController.interactionContext(
+      `page:${documentId}`,
+    )
     const detach = attachBlockInteractions(view, {
       readOnly: false,
+      isActive: interactionContext.isActive,
+      claim: interactionContext.claim,
+      release: interactionContext.release,
+      subscribeActive: interactionContext.subscribe,
       clipboardPolicy: {
         namespace: "block-editor/workspace",
         cut: "remove-after-write",

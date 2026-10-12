@@ -12,7 +12,12 @@ const base = `http://127.0.0.1:${address.port}`
 const browser = await chromium.launch({
   headless: true,
   ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),
-  args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  args: [
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--font-render-hinting=none",
+    "--disable-lcd-text",
+  ],
 })
 
 try {

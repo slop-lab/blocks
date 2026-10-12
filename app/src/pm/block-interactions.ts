@@ -60,6 +60,11 @@ export const attachBlockInteractions = (
   })
   let activeId: string | null = null
   let railId: string | null = null
+  const ownsBlock = (block: HTMLElement): boolean => block.closest(".ProseMirror") === view.dom
+  const ownedBlockById = (id: string): HTMLElement | null =>
+    Array.from(view.dom.querySelectorAll<HTMLElement>(`[data-block-id="${CSS.escape(id)}"]`)).find(
+      ownsBlock,
+    ) ?? null
 
   const hideRail = () => {
     activeId = null
@@ -90,7 +95,12 @@ export const attachBlockInteractions = (
   }
   const showRail = (block: HTMLElement) => {
     const blockId = block.dataset["blockId"]
-    if (blockId === undefined || options.readOnly || options.active?.() === false) {
+    if (
+      blockId === undefined ||
+      !ownsBlock(block) ||
+      options.readOnly ||
+      options.active?.() === false
+    ) {
       hideRail()
       return
     }
@@ -114,16 +124,18 @@ export const attachBlockInteractions = (
   }
   const refreshFromSelection = () => {
     const { $from } = view.state.selection
-    const node = $from.depth > 0 ? $from.node(1) : ($from.nodeAfter ?? $from.nodeBefore)
-    const id = node?.attrs["id"]
+    let id: unknown
+    for (let depth = $from.depth; depth > 0 && typeof id !== "string"; depth -= 1)
+      id = $from.node(depth).attrs["id"]
+    if (typeof id !== "string") id = ($from.nodeAfter ?? $from.nodeBefore)?.attrs["id"]
     if (typeof id !== "string") return
-    const element = view.dom.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(id)}"]`)
+    const element = ownedBlockById(id)
     if (element !== null) showRail(element)
   }
   const refreshActiveRail = () => {
     menu.close()
     if (railId === null || rail.hidden) return
-    const element = view.dom.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(railId)}"]`)
+    const element = ownedBlockById(railId)
     if (element === null) hideRail()
     else showRail(element)
   }
@@ -199,7 +211,7 @@ export const attachBlockInteractions = (
   }
   const onPointerOver = (event: PointerEvent) => {
     const block = blockElement(event.target)
-    if (block !== null && view.dom.contains(block)) showRail(block)
+    if (block !== null && ownsBlock(block)) showRail(block)
   }
   const onDocumentPointerDown = (event: PointerEvent) => {
     if (!(event.target instanceof Node)) return

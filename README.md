@@ -1,5 +1,7 @@
 # 문서 작업실
 
+선택·포커스·클립보드의 책임은 `docs/contracts/interaction.md`, 공유 원본의 상태·저장 책임은 `docs/contracts/source-runtime.md`, 검증 계층은 `docs/contracts/testing.md`에 정의합니다. 예제 UI의 편의 기능과 엔진/호스트 계약을 구분하며, 테스트 개수만으로 적합성을 주장하지 않습니다.
+
 React와 ProseMirror를 사용하는 블록 편집기 및 선택 가능한 연결 모듈입니다. 기본 편집기는 저장소·도메인 서비스·협업 서버 없이 사용할 수 있습니다.
 
 ## 실행

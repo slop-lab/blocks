@@ -91,17 +91,17 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 
 ### Editor Block
 - Structure: stable block wrapper + peripheral handle + ProseMirror-rendered native content.
-- Variants: paragraph, three headings, bullet, ordered, quote, code, task card, caption, opaque fallback.
+- Variants are supplied by the active block profile. Structured documents use sections with optional titles, callouts and quotes containing child blocks; Markdown heading levels belong only to the Markdown format adapter.
 - States: selected, locked, readonly, review candidate, opaque. Locked/opaque states show a textual badge.
 - Accessibility: content remains in logical DOM order; controls are keyboard reachable; drag is never the only move mechanism.
 
 ### Living Margin Controls
 - A reusable `attachBlockInteractions(view, options)` boundary owns ephemeral controls while the `EditorView` remains the only document state owner. It supports local, Yjs, and composite schemas by capability detection rather than simulated block types.
-- Hover or editor focus reveals a compact plus and grip rail beside the current top-level block. Coarse pointers keep the rail discoverable at the focused block with 44px targets. Readonly surfaces omit mutation controls entirely; locked blocks expose identity and status but no destructive actions.
+- Hover or editor focus reveals a compact plus and grip rail beside the current logical block, including nested children. Parent-to-child targeting is not suppressed by the parent's rectangle. Coarse pointers keep the rail discoverable at the focused block with 44px targets. Readonly surfaces omit mutation controls entirely; locked blocks expose identity and status but no destructive actions.
 - The grip is the only drag origin. Its menu opens by click, `Shift+F10`, or the Context Menu key and includes duplicate, delete, move, and supported type changes. Every action resolves the stable block ID against the current document when invoked; menu position is never treated as document identity.
 - Drag shows one accent insertion rule between blocks, supports document-start and document-end gaps, and autoscrolls the nearest editor scroll owner. Cancel, Escape, pointer cancellation, and leaving the same editor clear all transient drag state. Keyboard move actions remain first-class.
-- Grip click enters ephemeral block-selection mode. Shift extends through visible order, Ctrl/Cmd toggles, Escape clears, and Delete/Backspace owns the selected structural batch. Dragging empty editor chrome draws a rectangular marquee; starting inside editable text preserves native text selection.
-- Selected blocks use `selection-soft` plus a blue `selection` outline. Synced blocks retain a thin purple `sync` strip and a labeled sync icon when selected, while keyboard focus uses the warning token as a third independent state. Selection state, anchor, focus, and marquee geometry are view-only and never enter document JSON or collaborative state.
+- Grip click selects the block and opens its context menu. Shift adds/removes a range from the last focus, Ctrl/Cmd toggles, Escape clears, and Delete/Backspace owns the canonical structural batch. Ancestor and descendant are never simultaneous explicit selection roots. Dragging empty editor chrome draws a rectangular marquee; starting inside editable text activates native text mode. Pointer-down outside the context clears selection, except declared rail/menu/format controls; entering another editor deactivates the previous context.
+- Selected blocks use one `selection-soft` subtree wash plus a blue `selection` outline. Children do not repaint white islands or acquire a second explicit selection fill. Synced blocks retain a thin purple `sync` strip and a labeled sync icon when selected, while keyboard focus uses the warning token as a third independent state. Selection state, anchor, focus, and marquee geometry are view-only and never enter document JSON or collaborative state. The interaction contract, not DOM classes, defines selection state.
 
 ### Editor Popover / Command Menu
 - Structure: owner-document portal, anchored to a block control or text caret, with viewport-clamped position, whisper border, paper/elevated surface, and the documented popover shadow.
@@ -121,10 +121,6 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 - Structure: title, description, labeled controls, inline validation, footer actions.
 - States: valid, invalid, saving, saved. Escape closes unless a dirty draft needs explicit save/cancel choice.
 - Review dialogs use an immutable before pane beside an editable candidate pane; host drafts remain outside document content and disclose their captured revision.
-
-### Ownership Channel Panel
-- A compact four-column `content` / `view` / `overlay` / `ui` tab set renders actual channel values, never a static architecture claim.
-- JSON is horizontally scrollable within the panel and uses the mono type token.
 
 ### Ownership Examples Workspace
 - A five-tab operational workspace compares notebook, project board, status projection, Markdown file tree, and mixed backlog ownership without presenting implementation progress.
@@ -146,7 +142,8 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 ### Structured Workspace
 - A fixed-sidenav list/detail shell presents a nested page tree beside one paper document. The document is the only primary scroll owner; database tables may scroll inline on narrow screens.
 - Page, database, and synced-source status use the shared badge and action-button primitives. Synced occurrences use a subtle `sync-soft` surface, thin purple `sync` strip, icon, and the text `동기화`; blue remains reserved for structural selection and color never acts alone.
-- Headings render their authored relative level plus embedding depth, clamped to HTML h1-h6; rendering never writes the derived level back to JSON.
+- Section titles derive HTML h1-h6 from semantic section nesting and embedding depth. Structured JSON does not store fixed Markdown heading levels; rendering never changes content.
+- A canonical shared source owns one runtime and history. Occurrences supply placement, depth, focus and bookmarks; inactive occurrences are readonly projections and cannot route commands. Saving and remote conflicts are independent of which occurrence currently has focus.
 - Below 768px the page tree becomes a collapsible top rail and the document keeps 16px gutters. Search and the Ctrl-K command palette remain keyboard reachable at every width.
 - Persisted page-reference blocks produce a compact backlinks region after the document. Each backlink names its source page and returns focus to the exact reference block through the URL hash.
 - A compact labeled paste-policy selector above the document makes independent duplication versus persisted shared-source references explicit; reference mode never invents a source for ordinary local blocks.

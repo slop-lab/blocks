@@ -254,7 +254,7 @@ try {
   await syncedVisualBlock
     .locator("header > span:not([data-sync-label])")
     .click({ modifiers: ["Control"] })
-  assert.equal(await localVisualBlock.getAttribute("data-block-selected"), "true")
+  assert.equal(await localVisualBlock.getAttribute("data-block-selected"), null)
   assert.equal(await syncedVisualBlock.getAttribute("data-block-selected"), "true")
   const combinedColors = await syncedVisualBlock.evaluate((element) => {
     const style = getComputedStyle(element)

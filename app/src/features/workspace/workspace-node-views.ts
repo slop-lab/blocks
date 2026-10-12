@@ -1,4 +1,6 @@
+import { SourceRuntimeRegistry } from "@block-editor/bindings"
 import type { Node as ProseMirrorNode } from "prosemirror-model"
+import type { EditorState } from "prosemirror-state"
 import type { NodeView, NodeViewConstructor } from "prosemirror-view"
 import { createLocalSectionView } from "./workspace-local-section-view"
 import {
@@ -40,6 +42,16 @@ export const createWorkspaceNodeViews = (data: {
 }): WorkspaceNodeViews => {
   const renders = new Set<() => void>()
   const nestedEditors = new Map<string, NestedEditor>()
+  const sourceRuntimes = new SourceRuntimeRegistry<EditorState, ProseMirrorNode>({
+    contentOf: (state) => state.doc,
+    replaceContent: (state, document) =>
+      state.apply(
+        state.tr
+          .replaceWith(0, state.doc.content.size, document.content)
+          .setMeta("addToHistory", false)
+          .setMeta("origin", "remote"),
+      ),
+  })
   let activeOccurrence: string | null = null
   const activity = {
     current: () => activeOccurrence,
@@ -95,6 +107,7 @@ export const createWorkspaceNodeViews = (data: {
             data,
             editors: nestedEditors,
             activity,
+            runtimes: sourceRuntimes,
           }),
     section_title: (_node, view, getPos) => {
       const position = getPos()
@@ -119,6 +132,7 @@ export const createWorkspaceNodeViews = (data: {
       renders.clear()
       for (const editor of nestedEditors.values()) editor.destroy()
       nestedEditors.clear()
+      sourceRuntimes.clear()
     },
   }
 }

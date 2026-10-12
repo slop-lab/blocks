@@ -90,6 +90,7 @@ Markdown·협업·표·대용량 기능은 각각의 진입점을 가져오거�
 | `@block-editor/bindings` | 엔진과 무관한 변경 전달, draft/ack 정책, 비동기 외부 액션 target guard, 엄격한 revision schema |
 | `@block-editor/server-bindings` | Node 파일 CAS 저장소, Yjs room 저장소, 서명된 데모 세션과 scope 검사, versioned 승인 workflow |
 | `@block-editor/model` | 엔진과 무관한 문서 계약, codec, 명시적 block registry와 React viewer |
+| `@block-editor/interactions` | 엔진 독립 선택·clipboard·cut 정책. ProseMirror 연결은 opt-in `/prosemirror` 진입점 |
 | `@block-editor/prosemirror` | opt-in ProseMirror schema/snapshot adapter와 block별 leaf export |
 | `@block-editor/workspace` | 엔진 독립 페이지/문서/database/synced-source Zod 계약, 계층 명령, typed row patch, filter/sort와 context heading projection |
 
@@ -177,7 +178,7 @@ const htmlLevel = headingLevelAtDepth(2, 3) // 5; 저장된 2는 바뀌지 않�
 - `GET/PUT /api/documents/:id`: room scope와 role을 검사하는 durable CAS 문서.
 - `POST /api/workflows/:id/submit|approve`: 제출한 콘텐츠 revision을 고정하는 versioned 제출/승인과 audit history. 제출·승인된 문서는 이 예제 API에서 수정할 수 없습니다.
 - `GET /api/workspace`: sample workspace와 별도 page/database/synced-source entity를 읽습니다.
-- `PUT /api/workspace/:kind/:id`: `trees|pages|databases|sources` entity를 Zod로 파싱한 뒤 `expectedRevision` CAS로 저장합니다. 새 page document만 revision 없이 생성할 수 있습니다.
+- `PUT /api/workspace/:kind/:id`: `trees|pages|databases|sources` entity를 Zod로 파싱한 뒤 `expectedRevision` CAS로 저장합니다. 새 page document와 synced source는 revision 없이 생성할 수 있습니다.
 - `.runtime/`은 실행 데이터이며 Git에서 제외합니다.
 
 구조화 작업 공간은 기본 서버에서 `.runtime/workspace/{trees,pages,databases,sources}`에 entity별 JSON snapshot과 audit history를 저장합니다. `RUNTIME_ROOT`를 직접 받는 API는 없으며 테스트는 `createApplicationServer({ runtimeRoot })`로 임시 root를 격리합니다. 저장 직렬화는 한 Node process 안의 파일별 queue와 atomic rename을 사용합니다. 여러 process 또는 분산 transaction을 제공한다고 가정하지 않습니다.

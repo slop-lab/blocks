@@ -146,15 +146,19 @@ export class SourceRuntime<State, Content> {
 
   pendingSave(): PendingSourceSave<Content> | null {
     if (!this.dirty) return null
-    const pending = {
+    return {
       sourceId: this.sourceId,
       generation: this.generation,
       baselineRevision: this.revision,
       causeId: this.causeId,
       content: this.adapter.contentOf(this.currentState),
     }
+  }
+
+  registerSubmitted(pending: PendingSourceSave<Content>): boolean {
+    if (pending.sourceId !== this.sourceId) return false
     this.submitted.set(pending.generation, pending)
-    return pending
+    return true
   }
 
   acknowledge(input: SourceAcknowledgement<Content>): { readonly kind: "accepted" | "stale" } {
@@ -162,13 +166,18 @@ export class SourceRuntime<State, Content> {
     if (
       submitted === undefined ||
       input.causeId !== submitted.causeId ||
-      input.record.revision <= submitted.baselineRevision ||
       !this.adapter.contentEquals(input.record.content, submitted.content)
+    )
+      return { kind: "stale" }
+    this.submitted.delete(input.generation)
+    if (
+      input.generation <= this.savedGeneration ||
+      input.record.revision <= submitted.baselineRevision ||
+      input.record.revision <= this.revision
     )
       return { kind: "stale" }
     this.revision = input.record.revision
     this.savedGeneration = Math.max(this.savedGeneration, input.generation)
-    this.submitted.delete(input.generation)
     if (this.conflictRecord !== null && this.conflictRecord.revision <= this.revision)
       this.conflictRecord = null
     this.emit()

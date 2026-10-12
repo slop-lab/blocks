@@ -122,6 +122,7 @@ describe("canonical source runtime", () => {
     runtime.activate("first")
     runtime.updateLocal("first", { content: "first", undo: ["A"] }, "cause-1")
     const old = runtime.pendingSave()
+    if (old !== null) runtime.registerSubmitted(old)
     runtime.updateLocal("first", { content: "newest", undo: ["A", "first"] }, "cause-2")
 
     const result = runtime.acknowledge({
@@ -136,6 +137,36 @@ describe("canonical source runtime", () => {
     expect(runtime.pendingSave()).toMatchObject({ baselineRevision: 4, content: "newest" })
   })
 
+  it("Given B is acknowledged before A, When A arrives late, Then the baseline remains at B", () => {
+    const runtime = registry().open("source-a", {
+      state: { content: "A", undo: [] },
+      revision: 3,
+    })
+    runtime.attach("first")
+    runtime.activate("first")
+    runtime.updateLocal("first", { content: "first", undo: ["A"] }, "cause-a")
+    const saveA = runtime.pendingSave()
+    if (saveA !== null) runtime.registerSubmitted(saveA)
+    runtime.updateLocal("first", { content: "second", undo: ["A", "first"] }, "cause-b")
+    const saveB = runtime.pendingSave()
+    if (saveB !== null) runtime.registerSubmitted(saveB)
+    runtime.acknowledge({
+      generation: saveB?.generation ?? 0,
+      causeId: "cause-b",
+      record: { content: "second", revision: 5 },
+    })
+
+    const late = runtime.acknowledge({
+      generation: saveA?.generation ?? 0,
+      causeId: "cause-a",
+      record: { content: "first", revision: 4 },
+    })
+
+    expect(late).toEqual({ kind: "stale" })
+    expect(runtime.baselineRevision).toBe(5)
+    expect(runtime.dirty).toBe(false)
+  })
+
   it("Given a submitted generation, When its cause or saved content differs, Then acknowledgement is stale", () => {
     const runtime = registry().open("source-a", {
       state: { content: "A", undo: [] },
@@ -145,6 +176,7 @@ describe("canonical source runtime", () => {
     runtime.activate("first")
     runtime.updateLocal("first", { content: "first", undo: ["A"] }, "cause-1")
     const submitted = runtime.pendingSave()
+    if (submitted !== null) runtime.registerSubmitted(submitted)
 
     expect(
       runtime.acknowledge({
@@ -162,6 +194,42 @@ describe("canonical source runtime", () => {
     ).toEqual({ kind: "stale" })
     expect(runtime.baselineRevision).toBe(3)
     expect(runtime.dirty).toBe(true)
+  })
+
+  it("Given many debounced captures, When only the latest is submitted, Then unsent generations cannot be acknowledged", () => {
+    const runtime = registry().open("source-a", {
+      state: { content: "A", undo: [] },
+      revision: 1,
+    })
+    runtime.attach("first")
+    runtime.activate("first")
+    runtime.updateLocal("first", { content: "first", undo: ["A"] }, "cause-1")
+    const unsent = runtime.pendingSave()
+    let latest = unsent
+    for (let generation = 2; generation <= 1_000; generation += 1) {
+      runtime.updateLocal(
+        "first",
+        { content: `draft-${generation}`, undo: [] },
+        `cause-${generation}`,
+      )
+      latest = runtime.pendingSave()
+    }
+    if (latest !== null) runtime.registerSubmitted(latest)
+
+    expect(
+      runtime.acknowledge({
+        generation: unsent?.generation ?? 0,
+        causeId: "cause-1",
+        record: { content: "first", revision: 2 },
+      }),
+    ).toEqual({ kind: "stale" })
+    expect(
+      runtime.acknowledge({
+        generation: latest?.generation ?? 0,
+        causeId: "cause-1000",
+        record: { content: "draft-1000", revision: 2 },
+      }),
+    ).toEqual({ kind: "accepted" })
   })
 
   it("Given a remote conflict, When the user keeps the local draft, Then it rebases only by explicit recovery", () => {

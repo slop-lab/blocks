@@ -117,6 +117,23 @@ try {
   await outerQuote.evaluate((element) => {
     element.style.paddingBottom = ""
   })
+  const textDrag = await leaf.evaluate((element) => {
+    const text = element.firstChild
+    if (!(text instanceof Text)) throw new TypeError("Missing nested paragraph text")
+    const point = (offset) => {
+      const range = document.createRange()
+      range.setStart(text, offset)
+      range.setEnd(text, offset)
+      const rect = range.getBoundingClientRect()
+      return { x: rect.left, y: rect.top + rect.height / 2 }
+    }
+    return { start: point(1), end: point(3) }
+  })
+  await page.mouse.move(textDrag.start.x, textDrag.start.y)
+  await page.mouse.down()
+  await page.mouse.move(textDrag.end.x, textDrag.end.y, { steps: 4 })
+  await page.mouse.up()
+  assert.equal(await page.evaluate(() => document.getSelection()?.toString()), "bc")
   await page.mouse.move(leafBox.x + leafBox.width / 2, leafBox.y + leafBox.height / 2)
   await page.mouse.move(gripBox.x + gripBox.width / 2, gripBox.y + gripBox.height / 2, {
     steps: 25,
@@ -128,6 +145,9 @@ try {
   await grip.click()
   const menu = page.getByRole("menu", { name: "블록 작업" })
   await menu.waitFor()
+  const retainedTextAfterMenuFocus = await page.evaluate(
+    () => document.getSelection()?.toString() ?? "",
+  )
   assert.equal(await menu.getAttribute("data-target-block-id"), leafId)
   await page.evaluate(() => {
     window.__nestedClipboardTypes = []
@@ -185,7 +205,9 @@ try {
   assert.equal(persistedIds.length, 3)
   assert.equal(new Set(persistedIds).size, 3)
   assert.deepEqual(errors, [])
-  console.log("PASS nested grip ownership and quote split persistence")
+  console.log(
+    `PASS nested grip ownership and quote split persistence; retained text after menu focus: ${JSON.stringify(retainedTextAfterMenuFocus)}`,
+  )
 } finally {
   await browser.close()
   server.closeAllConnections()

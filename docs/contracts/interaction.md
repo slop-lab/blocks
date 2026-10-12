@@ -39,6 +39,8 @@ The rail corridor extends only from the near edge of the current block to the ra
 
 The default grip click selects its operation root and opens that root's contextual menu. Escape from the menu returns focus to the grip without erasing the block selection. An unmodified text click activates native text selection; a pointer-down outside this context clears active selection. Rail, menu and an open selection-format form are declared context controls, not arbitrary DOM descendants exempt from dismissal. Entering a different nested editor deactivates the previous context. Projects may choose a select-only grip presentation, but the input adapter does not infer that policy from CSS or element names.
 
+Generic editor-root, canvas, sidebar, and blank-surface clicks never create document content. New blocks require an explicit insertion control or an engine editing command such as Enter; a rendered empty-root placeholder is not persisted content.
+
 Readonly contexts permit native text selection and copy. Structural mutation controls are absent. Operations containing any locked block or locked ancestor are all-or-nothing.
 
 ## Clipboard

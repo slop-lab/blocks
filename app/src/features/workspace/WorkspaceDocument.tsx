@@ -13,7 +13,8 @@ type Props = {
   readonly onDocument: (document: PageDocument) => void
   readonly onDatabase: (database: Database) => void
   readonly onSourceEdit: (source: SyncedSource) => void
-  readonly onSourceCreate: (source: SyncedSource) => Promise<boolean>
+  readonly onSourceCreate: (source: SyncedSource) => Promise<SyncedSource | null>
+  readonly onSourceCompositionChange: (sourceId: string, composing: boolean) => void
   readonly backlinks: readonly {
     readonly blockId: string
     readonly pageId: string
@@ -91,6 +92,7 @@ export const WorkspaceDocument = (props: Props) => {
         onDocument={props.onDocument}
         onSourceEdit={props.onSourceEdit}
         onSourceCreate={props.onSourceCreate}
+        onSourceCompositionChange={props.onSourceCompositionChange}
         onOpenPage={props.onOpenPage}
         onCompositionChange={props.onCompositionChange ?? (() => {})}
         pasteMode={props.pasteMode}

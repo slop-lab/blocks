@@ -14,6 +14,7 @@ import {
 type Activity = {
   readonly current: () => string | null
   readonly activate: (occurrenceId: string) => void
+  readonly deactivate: (occurrenceId: string) => void
 }
 type SyncedSectionOptions = {
   readonly node: ProseMirrorNode
@@ -91,6 +92,8 @@ export const createSyncedSectionView = ({
   label.textContent = `동기화된 섹션 · v${source.version}`
   let sourceVersion = source.version
   let emitted = JSON.stringify(source.section)
+  let composing = false
+  let compositionTimer: ReturnType<typeof setTimeout> | undefined
   const nestedView = new EditorView(host, {
     state: createEditorState({
       document: snapshotToPm(
@@ -109,6 +112,22 @@ export const createSyncedSectionView = ({
       "aria-label": `동기화된 섹션 ${occurrenceId}`,
     },
     editable: () => activity.current() === occurrenceId,
+    handleDOMEvents: {
+      compositionstart: () => {
+        clearTimeout(compositionTimer)
+        composing = true
+        data.current.onSourceCompositionChange(sourceId, true)
+        return false
+      },
+      compositionend: () => {
+        clearTimeout(compositionTimer)
+        compositionTimer = setTimeout(() => {
+          composing = false
+          data.current.onSourceCompositionChange(sourceId, false)
+        }, 0)
+        return false
+      },
+    },
     dispatchTransaction: (transaction) => {
       const next = nestedView.state.apply(transaction)
       nestedView.updateState(next)
@@ -129,7 +148,12 @@ export const createSyncedSectionView = ({
     active: () => activity.current() === occurrenceId,
   })
   const activate = () => activity.activate(occurrenceId)
+  const deactivate = (event: FocusEvent) => {
+    if (event.relatedTarget instanceof Node && dom.contains(event.relatedTarget)) return
+    activity.deactivate(occurrenceId)
+  }
   dom.addEventListener("pointerdown", activate, true)
+  dom.addEventListener("focusout", deactivate, true)
   const refresh = () => {
     const current = data.current.sources.find((candidate) => candidate.id === sourceId)
     if (
@@ -159,6 +183,9 @@ export const createSyncedSectionView = ({
   }
   const destroy = () => {
     dom.removeEventListener("pointerdown", activate, true)
+    dom.removeEventListener("focusout", deactivate, true)
+    clearTimeout(compositionTimer)
+    if (composing) data.current.onSourceCompositionChange(sourceId, false)
     detach()
     nestedView.destroy()
   }

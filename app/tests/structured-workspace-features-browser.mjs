@@ -19,13 +19,23 @@ const base = `http://127.0.0.1:${address.port}`
 const browser = await chromium.launch({
   headless: true,
   ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),
-  args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  args: [
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--font-render-hinting=none",
+    "--disable-lcd-text",
+  ],
 })
 
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
   const errors = []
+  let sourceWrites = 0
   page.on("pageerror", (error) => errors.push(error.message))
+  page.on("request", (request) => {
+    if (request.method() === "PUT" && request.url().includes("/api/workspace/sources/"))
+      sourceWrites += 1
+  })
   await page.goto(`${base}/?workspace=structured-workspace`, { waitUntil: "networkidle" })
   const workspace = page.getByLabel("문서와 데이터베이스")
   await workspace.waitFor()
@@ -65,7 +75,36 @@ try {
   await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
   await page.reload({ waitUntil: "networkidle" })
   await workspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
-  await workspace.locator(".structured-sync").first().waitFor()
+  const syncedSection = workspace.locator(".structured-sync").first()
+  await syncedSection.waitFor()
+  const syncedEditor = syncedSection.locator(".structured-sync__editor")
+  const syncedParagraph = syncedEditor.locator("p").first()
+  const sourceWritesBeforeComposition = sourceWrites
+  await syncedParagraph.click()
+  await syncedEditor.dispatchEvent("compositionstart")
+  await page.keyboard.insertText("조합 중")
+  await page.waitForTimeout(800)
+  assert.equal(sourceWrites, sourceWritesBeforeComposition)
+  await syncedEditor.dispatchEvent("compositionend")
+  await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
+  assert.equal(sourceWrites, sourceWritesBeforeComposition + 1)
+  assert.equal(
+    await syncedEditor.evaluate((element) => element.contains(document.activeElement)),
+    true,
+  )
+  await page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" && response.url().endsWith("/api/workspace"),
+  )
+  assert.equal(
+    await syncedEditor.evaluate((element) => element.contains(document.activeElement)),
+    true,
+  )
+  await workspace.getByLabel("연결할 페이지").focus()
+  assert.equal(await syncedEditor.getAttribute("contenteditable"), "false")
+  await page.reload({ waitUntil: "networkidle" })
+  await workspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
+  assert.match(await workspace.locator(".structured-sync__editor").first().innerText(), /조합 중/)
 
   await workspace.getByRole("button", { name: "제품 출시", exact: true }).click()
   await workspace.getByRole("button", { name: "보드 보기", exact: true }).click()

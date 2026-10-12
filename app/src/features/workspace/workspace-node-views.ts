@@ -47,6 +47,14 @@ export const createWorkspaceNodeViews = (data: {
       activeOccurrence = occurrenceId
       for (const editor of nestedEditors.values()) editor.view.setProps({})
     },
+    deactivate: (occurrenceId: string) => {
+      if (activeOccurrence !== occurrenceId) return
+      activeOccurrence = null
+      for (const editor of nestedEditors.values()) {
+        editor.view.setProps({})
+        editor.refresh()
+      }
+    },
   }
   const nodeViews: Readonly<Record<string, NodeViewConstructor>> = {
     workspace_page_ref: (node, view) =>

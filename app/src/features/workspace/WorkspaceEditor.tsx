@@ -19,7 +19,8 @@ type Props = {
   readonly sources: readonly SyncedSource[]
   readonly onDocument: (document: PageDocument) => void
   readonly onSourceEdit: (source: SyncedSource) => void
-  readonly onSourceCreate: (source: SyncedSource) => Promise<boolean>
+  readonly onSourceCreate: (source: SyncedSource) => Promise<SyncedSource | null>
+  readonly onSourceCompositionChange: (sourceId: string, composing: boolean) => void
   readonly onOpenPage: (id: string, blockId?: string) => void
   readonly onCompositionChange: (composing: boolean) => void
   readonly pasteMode: "clone" | "reference"
@@ -44,6 +45,7 @@ export const WorkspaceEditor = (props: Props) => {
     onOpenPage: props.onOpenPage,
     onSourceEdit: props.onSourceEdit,
     onSourceCreate: props.onSourceCreate,
+    onSourceCompositionChange: props.onSourceCompositionChange,
     embeddingDepth: props.depth,
   })
   dataRef.current = {
@@ -54,6 +56,7 @@ export const WorkspaceEditor = (props: Props) => {
     onOpenPage: props.onOpenPage,
     onSourceEdit: props.onSourceEdit,
     onSourceCreate: props.onSourceCreate,
+    onSourceCompositionChange: props.onSourceCompositionChange,
     embeddingDepth: props.depth,
   }
 

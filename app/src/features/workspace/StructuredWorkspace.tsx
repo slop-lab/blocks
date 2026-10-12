@@ -109,6 +109,9 @@ export const StructuredWorkspace = () => {
           onDatabase={persistence.updateDatabase}
           onSourceEdit={persistence.updateSource}
           onSourceCreate={persistence.createSource}
+          onSourceCompositionChange={(sourceId, composing) =>
+            persistence.setComposing({ kind: "sources", id: sourceId }, composing)
+          }
           onCompositionChange={(composing) =>
             persistence.setComposing({ kind: "pages", id: active.documentId }, composing)
           }

@@ -4,48 +4,26 @@ import {
   createPage,
   databaseSchema,
   pageDocumentSchema,
-  pageSchema,
   syncedSourceSchema,
   workspaceSchema,
 } from "@block-editor/workspace"
 import { z } from "zod"
+import { withWorkspaceMutation } from "./workspace-mutation-queue.mjs"
+import {
+  createPageSchema,
+  readWorkspaceBody,
+  sendWorkspaceResponse,
+  updateSchema,
+} from "./workspace-request.mjs"
 import {
   sampleDatabases,
   sampleDocuments,
   sampleSources,
   sampleWorkspace,
 } from "./workspace-seed.mjs"
-import { validateWorkspaceEntity } from "./workspace-validation.mjs"
+import { validateWorkspaceCandidates, validateWorkspaceEntity } from "./workspace-validation.mjs"
 
-const MAX_BODY = 512 * 1024
-const updateSchema = z
-  .object({ expectedRevision: z.number().int().positive().optional(), content: z.json() })
-  .strict()
-const createPageSchema = z
-  .object({
-    expectedTreeRevision: z.number().int().positive(),
-    page: pageSchema.omit({ archived: true }),
-  })
-  .strict()
-
-const send = (response, status, payload) => {
-  response.writeHead(status, {
-    "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-    "x-content-type-options": "nosniff",
-  })
-  response.end(JSON.stringify(payload))
-}
-const readBody = async (request) => {
-  const chunks = []
-  let size = 0
-  for await (const chunk of request) {
-    size += chunk.length
-    if (size > MAX_BODY) throw new RangeError("Request body is too large")
-    chunks.push(chunk)
-  }
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"))
-}
+const send = sendWorkspaceResponse
 const createIfMissing = async (repository, documentId, content, schema) => {
   const existing = await repository.read(documentId)
   if (existing !== null) {
@@ -130,7 +108,7 @@ export const createWorkspaceHandler = ({ root, host }) => {
         request.method === "GET" ? "read" : "write",
       )
       if (url.pathname === "/api/workspace" && request.method === "GET") {
-        send(response, 200, await initialize())
+        send(response, 200, await withWorkspaceMutation(root, initialize))
         return true
       }
       if (url.pathname === "/api/workspace/pages" && request.method === "POST") {
@@ -139,40 +117,51 @@ export const createWorkspaceHandler = ({ root, host }) => {
           send(response, 403, { error: "cross_origin_mutation" })
           return true
         }
-        await initialize()
-        const parsed = createPageSchema.parse(await readBody(request))
-        const tree = await repositories.trees.read(sampleWorkspace.id)
-        if (tree === null) throw new TypeError("Workspace tree is missing")
-        const pageDocument = pageDocumentSchema.parse({
-          pageId: parsed.page.id,
-          version: 1,
-          blocks: [
-            {
-              id: `${parsed.page.id}-section`,
-              type: "section",
-              heading: parsed.page.title,
-              children: [{ id: `${parsed.page.id}-paragraph`, type: "paragraph", text: "" }],
-            },
-          ],
-        })
-        const document = await repositories.pages.create({
-          documentId: parsed.page.id,
-          content: pageDocument,
-          actorId: session.subject,
-        })
-        try {
+        const parsed = createPageSchema.parse(await readWorkspaceBody(request))
+        const created = await withWorkspaceMutation(root, async () => {
+          await initialize()
+          const tree = await repositories.trees.read(sampleWorkspace.id)
+          if (tree === null) throw new TypeError("Workspace tree is missing")
+          const pageDocument = pageDocumentSchema.parse({
+            pageId: parsed.page.id,
+            version: 1,
+            blocks: [
+              {
+                id: `${parsed.page.id}-section`,
+                type: "section",
+                heading: parsed.page.title,
+                children: [{ id: `${parsed.page.id}-paragraph`, type: "paragraph", text: "" }],
+              },
+            ],
+          })
           const content = createPage(tree.content, parsed.page)
-          const savedTree = await repositories.trees.update(
-            tree.documentId,
-            parsed.expectedTreeRevision,
-            { ...content, version: content.version + 1 },
-            { actorId: session.subject },
-          )
-          send(response, 201, { tree: savedTree, document })
-        } catch (error) {
-          await repositories.pages.delete(document.documentId, document.revision)
-          throw error
-        }
+          const nextTree = { ...content, version: content.version + 1 }
+          await validateWorkspaceCandidates({
+            candidates: [
+              { kind: "trees", id: tree.documentId, content: nextTree },
+              { kind: "pages", id: parsed.page.id, content: pageDocument },
+            ],
+            repositories,
+          })
+          const document = await repositories.pages.create({
+            documentId: parsed.page.id,
+            content: pageDocument,
+            actorId: session.subject,
+          })
+          try {
+            const savedTree = await repositories.trees.update(
+              tree.documentId,
+              parsed.expectedTreeRevision,
+              nextTree,
+              { actorId: session.subject },
+            )
+            return { tree: savedTree, document }
+          } catch (error) {
+            await repositories.pages.delete(document.documentId, document.revision)
+            throw error
+          }
+        })
+        send(response, 201, created)
         return true
       }
       const match = /^\/api\/workspace\/(trees|pages|databases|sources)\/([a-zA-Z0-9_-]+)$/u.exec(
@@ -192,8 +181,7 @@ export const createWorkspaceHandler = ({ root, host }) => {
         return true
       }
       const [, kind, id] = match
-      await initialize()
-      const parsed = updateSchema.parse(await readBody(request))
+      const parsed = updateSchema.parse(await readWorkspaceBody(request))
       const schemas = {
         trees: workspaceSchema,
         pages: pageDocumentSchema,
@@ -201,19 +189,25 @@ export const createWorkspaceHandler = ({ root, host }) => {
         sources: syncedSourceSchema,
       }
       const content = schemas[kind].parse(parsed.content)
-      await validateWorkspaceEntity({ kind, id, content, repositories })
-      const current = await repositories[kind].read(id)
-      if (parsed.expectedRevision === undefined && current !== null) {
+      const result = await withWorkspaceMutation(root, async () => {
+        await initialize()
+        const current = await repositories[kind].read(id)
+        if (parsed.expectedRevision === undefined && current !== null)
+          return { kind: "expected_revision_required" }
+        await validateWorkspaceEntity({ kind, id, content, repositories })
+        const saved =
+          parsed.expectedRevision === undefined
+            ? await repositories[kind].create({ documentId: id, content, actorId: session.subject })
+            : await repositories[kind].update(id, parsed.expectedRevision, content, {
+                actorId: session.subject,
+              })
+        return { kind: "saved", saved, created: current === null }
+      })
+      if (result.kind === "expected_revision_required") {
         send(response, 400, { error: "expected_revision_required" })
         return true
       }
-      const saved =
-        parsed.expectedRevision === undefined
-          ? await repositories[kind].create({ documentId: id, content, actorId: session.subject })
-          : await repositories[kind].update(id, parsed.expectedRevision, content, {
-              actorId: session.subject,
-            })
-      send(response, current === null ? 201 : 200, saved)
+      send(response, result.created ? 201 : 200, result.saved)
       return true
     } catch (error) {
       if (error instanceof RevisionConflictError) {

@@ -2,7 +2,6 @@ import { Fragment, type Node as ProseMirrorNode } from "prosemirror-model"
 import type { EditorView } from "prosemirror-view"
 import {
   BLOCK_CLIPBOARD_MIME,
-  type BlockSelection,
   type ClipboardEnvelope,
   type ClipboardPolicy,
   decodeBlockClipboard,
@@ -38,7 +37,7 @@ export type ProseMirrorClipboardOptions = {
 }
 
 type ClipboardControllerOptions = ProseMirrorClipboardOptions & {
-  readonly selection: BlockSelection
+  readonly selection: { readonly value: readonly string[] }
   readonly clear: () => void
 }
 

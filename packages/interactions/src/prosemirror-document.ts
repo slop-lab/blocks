@@ -1,6 +1,7 @@
 import { Fragment, type Node as ProseMirrorNode } from "prosemirror-model"
 import type { EditorView } from "prosemirror-view"
-import type { BlockSelection } from "./index.js"
+
+type SelectionReader = { readonly value: readonly string[] }
 
 export type LocatedBlockNode = {
   readonly id: string
@@ -53,7 +54,7 @@ export const selectedBlockNodes = (
 
 export const selectedBlockIdsInDocumentOrder = (
   view: EditorView,
-  selection: BlockSelection,
+  selection: SelectionReader,
 ): readonly string[] => selectedBlockNodes(view.state.doc, selection.value).map(({ id }) => id)
 
 export const selectionContainsLockedNode = (

@@ -43,6 +43,7 @@ export const attachBlockInteractions = (
       ? {}
       : { onReferencePaste: options.onReferencePaste }),
     ...(options.onUnavailable === undefined ? {} : { onUnavailable: options.onUnavailable }),
+    isContextTarget: (target) => rail.contains(target) || menu.element.contains(target),
     onSelectionChange: selectionStatus.update,
   })
   let activeId: string | null = null

@@ -58,13 +58,19 @@ export class BlockSelection {
         return
       }
       case "range": {
-        const anchor = this.anchorId === null ? -1 : visible.indexOf(this.anchorId)
+        const previousFocus = this.focusId === null ? -1 : visible.indexOf(this.focusId)
         const focus = visible.indexOf(intent.id)
         if (focus < 0) return
-        const start = anchor < 0 ? focus : Math.min(anchor, focus)
-        const end = anchor < 0 ? focus : Math.max(anchor, focus)
-        this.selected = visible.slice(start, end + 1)
-        this.anchorId = anchor < 0 ? intent.id : this.anchorId
+        const start = previousFocus < 0 ? focus : Math.min(previousFocus, focus)
+        const end = previousFocus < 0 ? focus : Math.max(previousFocus, focus)
+        const current = new Set(this.selected)
+        const remove = current.has(intent.id)
+        for (const id of visible.slice(start, end + 1)) {
+          if (remove) current.delete(id)
+          else current.add(id)
+        }
+        this.selected = visible.filter((id) => current.has(id))
+        this.anchorId ??= intent.id
         this.focusId = intent.id
         return
       }

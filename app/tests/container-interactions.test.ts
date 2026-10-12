@@ -98,6 +98,21 @@ describe("block interaction contracts", () => {
     expect(selection.focus).toBe("a-2")
   })
 
+  it("Given a noncontiguous selection, When Shift targets from the last focus, Then the range adds or removes by target membership", () => {
+    const visible = ["a", "b", "c", "d", "e"]
+    const selection = new BlockSelection()
+    selection.apply({ kind: "replace", id: "b" }, visible)
+    selection.apply({ kind: "toggle", id: "e" }, visible)
+
+    selection.apply({ kind: "range", id: "c" }, visible)
+    expect(selection.value).toEqual(["b", "c", "d", "e"])
+    expect(selection.focus).toBe("c")
+
+    selection.apply({ kind: "range", id: "e" }, visible)
+    expect(selection.value).toEqual(["b"])
+    expect(selection.focus).toBe("e")
+  })
+
   it("Given removed visible blocks, When selection reconciles, Then stale IDs and anchors are pruned", () => {
     const selection = new BlockSelection()
     selection.apply({ kind: "replace", id: "a-1" }, ["a-1", "a-2"])

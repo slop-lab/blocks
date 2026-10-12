@@ -174,6 +174,67 @@ describe("synced source references", () => {
       children: [],
     })
   })
+
+  it("preserves every supported nested child while moving a section into a source", () => {
+    const children = [
+      { id: "paragraph", type: "paragraph" as const, text: "Text" },
+      { id: "code", type: "code" as const, text: "const value = 1" },
+      { id: "page", type: "page_ref" as const, pageId: "target" },
+      {
+        id: "database",
+        type: "database_embed" as const,
+        databaseId: "tasks",
+        layout: "table" as const,
+      },
+      {
+        id: "callout",
+        type: "callout" as const,
+        children: [
+          {
+            id: "quote",
+            type: "quote" as const,
+            children: [{ id: "nested", type: "paragraph" as const, text: "Nested" }],
+          },
+        ],
+      },
+    ]
+
+    const converted = convertSectionToSyncedSource(
+      { id: "local", type: "section", heading: "All blocks", children },
+      (() => {
+        const ids = ["source", "source-root", "occurrence"]
+        return () => ids.shift() ?? "unexpected"
+      })(),
+    )
+
+    const source = syncedSourceSchema.parse(converted.source)
+    if (source.section.type !== "section") throw new TypeError("Source root is not a section")
+    expect(source.section.children).toEqual(children)
+    expect(converted.occurrence.children).toEqual([])
+  })
+
+  it("rejects a canonical source that directly references itself", () => {
+    const result = syncedSourceSchema.safeParse({
+      id: "source",
+      version: 1,
+      section: {
+        id: "root",
+        type: "section",
+        children: [
+          {
+            id: "recursive",
+            type: "section",
+            occurrenceId: "occurrence",
+            ref: { sourceId: "source" },
+            children: [],
+          },
+        ],
+      },
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error.issues[0]?.message).toMatch(/cycle/u)
+  })
 })
 
 describe("legacy workspace migration", () => {

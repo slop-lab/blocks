@@ -65,6 +65,27 @@ const currentSourceSchema = z
     path: ["section"],
     message: "Source root must be a section",
   })
+  .superRefine((value, context) => {
+    const visit = (block: z.infer<typeof blockSchema>): void => {
+      if (block.type === "section") {
+        if (block.ref?.sourceId === value.id)
+          context.addIssue({
+            code: "custom",
+            path: ["section"],
+            message: "Synced source cycle",
+          })
+        if (block.ref !== undefined && block.children.length > 0)
+          context.addIssue({
+            code: "custom",
+            path: ["section"],
+            message: "Synced occurrences cannot own children",
+          })
+      }
+      if (block.type === "section" || block.type === "callout" || block.type === "quote")
+        for (const child of block.children) visit(child)
+    }
+    visit(value.section)
+  })
 const legacySourceSchema = z
   .object({
     id: entityIdSchema,

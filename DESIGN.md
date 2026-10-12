@@ -96,6 +96,8 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 - Hover or editor focus reveals a compact plus and grip rail beside the current top-level block. Coarse pointers keep the rail discoverable at the focused block with 44px targets. Readonly surfaces omit mutation controls entirely; locked blocks expose identity and status but no destructive actions.
 - The grip is the only drag origin. Its menu opens by click, `Shift+F10`, or the Context Menu key and includes duplicate, delete, move, and supported type changes. Every action resolves the stable block ID against the current document when invoked; menu position is never treated as document identity.
 - Drag shows one accent insertion rule between blocks, supports document-start and document-end gaps, and autoscrolls the nearest editor scroll owner. Cancel, Escape, pointer cancellation, and leaving the same editor clear all transient drag state. Keyboard move actions remain first-class.
+- Grip click enters ephemeral block-selection mode. Shift extends through visible order, Ctrl/Cmd toggles, Escape clears, and Delete/Backspace owns the selected structural batch. Dragging empty editor chrome draws a rectangular marquee; starting inside editable text preserves native text selection.
+- Selected blocks use `accent-soft` plus an inset accent rule. Selection state, anchor, focus, and marquee geometry are view-only and never enter document JSON or collaborative state.
 
 ### Editor Popover / Command Menu
 - Structure: owner-document portal, anchored to a block control or text caret, with viewport-clamped position, whisper border, paper/elevated surface, and the documented popover shadow.
@@ -142,6 +144,10 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 - Page, database, and synced-source status use the shared badge and action-button primitives. Synced occurrences use `accent-soft` with a textual shared-source label, never color alone.
 - Headings render their authored relative level plus embedding depth, clamped to HTML h1-h6; rendering never writes the derived level back to JSON.
 - Below 768px the page tree becomes a collapsible top rail and the document keeps 16px gutters. Search and the Ctrl-K command palette remain keyboard reachable at every width.
+- Persisted page-reference blocks produce a compact backlinks region after the document. Each backlink names its source page and returns focus to the exact reference block through the URL hash.
+- A compact labeled paste-policy selector above the document makes independent duplication versus persisted shared-source references explicit; reference mode never invents a source for ordinary local blocks.
+- The document toolbar pairs a labeled page picker with an explicit insertion action. Local sections reveal title and shared-source controls on hover or focus; coarse pointers keep them visible with 44px targets.
+- Typed databases switch between a scroll-safe table and status-column kanban. Kanban cards retain text labels and native selects, and every status move writes through the same database CAS entity as table edits.
 
 ## 6. Motion & Interaction
 

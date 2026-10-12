@@ -20,7 +20,7 @@
   gap: var(--space-2);
 }
 .structured-database__tools :where(input, select, button) {
-  min-block-size: 36px;
+  min-block-size: var(--space-10);
   padding-inline: var(--space-2);
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -34,6 +34,42 @@
   margin-block: var(--space-3) 0;
   color: var(--ink-muted);
   font: var(--type-caption);
+}
+.structured-kanban {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(176px, 100%), 1fr));
+  gap: var(--space-3);
+  margin-block-start: var(--space-4);
+}
+.structured-kanban__column {
+  min-inline-size: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.structured-kanban__column h3 {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 var(--space-3);
+  color: var(--ink-muted);
+  font: var(--type-ui);
+}
+.structured-kanban__card {
+  display: grid;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  font: var(--type-small);
+}
+.structured-kanban__card select {
+  min-block-size: var(--space-10);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--elevated);
 }
 .structured-database table {
   inline-size: 100%;
@@ -126,7 +162,7 @@
   }
   .structured-search,
   .structured-search :where(input, button),
-  .structured-database__tools :where(input, select, button),
+  .structured-database .structured-database__tools :where(input, select, button),
   .structured-database td :where(input, select) {
     min-block-size: var(--touch-target-size);
   }
@@ -155,6 +191,10 @@
   }
 }
 @media (max-width: 767px), (pointer: coarse) {
+  .structured-page-ref,
+  .structured-trash button {
+    min-block-size: var(--touch-target-size);
+  }
   .structured-tree__row {
     grid-template-columns: minmax(0, 1fr) var(--touch-target-size) var(--touch-target-size);
     min-block-size: var(--touch-target-size);

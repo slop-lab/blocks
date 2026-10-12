@@ -31,7 +31,11 @@ export const blockSelectionReconcilePlugin = new Plugin<readonly string[]>({
       state.doc.descendants((node, position) => {
         if (selected.has(String(node.attrs["id"])))
           decorations.push(
-            Decoration.node(position, position + node.nodeSize, { class: "block-selected" }),
+            Decoration.node(position, position + node.nodeSize, {
+              class: "block-selected",
+              "aria-current": "true",
+              "data-block-selected": "true",
+            }),
           )
         return true
       })
@@ -61,6 +65,7 @@ export const blockSelectionReconcilePlugin = new Plugin<readonly string[]>({
 
 export type BlockSelectionController = {
   readonly selectFromClick: (blockId: string, event: MouseEvent) => boolean
+  readonly replace: (blockIds: readonly string[]) => void
   readonly selectedIds: () => readonly string[]
   readonly contains: (blockId: string) => boolean
   readonly clear: () => void
@@ -88,8 +93,17 @@ export const attachBlockSelection = (
     )
   const render = () => {
     const selected = new Set(selection.value)
-    for (const element of ownedBlockElements(view))
-      element.classList.toggle("block-selected", selected.has(element.dataset["blockId"] ?? ""))
+    for (const element of ownedBlockElements(view)) {
+      const active = selected.has(element.dataset["blockId"] ?? "")
+      element.classList.toggle("block-selected", active)
+      if (active) {
+        element.dataset["blockSelected"] = "true"
+        element.setAttribute("aria-current", "true")
+      } else {
+        delete element.dataset["blockSelected"]
+        element.removeAttribute("aria-current")
+      }
+    }
     view.dom.classList.toggle("block-selection-active", selected.size > 0)
     view.dom.dataset["selectedBlockIds"] = selection.value.join(" ")
     const decorated = selectionKey.getState(view.state) ?? []
@@ -122,6 +136,14 @@ export const attachBlockSelection = (
     selection.apply({ kind, id: blockId }, visibleIds())
     render()
     return kind !== "replace"
+  }
+  const replace = (blockIds: readonly string[]) => {
+    const visible = visibleIds()
+    selection.apply({ kind: "clear" }, visible)
+    for (const id of visible) {
+      if (blockIds.includes(id)) selection.apply({ kind: "toggle", id }, visible)
+    }
+    render()
   }
   const detachClipboard = attachProseMirrorClipboard(view, { ...options, selection, clear })
   const selectionDrag = attachSelectionDrag(view, selection, visibleIds, render)
@@ -156,11 +178,11 @@ export const attachBlockSelection = (
     if (
       event.button !== 0 ||
       !(event.target instanceof HTMLElement) ||
-      event.target.closest(".ProseMirror") !== view.dom ||
-      isInteractiveTarget(event.target)
+      event.target.closest(".ProseMirror") !== view.dom
     )
       return
     if (event.metaKey || event.ctrlKey || event.shiftKey) {
+      if (event.target.closest("button, a, input, textarea, select") !== null) return
       const blockId = event.target.closest<HTMLElement>("[data-block-id]")?.dataset["blockId"]
       if (blockId !== undefined) {
         event.preventDefault()
@@ -172,8 +194,12 @@ export const attachBlockSelection = (
       }
       return
     }
+    if (isInteractiveTarget(event.target)) return
+    const hitsGlyph = pointHitsGlyph(ownerDocument, event.clientX, event.clientY)
+    const blockId = event.target.closest<HTMLElement>("[data-block-id]")?.dataset["blockId"]
+    if (blockId !== undefined && selection.value.includes(blockId) && !hitsGlyph) return
+    if (hitsGlyph) return
     if (selection.value.length > 0) clear()
-    if (pointHitsGlyph(ownerDocument, event.clientX, event.clientY)) return
     selectionDrag.start(event)
   }
   const onMouseDown = (event: MouseEvent) => {
@@ -206,6 +232,7 @@ export const attachBlockSelection = (
   view.dom.addEventListener("mousedown", onMouseDown, true)
   return {
     selectFromClick,
+    replace,
     selectedIds: () => selection.value,
     contains: (blockId) => selection.value.includes(blockId),
     clear,

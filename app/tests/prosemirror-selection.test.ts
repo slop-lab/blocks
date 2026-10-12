@@ -34,12 +34,12 @@ const createView = () => {
     },
   })
   detachments.push(controller.destroy)
-  return view
+  return { view, controller }
 }
 
 describe("native multi-block text selection", () => {
   it("projects a range that fully covers adjacent blocks into structural selection", () => {
-    const view = createView()
+    const { view } = createView()
     const paragraphs = view.dom.querySelectorAll("p")
     const first = paragraphs.item(0)
     const second = paragraphs.item(1)
@@ -56,7 +56,7 @@ describe("native multi-block text selection", () => {
   })
 
   it("leaves a partial cross-block character range as native text selection", () => {
-    const view = createView()
+    const { view } = createView()
     const paragraphs = view.dom.querySelectorAll("p")
     const firstText = paragraphs.item(0).firstChild
     const secondText = paragraphs.item(1).firstChild
@@ -73,6 +73,35 @@ describe("native multi-block text selection", () => {
     expect(view.dom.querySelectorAll(".block-selected")).toHaveLength(0)
     expect(document.getSelection()?.toString()).toBe("irstSec")
   })
+})
+
+it("replaces selection with an explicit preview and exposes semantic DOM state", () => {
+  const { view, controller } = createView()
+
+  controller.replace(["first", "second"])
+
+  expect(controller.selectedIds()).toEqual(["first", "second"])
+  expect(view.dom.querySelectorAll("[data-block-selected='true']")).toHaveLength(2)
+  expect(view.dom.querySelectorAll("[aria-current='true']")).toHaveLength(2)
+})
+
+it("preserves structural selection when pointer-down starts on selected blank block surface", () => {
+  const { view, controller } = createView()
+  const first = view.dom.querySelector<HTMLElement>("[data-block-id='first']")
+  if (first === null) throw new TypeError("Missing first block")
+  controller.replace(["first"])
+  const pointerDown = new MouseEvent("pointerdown", {
+    button: 0,
+    bubbles: true,
+    cancelable: true,
+    clientX: 200,
+    clientY: 20,
+  })
+  Object.defineProperty(pointerDown, "pointerId", { value: 1 })
+
+  first.dispatchEvent(pointerDown)
+
+  expect(controller.selectedIds()).toEqual(["first"])
 })
 
 it("routes Mod-K to link editing when the active editor owns a text range", () => {

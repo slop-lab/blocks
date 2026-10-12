@@ -12,6 +12,7 @@ import { type SaveSettlement, WorkspaceSaveQueue } from "./workspace-save-queue"
 import type { SourceConflictResult } from "./workspace-source-runtime"
 
 export type WorkspaceSourceEvents = {
+  readonly registerSubmitted: (request: SourceEditRequest) => void
   readonly acknowledge: (request: SourceEditRequest, saved: EntityRecord<SyncedSource>) => void
   readonly receiveRemote: (record: EntityRecord<SyncedSource>) => void
   readonly resolve: (
@@ -39,7 +40,15 @@ export const createWorkspaceSaveQueue = (
   setStatus: SetStatus,
 ): WorkspaceSaveQueue =>
   new WorkspaceSaveQueue(
-    saveWorkspaceRequest,
+    (request) => {
+      if (request.target.kind === "sources" && request.causality !== undefined)
+        sourceEvents.registerSubmitted({
+          sourceId: request.target.id,
+          ...request.causality,
+          content: syncedSourceSchema.parse(request.content),
+        })
+      return saveWorkspaceRequest(request)
+    },
     (settlement: SaveSettlement) => {
       commit((current) => {
         if (current === null) return current

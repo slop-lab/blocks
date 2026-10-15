@@ -12,6 +12,8 @@ corepack pnpm build
 corepack pnpm start
 ```
 
+`pnpm install`은 `prepare` 단계에서 내부 패키지를 빌드하여 `packages/*/dist`의 JavaScript와 타입 선언을 생성합니다. 설치 스크립트를 생략했다면 `pnpm build:packages`를 먼저 실행하세요. `pnpm build`와 `pnpm typecheck`도 내부 패키지를 먼저 빌드합니다.
+
 기본 주소는 `http://localhost:3000`입니다. `PORT=4174 corepack pnpm start`로 포트를 바꿀 수 있습니다. 개발할 때는 서버와 `corepack pnpm dev`를 함께 실행합니다.
 
 개발 서버는 `/api`와 협업 WebSocket을 기본적으로 3000 포트에 전달합니다. 백엔드 포트를 바꾸었다면 `BACKEND_URL=http://127.0.0.1:4174 corepack pnpm dev`를 사용합니다.

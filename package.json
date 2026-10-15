@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build:packages": "pnpm --filter './packages/**' build",
+    "build:packages": "pnpm --filter \"./packages/**\" --fail-if-no-match build",
     "build": "pnpm build:packages && tsc --noEmit && vite build",
-    "typecheck": "pnpm --filter './packages/**' typecheck && tsc --noEmit",
+    "prepare": "pnpm build:packages",
+    "typecheck": "pnpm build:packages && pnpm --filter \"./packages/**\" --fail-if-no-match typecheck && tsc --noEmit",
     "pretest": "pnpm build:packages",
     "test": "vitest run",
     "test:browser": "node app/tests/browser.mjs && node app/tests/advanced-browser.mjs && node app/tests/block-interactions-browser.mjs && node app/tests/workflow-browser.mjs && node app/tests/ownership-browser.mjs && node app/tests/structured-workspace-browser.mjs && node app/tests/structured-workspace-features-browser.mjs && node app/tests/structured-workspace-nested-browser.mjs && node app/tests/source-runtime-browser.mjs",

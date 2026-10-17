@@ -134,6 +134,9 @@ const workspaceTools = (options, context) => {
     input: z.object({ rowId: z.string(), propertyId: z.string(), after: z.string() }).strict(),
     output: artifactOutputSchema,
     prepare: async ({ rowId, propertyId, after }, execution) => {
+      const property = database.properties.find((item) => item.id === propertyId)
+      if (property?.type !== "status") throw new RangeError("Status property is unavailable")
+      if (!property.options.includes(after)) throw new RangeError("Status option is unavailable")
       const row = database.rows.find((item) => item.id === rowId)
       const before = row?.values[propertyId]
       if (typeof before !== "string") throw new RangeError("Status cell is unavailable")

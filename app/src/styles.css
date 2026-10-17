@@ -319,14 +319,22 @@ input:focus-visible,
 .skip-link {
   position: fixed;
   inset: var(--space-2) auto auto var(--space-2);
-  transform: translateY(-160%);
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
   z-index: 70;
   background: var(--ink);
   color: var(--paper);
-  padding: var(--space-3);
+  padding: 0;
 }
 .skip-link:focus {
-  transform: translateY(0);
+  inline-size: auto;
+  block-size: auto;
+  overflow: visible;
+  clip-path: none;
+  padding: var(--space-3);
 }
 .app-shell {
   display: grid;

@@ -81,6 +81,11 @@ try {
   await page.getByRole("button", { name: "검토한 작업 적용" }).click()
   await page.getByRole("status").filter({ hasText: "원본이 바뀌어" }).waitFor()
   await page.screenshot({ path: "/tmp/opencode/agent-workbench-1280.png", fullPage: true })
+  await page.locator(".agent-timeline").scrollIntoViewIfNeeded()
+  await page.screenshot({
+    path: "/tmp/opencode/agent-workbench-1280-timeline.png",
+    fullPage: true,
+  })
 
   for (const width of [768, 375]) {
     await page.setViewportSize({ width, height: 900 })
@@ -93,9 +98,14 @@ try {
       fullPage: true,
     })
     await page.locator(".agent-review-panel").scrollIntoViewIfNeeded()
-    await page.locator(".agent-review-panel").click({ position: { x: 8, y: 8 } })
+    await page.getByRole("button", { name: "검토한 작업 적용" }).focus()
     await page.screenshot({
       path: `/tmp/opencode/agent-workbench-${width}-review.png`,
+      fullPage: true,
+    })
+    await page.locator(".agent-timeline").scrollIntoViewIfNeeded()
+    await page.screenshot({
+      path: `/tmp/opencode/agent-workbench-${width}-timeline.png`,
       fullPage: true,
     })
   }

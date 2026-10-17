@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
-import { FileCasRepository, RevisionConflictError } from "@block-editor/server-bindings"
+import { FileCasRepository, RevisionConflictError } from "@slop-lab/blocks-server-bindings"
 import { z } from "zod"
 import { markdownRoot } from "./markdown-core.mjs"
 import {

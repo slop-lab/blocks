@@ -1,12 +1,12 @@
 import { join } from "node:path"
-import { FileCasRepository, RevisionConflictError } from "@block-editor/server-bindings"
+import { FileCasRepository, RevisionConflictError } from "@slop-lab/blocks-server-bindings"
 import {
   createPage,
   databaseSchema,
   pageDocumentSchema,
   syncedSourceSchema,
   workspaceSchema,
-} from "@block-editor/workspace"
+} from "@slop-lab/blocks-workspace"
 import { z } from "zod"
 import { withWorkspaceMutation } from "./workspace-mutation-queue.mjs"
 import {

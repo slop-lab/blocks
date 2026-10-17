@@ -1,4 +1,4 @@
-import { pageSchema } from "@block-editor/workspace"
+import { pageSchema } from "@slop-lab/blocks-workspace"
 import { z } from "zod"
 
 const MAX_BODY = 512 * 1024

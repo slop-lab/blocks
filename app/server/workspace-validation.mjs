@@ -4,7 +4,7 @@ import {
   pageDocumentSchema,
   syncedSourceSchema,
   workspaceSchema,
-} from "@block-editor/workspace"
+} from "@slop-lab/blocks-workspace"
 
 const MAX_BLOCKS = 10_000
 const MAX_DEPTH = 64

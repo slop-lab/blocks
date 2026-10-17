@@ -1,5 +1,5 @@
-import { createBudget, defineTool, toolContext } from "@block-editor/agent-tools"
-import { bindPartTool } from "@block-editor/agent-tools-part"
+import { createBudget, defineTool, toolContext } from "@slop-lab/blocks-agent-tools"
+import { bindPartTool } from "@slop-lab/blocks-agent-tools-part"
 import { z } from "zod"
 import { sealArtifact } from "./artifacts.mjs"
 

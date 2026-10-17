@@ -1,6 +1,6 @@
 import { join } from "node:path"
-import { FileCasRepository, RevisionConflictError } from "@block-editor/server-bindings"
-import { databaseSchema, patchDatabaseRow } from "@block-editor/workspace"
+import { FileCasRepository, RevisionConflictError } from "@slop-lab/blocks-server-bindings"
+import { databaseSchema, patchDatabaseRow } from "@slop-lab/blocks-workspace"
 import {
   loadMarkdownFile,
   MarkdownRequestError,

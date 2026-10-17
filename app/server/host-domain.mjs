@@ -8,7 +8,7 @@ import {
   WorkflowRepository,
   WorkflowService,
   WorkflowStateError,
-} from "@block-editor/server-bindings"
+} from "@slop-lab/blocks-server-bindings"
 import { z } from "zod"
 
 const MAX_BODY_BYTES = 2 * 1024 * 1024

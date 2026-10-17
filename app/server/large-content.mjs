@@ -1,4 +1,4 @@
-import { FileCasRepository, RevisionConflictError } from "@block-editor/server-bindings"
+import { FileCasRepository, RevisionConflictError } from "@slop-lab/blocks-server-bindings"
 
 const DEFAULT_COUNT = 1_600
 const MAX_PAGE = 100

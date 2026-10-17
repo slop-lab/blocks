@@ -1,5 +1,6 @@
 {
-  "name": "@block-editor/block-docs",
+  "name": "@this-project/block-docs",
+  "private": true,
   "version": "0.1.0",
   "type": "module",
   "files": [
@@ -13,8 +14,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@block-editor/git-documents": "workspace:*",
-    "@block-editor/git-documents-host": "workspace:*"
+    "@slop-lab/blocks-git-documents": "workspace:*",
+    "@slop-lab/blocks-git-documents-host": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",

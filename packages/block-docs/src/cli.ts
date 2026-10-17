@@ -3,8 +3,8 @@ import { once } from "node:events"
 import { existsSync } from "node:fs"
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { GitDocuments, initializeGitDocumentsRepository } from "@block-editor/git-documents"
-import { createGitDocumentsServer } from "@block-editor/git-documents-host"
+import { GitDocuments, initializeGitDocumentsRepository } from "@slop-lab/blocks-git-documents"
+import { createGitDocumentsServer } from "@slop-lab/blocks-git-documents-host"
 import { parseInit, parseStart } from "./options.js"
 
 const help = `block-docs - personal Markdown and Git document workspace

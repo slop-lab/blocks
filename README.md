@@ -98,6 +98,8 @@ Markdown·협업·표·대용량 기능은 각각의 진입점을 가져오거�
 | `@block-editor/containers` | 엔진 독립 재귀 트리 이동·복제와 명시적 최소 연결 범위 감싸기 계획 |
 | `@block-editor/prosemirror` | opt-in ProseMirror schema/snapshot adapter와 block별 leaf export |
 | `@block-editor/workspace` | 엔진 독립 페이지/문서/database/synced-source Zod 계약, 계층 명령, typed row patch, filter/sort와 context heading projection |
+| `@block-editor/agent-tools` | 엔진 독립 tool schema/effect/context/budget/result/provenance 계약. 모델 실행이나 저장소를 소유하지 않습니다. |
+| `@block-editor/agent-tools-part` | 고정된 Part 0.1 `functionTool` 연결. 실행 lifecycle은 앱 서버가 소유합니다. |
 
 두 패키지는 `corepack pnpm build:packages`로 ESM과 선언 파일을 `packages/*/dist`에 생성합니다. 앱은 로컬 노트의 저장 알림, 호스트 폼의 revision bookmark, 수정안의 비동기 target guard, 부분 문서 저장 acknowledgement를 `@block-editor/bindings`에서 직접 사용합니다. 서버는 `.runtime` 아래 durable document/room/workflow 저장소와 권한 검사를 `@block-editor/server-bindings`에서 사용합니다.
 
@@ -169,9 +171,11 @@ const htmlLevel = headingLevelAtDepth(2, 3) // 5; 저장된 2는 바뀌지 않�
 
 외부 콘텐츠 교체는 model/epoch/baseVersion을 검사하고 조합 중에는 유예합니다. 자동 재조정이 불가능하면 draft를 보존하고 충돌을 알립니다. 외부 액션, 렌더링, 본문 저장은 서로 다른 경로입니다.
 
-`SuggestionProvider`를 연결해 외부 AI나 호스트 제안 스트림을 사용할 수 있습니다. 예제 기본 제공자는 입력 문장을 순차적으로 추가하는 로컬 제공자이며 외부 AI 서비스를 호출하지 않습니다.
+`@block-editor/agent-tools`는 실행 엔진과 무관한 bounded tool 계약이고, 선택적인 `@block-editor/agent-tools-part`가 고정된 Part 0.1 `functionTool`에만 연결합니다. command/query/watch lifecycle, 실행 journal, 모델 선택과 권한은 `app/server/agent/`의 예제 앱이 소유합니다. 브라우저는 같은 origin의 `/api/agent/commands`, `/api/agent/queries`, `/api/agent/events`만 사용하며 모델 자격 증명을 받지 않습니다. 기본 제공자는 `결정적 시나리오 / 모델미연결`로 표시되는 fixture이며 실제 Part model/tool loop를 실행하지만 외부 LLM 연결을 주장하지 않습니다.
 
-`createHttpSuggestionProvider({ endpoint, headers })`는 호스트의 NDJSON 스트림에 실제 HTTP 요청을 보냅니다. 각 응답 줄은 `BlockDocument` snapshot이며 크기·형식 검증 후 후보로 전달됩니다. 취소 신호는 HTTP 요청과 reader에 전파됩니다. API 자격 증명을 저장소에 넣지 말고 호스트가 설정해야 합니다.
+OpenAI-compatible 모델을 연결하려면 서버 환경에 `PART_API_BASE`, `PART_MODEL_ID`, `PART_API_KEY`를 모두 설정합니다. endpoint origin은 Part fetch transport의 allowlist에 고정되고 bearer key는 서버에만 남습니다. 세 값 중 하나라도 없으면 fixture로 명확히 전환됩니다. 실제 provider 연결은 배포 환경의 endpoint와 credential로 별도 검증해야 합니다.
+
+실행 journal은 `.runtime/agent/runs.json`에 원자적으로 저장됩니다. 명시적 실행 취소만 host task를 취소하며 dialog를 닫거나 event 관찰을 끊는 동작은 observer만 분리합니다. 서버 재시작 때 진행 중이던 실행은 `interrupted`로 남고 tool을 자동 재생하지 않습니다. 모델 tool은 canonical 문서를 직접 바꾸지 않고 review candidate만 갱신합니다. Markdown hash, workspace entity revision, mixed task dependency와 repository revision을 서버가 다시 확인한 뒤 사용자의 명시적 apply에서만 반영합니다. 상세 계약과 운영상 비주장은 `docs/contracts/agent-tools.md`에 정의합니다.
 
 ## 서버와 저장 위치
 
@@ -180,6 +184,7 @@ const htmlLevel = headingLevelAtDepth(2, 3) // 5; 저장된 2는 바뀌지 않�
 - `/collaboration`: schema handshake, room scope 검사, Yjs 동기화 및 재시작 가능한 room snapshot.
 - `/api/large-content`: 페이지 읽기, 블록 조회·수정, 검색 및 전체 내보내기.
 - `POST /api/demo/session?identity=author|reviewer|viewer`: 서명된 opaque 데모 세션 cookie 발급.
+- `POST /api/agent/commands|queries|events`: 서명 세션과 same-origin 검사를 재사용하는 Part agent transport. author scope만 실행할 수 있습니다.
 - `GET/PUT /api/documents/:id`: room scope와 role을 검사하는 durable CAS 문서.
 - `POST /api/workflows/:id/submit|approve`: 제출한 콘텐츠 revision을 고정하는 versioned 제출/승인과 audit history. 제출·승인된 문서는 이 예제 API에서 수정할 수 없습니다.
 - `GET /api/workspace`: sample workspace와 별도 page/database/synced-source entity를 읽습니다.

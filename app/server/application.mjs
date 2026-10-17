@@ -3,6 +3,7 @@ import { createServer } from "node:http"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { FileRoomStore, resolveStaticApplication } from "@block-editor/server-bindings"
+import { createAgentHandler } from "./agent.mjs"
 import { attachCollaboration } from "./collaboration.mjs"
 import { createHostDomain } from "./host-domain.mjs"
 import { createLargeContentHandler } from "./large-content.mjs"
@@ -24,6 +25,12 @@ export const createApplicationServer = (options = {}) => {
   const handleLargeContent = createLargeContentHandler({ root: join(runtimeRoot, "large-content") })
   const handleOwnership = createOwnershipHandler({ root: join(runtimeRoot, "ownership"), host })
   const handleWorkspace = createWorkspaceHandler({ root: join(runtimeRoot, "workspace"), host })
+  const agent = createAgentHandler({
+    root: runtimeRoot,
+    host,
+    environment: options.environment,
+    model: options.agentModel,
+  })
   const server = createServer(async (request, response) => {
     try {
       if (await host.handle(request, response)) return
@@ -31,6 +38,7 @@ export const createApplicationServer = (options = {}) => {
       if (await handleLargeContent(request, response)) return
       if (await handleOwnership(request, response)) return
       if (await handleWorkspace(request, response)) return
+      if (await agent.handle(request, response)) return
       const url = new URL(request.url ?? "/", "http://localhost")
       if (url.pathname === "/api/notices/current" && request.method === "GET") {
         response
@@ -126,7 +134,7 @@ export const createApplicationServer = (options = {}) => {
   })
   const closeServer = server.close.bind(server)
   server.close = (callback) => {
-    collaboration.flushPersistence().then(
+    Promise.all([collaboration.flushPersistence(), agent.close()]).then(
       () => closeServer(callback),
       (error) => callback?.(error),
     )

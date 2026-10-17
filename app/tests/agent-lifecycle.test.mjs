@@ -75,8 +75,21 @@ it("deduplicates concurrent starts by principal, session, request, and input has
     runtime.start(input("request-deduplicated"), owner),
     runtime.start(input("request-deduplicated"), owner),
   ])
+  const reordered = input("request-deduplicated")
+  const semanticRetry = await runtime.start(
+    {
+      document: reordered.document,
+      target: reordered.target,
+      instruction: reordered.instruction,
+      sessionId: reordered.sessionId,
+      requestId: reordered.requestId,
+      kind: reordered.kind,
+    },
+    owner,
+  )
 
   expect(retry.id).toBe(first.id)
+  expect(semanticRetry.id).toBe(first.id)
   expect(first.inputHash).toMatch(/^[a-f0-9]{64}$/)
   expect(
     (await runtime.list()).filter((run) => run.input.requestId === "request-deduplicated"),

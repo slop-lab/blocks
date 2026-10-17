@@ -3,8 +3,21 @@ import { createHash } from "node:crypto"
 export class AgentRequestConflictError extends Error {}
 export class AgentCommandConflictError extends Error {}
 
+const canonicalJson = (value) => {
+  if (Array.isArray(value)) return value.map(canonicalJson)
+  if (value === null || typeof value !== "object") return value
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .filter((key) => value[key] !== undefined)
+      .map((key) => [key, canonicalJson(value[key])]),
+  )
+}
+
 export const hashJson = (value) =>
-  createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex")
+  createHash("sha256")
+    .update(JSON.stringify(canonicalJson(value)), "utf8")
+    .digest("hex")
 
 export const requestKey = (owner, input) =>
   `${owner.authority}\u0000${owner.subject}\u0000${input.sessionId}\u0000${input.requestId}`

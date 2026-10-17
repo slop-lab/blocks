@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { createAgentSuggestionProvider } from "../core/agent-suggestions"
 import { parseDocumentText } from "../core/codec"
 import type { SuggestionProvider } from "../core/proposals"
 import { acceptChanges, compareDocuments, SuggestionStream } from "../core/proposals"
@@ -6,34 +7,23 @@ import type { BlockDocument } from "../core/types"
 import { BlockViewer } from "../Viewer"
 import { DialogFrame } from "./DialogFrame"
 
-const localSuggestions: SuggestionProvider = async function* ({ document, instruction, signal }) {
-  const id = crypto.randomUUID()
-  let text = ""
-  for (const part of instruction.split(/(\s+)/)) {
-    if (signal.aborted) return
-    text += part
-    await new Promise((resolve) => setTimeout(resolve, 35))
-    yield {
-      ...document,
-      blocks: [
-        ...document.blocks,
-        { id, type: "paragraph", attrs: {}, content: [{ kind: "text", text, marks: [] }] },
-      ],
-    }
-  }
-}
-
 export const ReviewDialog = ({
   before,
   candidate,
   onClose,
   onAccept,
-  provider = localSuggestions,
+  target,
+  provider,
 }: {
   readonly before: BlockDocument
   readonly candidate: BlockDocument
   readonly onClose: () => void
   readonly onAccept: (candidate: BlockDocument) => boolean | undefined
+  readonly target?: {
+    readonly modelId: string
+    readonly epoch: number
+    readonly baseVersion: number
+  }
   readonly provider?: SuggestionProvider
 }) => {
   const [candidateText, setCandidateText] = useState(() => JSON.stringify(candidate, null, 2))
@@ -46,7 +36,13 @@ export const ReviewDialog = ({
   const [selected, setSelected] = useState<ReadonlySet<string> | null>(null)
   const stream = useRef(new SuggestionStream())
   const run = useRef(0)
-  useEffect(() => () => stream.current.cancel(), [])
+  const suggestionProvider = useMemo(
+    () =>
+      provider ??
+      createAgentSuggestionProvider(target ?? { modelId: "review", epoch: 0, baseVersion: 0 }),
+    [provider, target],
+  )
+  useEffect(() => () => stream.current.cancel("observer-detach"), [])
   const parsed = useMemo(() => {
     try {
       return { document: parseDocumentText(candidateText), error: null }
@@ -87,7 +83,7 @@ export const ReviewDialog = ({
     setSelected(null)
     setCandidateText(JSON.stringify(before, null, 2))
     try {
-      await stream.current.start(provider, { document: before, instruction }, (value) =>
+      await stream.current.start(suggestionProvider, { document: before, instruction }, (value) =>
         setCandidateText(JSON.stringify(value, null, 2)),
       )
     } catch (caught) {
@@ -112,7 +108,7 @@ export const ReviewDialog = ({
           type="button"
           onClick={() => {
             run.current += 1
-            stream.current.cancel()
+            stream.current.cancel("execution-cancel")
             setStreaming(false)
           }}
           disabled={!streaming}
@@ -134,8 +130,8 @@ export const ReviewDialog = ({
           문장으로 수정안 만들기
         </button>
         <small>
-          기본 제공자는 입력 문장을 순차적으로 추가합니다. 외부 AI 제공자는 별도로 연결할 수
-          있습니다.
+          서버의 Part 작업으로 후보를 만듭니다. 모델이 연결되지 않으면 결정적 시나리오 /
+          모델미연결로 명확히 표시됩니다.
         </small>
       </div>
       {editingJson ? (
@@ -151,7 +147,7 @@ export const ReviewDialog = ({
               rows={12}
               onChange={(event) => {
                 run.current += 1
-                stream.current.cancel()
+                stream.current.cancel("execution-cancel")
                 setStreaming(false)
                 setCandidateText(event.target.value)
                 setSelected(null)

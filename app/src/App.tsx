@@ -183,6 +183,11 @@ export const App = () => {
         <ReviewDialog
           before={workspace.review.before}
           candidate={workspace.review.candidate}
+          target={{
+            modelId: workspace.review.route,
+            epoch: workspace.review.epoch,
+            baseVersion: workspace.review.baseVersion,
+          }}
           onClose={workspace.rejectReview}
           onAccept={workspace.acceptCandidate}
         />

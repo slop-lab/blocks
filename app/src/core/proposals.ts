@@ -96,9 +96,9 @@ export type SuggestionProvider = (request: SuggestionRequest) => AsyncIterable<B
 export class SuggestionStream {
   private generation = 0
   private controller: AbortController | null = null
-  cancel() {
+  cancel(reason = "execution-cancel") {
     this.generation += 1
-    this.controller?.abort()
+    this.controller?.abort(reason)
     this.controller = null
   }
   async start(
@@ -106,7 +106,7 @@ export class SuggestionStream {
     request: Omit<SuggestionRequest, "signal">,
     onCandidate: (candidate: BlockDocument) => void,
   ) {
-    this.cancel()
+    this.cancel("execution-cancel")
     const generation = this.generation
     const controller = new AbortController()
     this.controller = controller

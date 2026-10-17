@@ -158,7 +158,8 @@ it("rejects viewer admission and preserves an interrupted run across restart", a
   })
 
   expect(recovered.value.status).toBe("interrupted")
-  expect(recovered.value.candidate.blocks[0].content[0].text).toBe("인터뷰 근거를 두 문단으로 정리")
+  expect(recovered.value.candidate).toBeNull()
+  expect(recovered.value.artifact).toBeNull()
   expect(recovered.value.authority).toMatchObject({
     kind: "mixed-backlog",
     resourceId: "TASK-104",

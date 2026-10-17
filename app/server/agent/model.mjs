@@ -8,9 +8,37 @@ export const createFixtureModel = (options = {}) => {
     kind: "fixture",
     label: "결정적 시나리오 / 모델미연결",
     create(input) {
+      const scenarios = {
+        "markdown-git": [
+          { name: "search_documents", arguments: { query: input.instruction } },
+          {
+            name: "read_markdown_range",
+            arguments: { file: input.target.resourceId, startLine: 1, endLine: 10_000 },
+          },
+          {
+            name: "propose_markdown_replacement",
+            arguments: { append: input.instruction },
+          },
+        ],
+        "structured-workspace": [
+          { name: "query_database_rows", arguments: {} },
+          {
+            name: "propose_row_status_patch",
+            arguments: { rowId: "task-1", propertyId: "status", after: "완료" },
+          },
+        ],
+        "mixed-backlog": [
+          { name: "list_running_tasks", arguments: {} },
+          { name: "read_task_context", arguments: {} },
+          { name: "read_linked_evidence", arguments: {} },
+          { name: "propose_task_plan", arguments: { text: input.instruction } },
+        ],
+        default: [{ name: "candidate_patch", arguments: { text: input.instruction } }],
+      }
+      const calls = scenarios[input.target.modelId] ?? scenarios.default
       const configured = fakeModel([
-        { toolCalls: [{ name: "candidate_patch", arguments: { text: input.instruction } }] },
-        { text: "candidate ready" },
+        ...calls.map((call) => ({ toolCalls: [call] })),
+        { text: "review artifact ready" },
       ])
       if (!options.pause) {
         return {

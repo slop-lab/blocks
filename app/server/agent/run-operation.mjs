@@ -26,7 +26,8 @@ export const startAgentOperation = async ({
   const id = crypto.randomUUID()
   const now = new Date().toISOString()
   const authoritative = await loadAuthoritativeCandidate(root, input)
-  let candidate = structuredClone(authoritative.document)
+  let candidate = authoritative.document === null ? null : structuredClone(authoritative.document)
+  let artifact = null
   const initial = await journal.put({
     schemaVersion: 1,
     id,
@@ -38,6 +39,7 @@ export const startAgentOperation = async ({
     status: "pending",
     cancellation: "not-requested",
     candidate,
+    artifact,
     authority: authoritative.authority,
     application: "not-requested",
     applicationResult: null,
@@ -63,6 +65,7 @@ export const startAgentOperation = async ({
     owner,
     operationId: id,
     signal: cancellation.signal,
+    authoritative,
     candidate: () => candidate,
     async targetIsCurrent() {
       const current = await loadAuthoritativeCandidate(root, input)
@@ -83,14 +86,33 @@ export const startAgentOperation = async ({
         }))
       })
     },
+    async writeArtifact(nextArtifact) {
+      await runGate(id, async () => {
+        const current = journal.get(id)
+        if (cancellation.signal.aborted || current === null || !isActive(current)) return
+        artifact = structuredClone(nextArtifact)
+        await update(id, (run) => ({
+          ...run,
+          artifact,
+          updatedAt: new Date().toISOString(),
+          events: [
+            ...run.events,
+            runEvent(run, "tool.proposal", `review artifact ${artifact.fingerprint}`),
+          ].slice(-100),
+        }))
+      })
+    },
   })
+  const toolSchemas = Object.fromEntries(
+    tools.map((tool) => [tool.id, documentToolSchemas[tool.id]]),
+  )
   const created = createAgent({
     model: model.create(input),
     tools,
-    toolSchemas: documentToolSchemas,
+    toolSchemas,
     principal: owner,
     limits: {
-      maxModelInvocations: 4,
+      maxModelInvocations: 6,
       maxToolDispatches: 8,
       maxExecutorAttempts: 12,
       maxConcurrentOperations: 8,
@@ -107,7 +129,7 @@ export const startAgentOperation = async ({
     }))
 
   const started = await created.value.start(
-    `Use the bounded tools. Read authoritative context, then call candidate_patch exactly once for the requested instruction: ${input.instruction}`,
+    `Use the bounded tools in order. Read authoritative context, then create one exact review artifact for: ${input.instruction}`,
   )
   if (!started.ok) {
     await created.value.dispose()
@@ -185,6 +207,7 @@ export const startAgentOperation = async ({
             ...run,
             status,
             candidate,
+            artifact,
             cancellation:
               status === "cancelled"
                 ? "confirmed"

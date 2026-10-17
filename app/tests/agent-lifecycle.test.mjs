@@ -210,6 +210,32 @@ it("claims application once and returns the durable outcome to every retry", asy
   await restarted.dispose()
 })
 
+it("persists an explicit non-retryable result when the apply adapter throws", async () => {
+  const root = await mkdtemp(join(tmpdir(), "part-agent-apply-failure-"))
+  roots.push(root)
+  let applications = 0
+  const runtime = await createAgentRuntime({
+    root,
+    model: createFixtureModel(),
+    async applyCandidate() {
+      applications += 1
+      throw new TypeError("adapter failed after claim")
+    },
+  })
+  const started = await runtime.start(input("request-apply-failure"), owner)
+  await runtime.wait(started.id)
+
+  const first = await runtime.apply(started.id, "author", "apply-failure")
+  const retry = await runtime.apply(started.id, "author", "apply-failure-retry")
+
+  expect(first).toEqual({ kind: "conflict", actualRevision: "application-failed" })
+  expect(retry).toEqual(first)
+  expect(applications).toBe(1)
+  expect((await runtime.get(started.id))?.application).toBe("conflict")
+  expect((await runtime.get(started.id))?.events.at(-1)?.type).toBe("candidate.apply-failed")
+  await runtime.dispose()
+})
+
 it("contains observer failures without changing the Part terminal outcome", async () => {
   const root = await mkdtemp(join(tmpdir(), "part-agent-observer-error-"))
   roots.push(root)

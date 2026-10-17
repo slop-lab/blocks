@@ -142,22 +142,27 @@ export const createAgentRuntime = async ({
       if (current.application === "applying")
         return { kind: "conflict", actualRevision: "application-incomplete" }
       await update(id, (run) => ({ ...run, application: "applying" }))
-      const result = await applyCandidate(root, current, actorId)
+      let result
+      let eventType
+      let detail
+      try {
+        result = await applyCandidate(root, current, actorId)
+        eventType = result.kind === "applied" ? "candidate.applied" : "candidate.conflict"
+        detail =
+          result.kind === "applied"
+            ? `authoritative revision ${result.revision}`
+            : `actual revision ${result.actualRevision}`
+      } catch (error) {
+        result = { kind: "conflict", actualRevision: "application-failed" }
+        eventType = "candidate.apply-failed"
+        detail = error instanceof Error ? error.message : "application adapter failed"
+      }
       await update(id, (run) => ({
         ...run,
         application: result.kind === "applied" ? "applied" : "conflict",
         applicationResult: result,
         updatedAt: new Date().toISOString(),
-        events: [
-          ...run.events,
-          runEvent(
-            run,
-            result.kind === "applied" ? "candidate.applied" : "candidate.conflict",
-            result.kind === "applied"
-              ? `authoritative revision ${result.revision}`
-              : `actual revision ${result.actualRevision}`,
-          ),
-        ].slice(-100),
+        events: [...run.events, runEvent(run, eventType, detail)].slice(-100),
         commandReceipts: [
           ...run.commandReceipts,
           { commandId, action: "apply", inputHash, result },

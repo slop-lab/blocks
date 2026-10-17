@@ -35,7 +35,9 @@ const parseUrl = (raw, kind) => {
 const configurationFromEnvironment = (environment) => {
   const keys = selectedGroup(environment)
   if (keys === null) return null
-  const missing = keys.filter((key) => environment[key] === undefined || environment[key].trim() === "")
+  const missing = keys.filter(
+    (key) => environment[key] === undefined || environment[key].trim() === "",
+  )
   if (missing.length > 0)
     throw new ProviderConfigurationError(
       `Incomplete provider configuration; missing ${missing.join(", ")}`,

@@ -1,6 +1,6 @@
 import { once } from "node:events"
-import { createServer } from "node:http"
 import { mkdtemp, readFile, rm } from "node:fs/promises"
+import { createServer } from "node:http"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, expect, it } from "vitest"

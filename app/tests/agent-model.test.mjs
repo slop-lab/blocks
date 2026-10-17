@@ -1,5 +1,5 @@
 import { expect, it } from "vitest"
-import { ProviderConfigurationError, modelFromEnvironment } from "../server/agent/model.mjs"
+import { modelFromEnvironment, ProviderConfigurationError } from "../server/agent/model.mjs"
 
 const standard = {
   OPENAI_BASE_URL: "https://api.example.com/v1/",

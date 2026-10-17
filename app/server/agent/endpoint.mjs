@@ -1,6 +1,7 @@
 import { createWatchHub } from "@slop-lab/part/client/index.js"
 import { fail, isJson, ok } from "@slop-lab/part/contracts/index.js"
 import { agentRunInputSchema } from "./contracts.mjs"
+import { AgentCommandConflictError, AgentRequestConflictError } from "./runtime.mjs"
 
 const capabilities = {
   revision: "1",
@@ -96,7 +97,18 @@ export const createAgentEndpoint = (runtime) => {
             commandId: request.commandId,
             error: fail("agent.session", "Session scope mismatch", "permission").error,
           }
-        const run = await runtime.start(parsed.data, context.principal)
+        let run
+        try {
+          run = await runtime.start(parsed.data, context.principal)
+        } catch (error) {
+          if (error instanceof AgentRequestConflictError)
+            return {
+              kind: "rejected",
+              commandId: request.commandId,
+              error: fail("agent.request-reused", error.message, "conflict").error,
+            }
+          throw error
+        }
         return {
           kind: "accepted",
           commandId: request.commandId,
@@ -123,7 +135,18 @@ export const createAgentEndpoint = (runtime) => {
             error: fail("agent.target", "Agent run unavailable", "permission").error,
           }
         const reason = typeof request.input === "string" ? request.input : "client-request"
-        const cancelled = await runtime.cancel(run.id, reason)
+        let cancelled
+        try {
+          cancelled = await runtime.cancel(run.id, reason, request.commandId)
+        } catch (error) {
+          if (error instanceof AgentCommandConflictError)
+            return {
+              kind: "rejected",
+              commandId: request.commandId,
+              error: fail("agent.command-reused", error.message, "conflict").error,
+            }
+          throw error
+        }
         return {
           kind: "completed",
           commandId: request.commandId,
@@ -145,7 +168,18 @@ export const createAgentEndpoint = (runtime) => {
             commandId: request.commandId,
             error: fail("agent.target", "Completed agent proposal unavailable", "permission").error,
           }
-        const applied = await runtime.apply(run.id, context.principal.subject)
+        let applied
+        try {
+          applied = await runtime.apply(run.id, context.principal.subject, request.commandId)
+        } catch (error) {
+          if (error instanceof AgentCommandConflictError)
+            return {
+              kind: "rejected",
+              commandId: request.commandId,
+              error: fail("agent.command-reused", error.message, "conflict").error,
+            }
+          throw error
+        }
         return {
           kind: "completed",
           commandId: request.commandId,

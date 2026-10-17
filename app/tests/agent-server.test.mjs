@@ -59,6 +59,34 @@ it("runs and queries a session-owned proposal through the same-origin Part bridg
       document: { format: "block-editor/v0.3", blocks: [] },
     },
   })
+  const retried = await post(base, cookie, "commands", {
+    protocolVersion: 1,
+    commandId: "agent-server-start-retry",
+    actionId: "block-editor.agent/start",
+    actionVersion: 1,
+    input: {
+      kind: "proposal",
+      requestId: "agent-server-request",
+      sessionId: session.value.sessionId,
+      instruction: "서버 후보",
+      target: { modelId: "note", epoch: 1, baseVersion: 0 },
+      document: { format: "block-editor/v0.3", blocks: [] },
+    },
+  })
+  const conflicting = await post(base, cookie, "commands", {
+    protocolVersion: 1,
+    commandId: "agent-server-start-conflict",
+    actionId: "block-editor.agent/start",
+    actionVersion: 1,
+    input: {
+      kind: "proposal",
+      requestId: "agent-server-request",
+      sessionId: session.value.sessionId,
+      instruction: "다른 서버 후보",
+      target: { modelId: "note", epoch: 1, baseVersion: 0 },
+      document: { format: "block-editor/v0.3", blocks: [] },
+    },
+  })
   const completed = await post(base, cookie, "queries", {
     queryId: "block-editor.agent/get",
     version: 1,
@@ -67,6 +95,11 @@ it("runs and queries a session-owned proposal through the same-origin Part bridg
   })
 
   expect(started.kind).toBe("accepted")
+  expect(retried.operation).toEqual(started.operation)
+  expect(conflicting).toMatchObject({
+    kind: "rejected",
+    error: { code: "part.agent.request-reused" },
+  })
   expect(completed.value).toMatchObject({
     provider: "fixture",
     providerLabel: "결정적 시나리오 / 모델미연결",

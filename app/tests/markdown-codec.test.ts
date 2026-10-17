@@ -1,4 +1,4 @@
-import { markdownSchema, parseMarkdown, serializeMarkdown } from "@block-editor/markdown"
+import { markdownSchema, parseMarkdown, serializeMarkdown } from "@slop-lab/blocks-markdown"
 import { expect, it } from "vitest"
 
 const richSource = [

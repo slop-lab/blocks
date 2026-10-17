@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { parseMarkdown } from "@block-editor/markdown"
+import { parseMarkdown } from "@slop-lab/blocks-markdown"
 import { act } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"

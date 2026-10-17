@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { FileCasRepository } from "@block-editor/server-bindings"
+import { FileCasRepository } from "@slop-lab/blocks-server-bindings"
 import { afterEach, expect, it } from "vitest"
 import { createFixtureModel } from "../server/agent/model.mjs"
 import { createAgentRuntime } from "../server/agent/runtime.mjs"

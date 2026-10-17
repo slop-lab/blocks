@@ -1,4 +1,4 @@
-import { SourceRuntimeRegistry } from "@block-editor/bindings"
+import { SourceRuntimeRegistry } from "@slop-lab/blocks-bindings"
 import { describe, expect, it } from "vitest"
 
 type TestState = {

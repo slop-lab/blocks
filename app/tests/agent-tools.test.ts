@@ -1,5 +1,10 @@
-import { createBudget, defineTool, redactTraceValue, toolContext } from "@block-editor/agent-tools"
-import { bindPartTool } from "@block-editor/agent-tools-part"
+import {
+  createBudget,
+  defineTool,
+  redactTraceValue,
+  toolContext,
+} from "@slop-lab/blocks-agent-tools"
+import { bindPartTool } from "@slop-lab/blocks-agent-tools-part"
 import { localContext } from "@slop-lab/part"
 import { createToolDispatcher } from "@slop-lab/part/tools.js"
 import { describe, expect, it } from "vitest"

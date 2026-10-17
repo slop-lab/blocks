@@ -1,4 +1,4 @@
-import { pageDocumentSchema } from "@block-editor/workspace"
+import { pageDocumentSchema } from "@slop-lab/blocks-workspace"
 import { expect, it } from "vitest"
 import {
   createWorkspaceProfile,

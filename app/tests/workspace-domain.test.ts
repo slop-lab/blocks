@@ -17,7 +17,7 @@ import {
   snapshotSyncedSource,
   syncedSourceSchema,
   workspaceSchema,
-} from "@block-editor/workspace"
+} from "@slop-lab/blocks-workspace"
 import { describe, expect, it } from "vitest"
 
 const workspace = workspaceSchema.parse({

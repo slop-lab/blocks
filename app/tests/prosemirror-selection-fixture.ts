@@ -1,7 +1,7 @@
 import {
   attachBlockSelection,
   type BlockSelectionOptions,
-} from "@block-editor/interactions/prosemirror"
+} from "@slop-lab/blocks-interactions/prosemirror"
 import { EditorView } from "prosemirror-view"
 import { createEditorState } from "../src/pm/editor"
 import { editorSchema } from "../src/pm/schema"

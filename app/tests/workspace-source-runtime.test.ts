@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { syncedSourceSchema } from "@block-editor/workspace"
+import { syncedSourceSchema } from "@slop-lab/blocks-workspace"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { EntityRecord } from "../src/features/workspace/workspace-api"
 import type { WorkspaceNodeViewData } from "../src/features/workspace/workspace-node-view-types"

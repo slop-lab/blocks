@@ -5,8 +5,8 @@ import type { Server } from "node:http"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { promisify } from "node:util"
-import { GitDocuments } from "@block-editor/git-documents"
-import { createGitDocumentsServer } from "@block-editor/git-documents-host"
+import { GitDocuments } from "@slop-lab/blocks-git-documents"
+import { createGitDocumentsServer } from "@slop-lab/blocks-git-documents-host"
 import { afterEach, describe, expect, it } from "vitest"
 
 const execute = promisify(execFile)

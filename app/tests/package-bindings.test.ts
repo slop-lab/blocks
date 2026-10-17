@@ -3,7 +3,7 @@ import {
   ChangeDelivery,
   PersistenceBaseline,
   revisionedDocumentSchema,
-} from "@block-editor/bindings"
+} from "@slop-lab/blocks-bindings"
 import { describe, expect, it, vi } from "vitest"
 
 describe("bindings package", () => {

@@ -5,7 +5,7 @@ import {
   moveForest,
   planTreeWrap,
   type TreeNode,
-} from "@block-editor/containers"
+} from "@slop-lab/blocks-containers"
 import {
   BLOCK_CLIPBOARD_MIME,
   BlockSelection,
@@ -16,7 +16,7 @@ import {
   initialBlockSelectionState,
   reduceBlockSelection,
   routeCut,
-} from "@block-editor/interactions"
+} from "@slop-lab/blocks-interactions"
 import { describe, expect, it } from "vitest"
 
 type TestNode = TreeNode & {

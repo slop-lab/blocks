@@ -10,7 +10,7 @@ import {
   InvalidSessionError,
   WorkflowRepository,
   WorkflowService,
-} from "@block-editor/server-bindings"
+} from "@slop-lab/blocks-server-bindings"
 import { afterEach, describe, expect, it } from "vitest"
 
 const roots: string[] = []

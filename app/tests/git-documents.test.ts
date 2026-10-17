@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { promisify } from "node:util"
-import { GitDocuments, GitDocumentsError } from "@block-editor/git-documents"
+import { GitDocuments, GitDocumentsError } from "@slop-lab/blocks-git-documents"
 import { afterEach, describe, expect, it } from "vitest"
 
 const execute = promisify(execFile)

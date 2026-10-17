@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { BLOCK_CLIPBOARD_MIME } from "@block-editor/interactions"
+import { BLOCK_CLIPBOARD_MIME } from "@slop-lab/blocks-interactions"
 import { afterEach, expect, it } from "vitest"
 import {
   cleanupSelectionViews,

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { attachBlockSelection } from "@block-editor/interactions/prosemirror"
+import { attachBlockSelection } from "@slop-lab/blocks-interactions/prosemirror"
 import { TextSelection } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { afterEach, describe, expect, it } from "vitest"

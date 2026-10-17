@@ -29,7 +29,7 @@ const bundle = async (source: string) => {
 
 it("keeps built-in block leaves out of a custom text consumer", async () => {
   const result = await bundle(`
-    import { createProseMirrorProfile, blockAttrs } from "@block-editor/prosemirror";
+    import { createProseMirrorProfile, blockAttrs } from "@slop-lab/blocks-prosemirror";
     const notesText = { type: "notes.text", nodeName: "notes_text", text: true, nodeSpec: { group: "block", content: "inline*", attrs: blockAttrs } };
     console.log(createProseMirrorProfile([notesText], "notes.text").defaultTextType);
   `)
@@ -45,7 +45,7 @@ it("keeps built-in block leaves out of a custom text consumer", async () => {
 
 it("keeps ProseMirror and unused leaves out of a paragraph renderer consumer", async () => {
   const result = await bundle(`
-    import { paragraphRenderer } from "@block-editor/prosemirror/paragraph-renderer";
+    import { paragraphRenderer } from "@slop-lab/blocks-prosemirror/paragraph-renderer";
     console.log(paragraphRenderer({ id: "p", type: "paragraph", attrs: {}, content: [] }, undefined));
   `)
   const inputs = Object.keys(result.metafile.inputs)
@@ -58,18 +58,18 @@ it("keeps ProseMirror and unused leaves out of a paragraph renderer consumer", a
 it("keeps ProseMirror out of a view-only consumer", async () => {
   const result = await bundle(`
     import React from "react";
-    import { BlockViewer } from "@block-editor/model/viewer";
+    import { BlockViewer } from "@slop-lab/blocks/viewer";
     console.log(React.createElement(BlockViewer, { content: [], renderers: new Map() }));
   `)
   const inputs = Object.keys(result.metafile.inputs)
 
   expect(inputs.some((path) => path.includes("prosemirror-"))).toBe(false)
-  expect(inputs.some((path) => path.includes("@block-editor/prosemirror"))).toBe(false)
+  expect(inputs.some((path) => path.includes("@slop-lab/blocks-prosemirror"))).toBe(false)
 })
 
 it("emits runnable ESM for the custom text consumer", async () => {
   const result = await bundle(`
-    import { createProseMirrorProfile, blockAttrs } from "@block-editor/prosemirror";
+    import { createProseMirrorProfile, blockAttrs } from "@slop-lab/blocks-prosemirror";
     const custom = { type: "notes.text", nodeName: "notes_text", text: true, nodeSpec: { group: "block", content: "inline*", attrs: blockAttrs } };
     globalThis.__profile = createProseMirrorProfile([custom], "notes.text").defaultTextType;
   `)
@@ -87,8 +87,8 @@ it("emits runnable ESM for the custom text consumer", async () => {
 
 it("keeps the standalone interaction and container consumer engine-free", async () => {
   const result = await bundle(`
-    import { canonicalSelection } from "@block-editor/containers";
-    import { BlockSelection } from "@block-editor/interactions";
+    import { canonicalSelection } from "@slop-lab/blocks-containers";
+    import { BlockSelection } from "@slop-lab/blocks-interactions";
     const tree = [{ id: "parent", children: [{ id: "child", children: [] }] }];
     const selection = new BlockSelection();
     selection.apply({ kind: "replace", id: "parent" }, ["parent", "child"]);
@@ -109,7 +109,7 @@ it("keeps the standalone interaction and container consumer engine-free", async 
 
 it("exposes ProseMirror interactions only through the opt-in adapter", async () => {
   const result = await bundle(`
-    import { blockSelectionReconcilePlugin } from "@block-editor/interactions/prosemirror";
+    import { blockSelectionReconcilePlugin } from "@slop-lab/blocks-interactions/prosemirror";
     globalThis.__adapter = blockSelectionReconcilePlugin.spec;
   `)
   const inputs = Object.keys(result.metafile.inputs)

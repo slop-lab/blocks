@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { BLOCK_CLIPBOARD_MIME, InteractionContextArbiter } from "@block-editor/interactions"
+import { BLOCK_CLIPBOARD_MIME, InteractionContextArbiter } from "@slop-lab/blocks-interactions"
 import { TextSelection } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { afterEach, expect, it } from "vitest"

@@ -1,7 +1,7 @@
-import { decodeDocument } from "@block-editor/model"
-import { createProseMirrorProfile, pmToSnapshot, snapshotToPm } from "@block-editor/prosemirror"
-import { sectionBlock, sectionTitle } from "@block-editor/prosemirror/containers"
-import { paragraphBlock } from "@block-editor/prosemirror/paragraph"
+import { decodeDocument } from "@slop-lab/blocks"
+import { createProseMirrorProfile, pmToSnapshot, snapshotToPm } from "@slop-lab/blocks-prosemirror"
+import { sectionBlock, sectionTitle } from "@slop-lab/blocks-prosemirror/containers"
+import { paragraphBlock } from "@slop-lab/blocks-prosemirror/paragraph"
 import { describe, expect, it } from "vitest"
 
 const document = {

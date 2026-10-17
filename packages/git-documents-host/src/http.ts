@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
-import { GitDocumentsError } from "@block-editor/git-documents"
+import { GitDocumentsError } from "@slop-lab/blocks-git-documents"
 import { z } from "zod"
 
 export const json = (response: ServerResponse, status: number, value: unknown): void => {

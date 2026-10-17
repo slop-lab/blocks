@@ -8,42 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@block-editor/agent-tools':
-        specifier: workspace:*
-        version: link:packages/agent-tools
-      '@block-editor/agent-tools-part':
-        specifier: workspace:*
-        version: link:packages/agent-tools-part
-      '@block-editor/bindings':
-        specifier: workspace:*
-        version: link:packages/bindings
-      '@block-editor/containers':
-        specifier: workspace:*
-        version: link:packages/containers
-      '@block-editor/git-documents':
-        specifier: workspace:*
-        version: link:packages/git-documents
-      '@block-editor/git-documents-host':
-        specifier: workspace:*
-        version: link:packages/git-documents-host
-      '@block-editor/interactions':
-        specifier: workspace:*
-        version: link:packages/interactions
-      '@block-editor/markdown':
-        specifier: workspace:*
-        version: link:packages/markdown
-      '@block-editor/model':
-        specifier: workspace:*
-        version: link:packages/model
-      '@block-editor/prosemirror':
-        specifier: workspace:*
-        version: link:packages/prosemirror
-      '@block-editor/server-bindings':
-        specifier: workspace:*
-        version: link:packages/server-bindings
-      '@block-editor/workspace':
-        specifier: workspace:*
-        version: link:packages/workspace
       '@codemirror/commands':
         specifier: ^6.11.1
         version: 6.11.1
@@ -59,6 +23,42 @@ importers:
       '@radix-ui/react-icons':
         specifier: ^1.3.2
         version: 1.3.2(react@19.3.0)
+      '@slop-lab/blocks':
+        specifier: workspace:*
+        version: link:packages/model
+      '@slop-lab/blocks-agent-tools':
+        specifier: workspace:*
+        version: link:packages/agent-tools
+      '@slop-lab/blocks-agent-tools-part':
+        specifier: workspace:*
+        version: link:packages/agent-tools-part
+      '@slop-lab/blocks-bindings':
+        specifier: workspace:*
+        version: link:packages/bindings
+      '@slop-lab/blocks-containers':
+        specifier: workspace:*
+        version: link:packages/containers
+      '@slop-lab/blocks-git-documents':
+        specifier: workspace:*
+        version: link:packages/git-documents
+      '@slop-lab/blocks-git-documents-host':
+        specifier: workspace:*
+        version: link:packages/git-documents-host
+      '@slop-lab/blocks-interactions':
+        specifier: workspace:*
+        version: link:packages/interactions
+      '@slop-lab/blocks-markdown':
+        specifier: workspace:*
+        version: link:packages/markdown
+      '@slop-lab/blocks-prosemirror':
+        specifier: workspace:*
+        version: link:packages/prosemirror
+      '@slop-lab/blocks-server-bindings':
+        specifier: workspace:*
+        version: link:packages/server-bindings
+      '@slop-lab/blocks-workspace':
+        specifier: workspace:*
+        version: link:packages/workspace
       '@slop-lab/part':
         specifier: 0.1.0
         version: 0.1.0
@@ -190,7 +190,7 @@ importers:
 
   packages/agent-tools-part:
     dependencies:
-      '@block-editor/agent-tools':
+      '@slop-lab/blocks-agent-tools':
         specifier: workspace:*
         version: link:../agent-tools
       '@slop-lab/part':
@@ -216,10 +216,10 @@ importers:
 
   packages/block-docs:
     dependencies:
-      '@block-editor/git-documents':
+      '@slop-lab/blocks-git-documents':
         specifier: workspace:*
         version: link:../git-documents
-      '@block-editor/git-documents-host':
+      '@slop-lab/blocks-git-documents-host':
         specifier: workspace:*
         version: link:../git-documents-host
     devDependencies:
@@ -247,10 +247,10 @@ importers:
 
   packages/git-documents-host:
     dependencies:
-      '@block-editor/git-documents':
+      '@slop-lab/blocks-git-documents':
         specifier: workspace:*
         version: link:../git-documents
-      '@block-editor/server-bindings':
+      '@slop-lab/blocks-server-bindings':
         specifier: workspace:*
         version: link:../server-bindings
       zod:
@@ -320,7 +320,7 @@ importers:
 
   packages/prosemirror:
     dependencies:
-      '@block-editor/model':
+      '@slop-lab/blocks':
         specifier: workspace:*
         version: link:../model
       prosemirror-model:
@@ -339,7 +339,7 @@ importers:
 
   packages/server-bindings:
     dependencies:
-      '@block-editor/bindings':
+      '@slop-lab/blocks-bindings':
         specifier: workspace:*
         version: link:../bindings
       yjs:

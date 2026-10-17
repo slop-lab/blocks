@@ -1,4 +1,4 @@
-import type { RevisionedDocument } from "@block-editor/bindings"
+import type { RevisionedDocument } from "@slop-lab/blocks-bindings"
 import type { FileCasRepository } from "./cas-repository.js"
 import { type WorkflowRecord, type WorkflowRepository, WorkflowStateError } from "./workflow.js"
 

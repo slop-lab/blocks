@@ -1,5 +1,5 @@
 {
-  "name": "@block-editor/bindings",
+  "name": "@slop-lab/blocks-bindings",
   "version": "0.1.0",
   "type": "module",
   "files": [

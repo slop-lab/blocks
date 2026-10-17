@@ -1,5 +1,5 @@
 {
-  "name": "@block-editor/interactions",
+  "name": "@slop-lab/blocks-interactions",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,

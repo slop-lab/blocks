@@ -1,5 +1,5 @@
 {
-  "name": "@block-editor/agent-tools",
+  "name": "@slop-lab/blocks-agent-tools",
   "version": "0.1.0",
   "type": "module",
   "files": [

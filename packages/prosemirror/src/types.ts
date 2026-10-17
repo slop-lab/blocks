@@ -1,4 +1,4 @@
-import type { BlockDefinition } from "@block-editor/model"
+import type { BlockDefinition } from "@slop-lab/blocks"
 import type { NodeSpec, Schema } from "prosemirror-model"
 
 export type InsertMenuItem = {

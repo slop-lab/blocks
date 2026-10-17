@@ -1,5 +1,5 @@
 {
-  "name": "@block-editor/server-bindings",
+  "name": "@slop-lab/blocks-server-bindings",
   "version": "0.1.0",
   "type": "module",
   "files": [
@@ -18,7 +18,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@block-editor/bindings": "workspace:*",
+    "@slop-lab/blocks-bindings": "workspace:*",
     "zod": "^4.1.11"
   },
   "devDependencies": {

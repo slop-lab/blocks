@@ -1,5 +1,5 @@
 {
-  "name": "@block-editor/model",
+  "name": "@slop-lab/blocks",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,

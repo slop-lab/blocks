@@ -1,5 +1,5 @@
 {
-  "name": "@block-editor/containers",
+  "name": "@slop-lab/blocks-containers",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,

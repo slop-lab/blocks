@@ -1,5 +1,5 @@
 {
-  "name": "@block-editor/git-documents-host",
+  "name": "@slop-lab/blocks-git-documents-host",
   "version": "0.1.0",
   "type": "module",
   "files": [
@@ -18,8 +18,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@block-editor/git-documents": "workspace:*",
-    "@block-editor/server-bindings": "workspace:*",
+    "@slop-lab/blocks-git-documents": "workspace:*",
+    "@slop-lab/blocks-server-bindings": "workspace:*",
     "zod": "^4.1.11"
   },
   "devDependencies": {

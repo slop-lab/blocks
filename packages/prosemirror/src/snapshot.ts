@@ -4,7 +4,7 @@ import {
   DocumentCodecError,
   decodeDocument,
   type InlineSnapshot,
-} from "@block-editor/model"
+} from "@slop-lab/blocks"
 import type { Mark, NodeType, Node as ProseMirrorNode } from "prosemirror-model"
 import type { ProseMirrorProfile } from "./types.js"
 

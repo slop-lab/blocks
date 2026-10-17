@@ -1,5 +1,5 @@
 {
-  "name": "@block-editor/agent-tools-part",
+  "name": "@slop-lab/blocks-agent-tools-part",
   "version": "0.1.0",
   "type": "module",
   "files": [
@@ -19,7 +19,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@block-editor/agent-tools": "workspace:*",
+    "@slop-lab/blocks-agent-tools": "workspace:*",
     "@slop-lab/part": "0.1.0",
     "zod": "^4.1.11"
   },

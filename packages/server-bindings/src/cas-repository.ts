@@ -1,6 +1,6 @@
 import { mkdir, readdir, rm } from "node:fs/promises"
 import { join } from "node:path"
-import { type RevisionedDocument, revisionedDocumentSchema } from "@block-editor/bindings"
+import { type RevisionedDocument, revisionedDocumentSchema } from "@slop-lab/blocks-bindings"
 import { readStored, safeName, withFileQueue, writeStored } from "./file-utils.js"
 
 export class RevisionConflictError extends Error {

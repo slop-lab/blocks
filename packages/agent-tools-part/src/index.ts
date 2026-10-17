@@ -1,4 +1,4 @@
-import type { DefinedTool, ToolContext } from "@block-editor/agent-tools"
+import type { DefinedTool, ToolContext } from "@slop-lab/blocks-agent-tools"
 import type { Contracts, Tools } from "@slop-lab/part/reference/index.js"
 import { functionTool } from "@slop-lab/part/tools.js"
 import { z } from "zod"

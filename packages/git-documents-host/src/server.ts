@@ -1,6 +1,6 @@
 import { createReadStream } from "node:fs"
 import { createServer, type Server } from "node:http"
-import { resolveStaticApplication } from "@block-editor/server-bindings"
+import { resolveStaticApplication } from "@slop-lab/blocks-server-bindings"
 import { createGitDocumentsHandler, type GitDocumentsHandlerOptions } from "./handler.js"
 import { json } from "./http.js"
 

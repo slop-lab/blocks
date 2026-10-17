@@ -1,4 +1,4 @@
-import type { BlockSnapshot } from "@block-editor/model"
+import type { BlockSnapshot } from "@slop-lab/blocks"
 import { Fragment, type ReactNode } from "react"
 
 const safeHref = (value: string): string | null => {

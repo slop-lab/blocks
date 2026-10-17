@@ -1,5 +1,5 @@
 {
-  "name": "@block-editor/prosemirror",
+  "name": "@slop-lab/blocks-prosemirror",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,
@@ -53,7 +53,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@block-editor/model": "workspace:*",
+    "@slop-lab/blocks": "workspace:*",
     "prosemirror-model": "^1.25.4"
   },
   "peerDependencies": {

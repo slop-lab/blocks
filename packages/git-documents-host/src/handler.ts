@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { basename } from "node:path"
-import { GitDocuments } from "@block-editor/git-documents"
+import { GitDocuments } from "@slop-lab/blocks-git-documents"
 import { body, HttpBoundaryError, json, sameOrigin, sendError } from "./http.js"
 import {
   branchSchema,

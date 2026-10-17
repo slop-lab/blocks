@@ -1,5 +1,5 @@
 {
-  "name": "@block-editor/git-documents",
+  "name": "@slop-lab/blocks-git-documents",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,

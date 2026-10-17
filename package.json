@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.3.0",
   "type": "module",
+  "engines": {
+    "node": ">=24.22.0"
+  },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build:packages": "pnpm --filter \"./packages/**\" --fail-if-no-match build",
@@ -11,7 +14,7 @@
     "typecheck": "pnpm build:packages && pnpm --filter \"./packages/**\" --fail-if-no-match typecheck && tsc --noEmit",
     "pretest": "pnpm build:packages",
     "test": "vitest run",
-    "test:browser": "node app/tests/browser.mjs && node app/tests/advanced-browser.mjs && node app/tests/block-interactions-browser.mjs && node app/tests/workflow-browser.mjs && node app/tests/ownership-browser.mjs && node app/tests/structured-workspace-browser.mjs && node app/tests/structured-workspace-features-browser.mjs && node app/tests/structured-workspace-nested-browser.mjs && node app/tests/source-runtime-browser.mjs",
+    "test:browser": "node app/tests/browser.mjs && node app/tests/advanced-browser.mjs && node app/tests/block-interactions-browser.mjs && node app/tests/workflow-browser.mjs && node app/tests/ownership-browser.mjs && node app/tests/agent-browser.mjs && node app/tests/structured-workspace-browser.mjs && node app/tests/structured-workspace-features-browser.mjs && node app/tests/structured-workspace-nested-browser.mjs && node app/tests/source-runtime-browser.mjs",
     "test:structured-workspace-browser": "node app/tests/structured-workspace-browser.mjs",
     "test:markdown-browser": "node app/tests/advanced-browser.mjs",
     "test:git-documents-browser": "node app/tests/git-documents-browser.mjs",
@@ -31,6 +34,11 @@
     "@block-editor/prosemirror": "workspace:*",
     "@block-editor/server-bindings": "workspace:*",
     "@block-editor/workspace": "workspace:*",
+    "@block-editor/agent-tools": "workspace:*",
+    "@block-editor/agent-tools-part": "workspace:*",
+    "@slop-lab/part": "0.1.0",
+    "@slop-lab/part-node": "0.1.0",
+    "@slop-lab/part-plugins": "0.1.0",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/lang-javascript": "^6.2.5",
     "@codemirror/state": "^6.7.6",

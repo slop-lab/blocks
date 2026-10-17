@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@block-editor/agent-tools':
+        specifier: workspace:*
+        version: link:packages/agent-tools
+      '@block-editor/agent-tools-part':
+        specifier: workspace:*
+        version: link:packages/agent-tools-part
       '@block-editor/bindings':
         specifier: workspace:*
         version: link:packages/bindings
@@ -53,6 +59,15 @@ importers:
       '@radix-ui/react-icons':
         specifier: ^1.3.2
         version: 1.3.2(react@19.3.0)
+      '@slop-lab/part':
+        specifier: 0.1.0
+        version: 0.1.0
+      '@slop-lab/part-node':
+        specifier: 0.1.0
+        version: 0.1.0
+      '@slop-lab/part-plugins':
+        specifier: 0.1.0
+        version: 0.1.0
       '@tanstack/react-virtual':
         specifier: ^3.14.13
         version: 3.14.13(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -162,6 +177,29 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@24.19.1)(jsdom@27.4.0)(tsx@4.23.15)
+
+  packages/agent-tools:
+    dependencies:
+      zod:
+        specifier: ^4.1.11
+        version: 4.6.5
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/agent-tools-part:
+    dependencies:
+      '@block-editor/agent-tools':
+        specifier: workspace:*
+        version: link:../agent-tools
+      '@slop-lab/part':
+        specifier: 0.1.0
+        version: 0.1.0
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/bindings:
     dependencies:
@@ -1054,6 +1092,19 @@ packages:
     resolution: {integrity: sha512-nl+CTWIgOGszQmUz/kanfgrfFZ4qiwxKIfT/ryl3N3Ewk5tqizmYtNXiqb7Bu/fDtNgu1kyxdFiAUJNur3iysg==}
     cpu: [x64]
     os: [win32]
+
+  '@slop-lab/part-node@0.1.0':
+    resolution: {integrity: sha512-OiX7VLah6aWk1M3tahl+9G27RtaVmG0pTILD6ZnHdNxAAj7vCufboeh9y11RQ/2g8YlAqMCFfi4OPNWUDeSWKA==}
+    engines: {node: '>=24.22.0'}
+    hasBin: true
+
+  '@slop-lab/part-plugins@0.1.0':
+    resolution: {integrity: sha512-6jCtb5F4xuzuKLy9EE2gJKQJAG77cZ2V0u9y4y63J23kwb9ElRnSS+Yp3aFJ5O4444zg+qcixyZjSdp/IJrGAQ==}
+    engines: {node: '>=24.22.0'}
+
+  '@slop-lab/part@0.1.0':
+    resolution: {integrity: sha512-kKHBHJbkdaX6AoRD34icGKS1bfpR7n02u6tnAnw1Ej03VpBrLaOOptwEJMBVzV7HOn7lwzKPSoy160K3K1wZng==}
+    engines: {node: '>=24.22.0'}
 
   '@tanstack/react-virtual@3.14.13':
     resolution: {integrity: sha512-JbDTAwtzZ99aOeCrAfW5EsE5KSq5RWh6Af2dtFwyLIIk48Ja7vm6n4axu/43T3vfjFnEGJalxJ1wyYjSQD6bSg==}
@@ -2360,6 +2411,16 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.64.0':
     optional: true
+
+  '@slop-lab/part-node@0.1.0':
+    dependencies:
+      '@slop-lab/part': 0.1.0
+
+  '@slop-lab/part-plugins@0.1.0':
+    dependencies:
+      '@slop-lab/part': 0.1.0
+
+  '@slop-lab/part@0.1.0': {}
 
   '@tanstack/react-virtual@3.14.13(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:

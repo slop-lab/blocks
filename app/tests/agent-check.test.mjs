@@ -130,7 +130,7 @@ it("cancels a provider request when the configured timeout expires", async () =>
     response.once("close", releaseClose)
   })
   const apiKey = "timeout-secret-do-not-print"
-  const failure = await execute(["--timeout-ms", "50"], {
+  const failure = await execute(["--", "--timeout-ms", "50"], {
     ...cleanEnvironment(),
     OPENAI_BASE_URL: baseUrl,
     OPENAI_API_KEY: apiKey,

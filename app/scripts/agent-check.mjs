@@ -24,6 +24,11 @@ const timeoutFromArguments = (arguments_) => {
   return timeout
 }
 
+const commandArguments = () => {
+  const arguments_ = process.argv.slice(2)
+  return arguments_[0] === "--" ? arguments_.slice(1) : arguments_
+}
+
 const redact = (message, environment) => {
   let redacted = message
   for (const secret of [environment.OPENAI_API_KEY, environment.PART_API_KEY]) {
@@ -80,11 +85,12 @@ const runCheck = async (environment, timeoutMs) => {
 }
 
 const main = async () => {
-  if (process.argv.slice(2).includes("--help")) {
+  const arguments_ = commandArguments()
+  if (arguments_.includes("--help")) {
     process.stdout.write(HELP)
     return
   }
-  const result = await runCheck(process.env, timeoutFromArguments(process.argv.slice(2)))
+  const result = await runCheck(process.env, timeoutFromArguments(arguments_))
   process.stdout.write(
     `status: passed\nmodel: ${result.model}\ntransport: OpenAI-compatible Chat Completions SSE\ntool turns: ${result.toolTurns}\ncanonical apply: not requested\n`,
   )

@@ -37,17 +37,22 @@ credentials, authorization fields, prompts, and model traces before an observer 
 
 ## Application examples
 
-The app runner demonstrates three authoritative-host flows:
+The app runner demonstrates three authoritative-host flows. Every proposal is a discriminated,
+immutable artifact carrying exact before/after values, the revisions and linked reads used to form
+it, and a canonical SHA-256 fingerprint. Apply recomputes that fingerprint before touching a host.
 
-1. **Markdown/Git documents**: reads a managed `.md` file through the existing allowlisted,
-   bounded Markdown host; creates a separate candidate; applies only after review with the file's
-   SHA-256 baseline revision. A changed file returns a conflict rather than being overwritten.
-2. **Structured workspace**: reads a page from the page CAS repository and projects bounded context
-   for the model. Apply reparses `pageDocumentSchema`, runs the existing cross-entity workspace
-   validator, and writes with the captured page revision.
-3. **Mixed backlog**: reads the authoritative task, presentation/current proposal, and linked
-   Markdown evidence. A proposal stores a `BlockDocument` with the task dependency version. Apply
-   rejects either a changed task version or a changed mixed-backlog repository revision.
+1. **Managed Markdown**: `search_documents` finds only bounded allowlisted files,
+   `read_markdown_range` returns exact source ranges, and `propose_markdown_replacement` creates a
+   `markdown-replacement` artifact. Apply checks the file SHA and exact before range, preserving
+   untouched source bytes and CRLF. This is not a Git worktree adapter.
+2. **Structured workspace**: `query_database_rows` reads the canonical typed database and
+   `propose_row_status_patch` creates a `workspace-row-status` artifact. Apply executes inside
+   `withWorkspaceMutation`, checks the database CAS revision and before value, calls the canonical
+   typed row patch, validates the whole workspace, and preserves unrelated rows and properties.
+3. **Mixed backlog**: `list_running_tasks`, `read_task_context`, and `read_linked_evidence` return
+   the real task, proposal context, Markdown content, and hashes. `propose_task_plan` creates a
+   `mixed-task-plan` artifact. Apply rejects a changed task version, repository revision, or linked
+   evidence hash.
 
 The model never receives authority from client target metadata alone. The target only identifies
 which managed resource the server must reread. Supplied document snapshots are retained solely for
@@ -56,7 +61,7 @@ apply command.
 
 ## Approval and lifecycle
 
-Model tools can update a review candidate but cannot apply it. The authenticated caller must invoke
+Model tools can create a review artifact but cannot apply it. The authenticated caller must invoke
 the apply action after review. Query, watch, cancel, and apply are restricted to the principal and
 session that started the operation. Closing an observer only detaches that observer; explicit
 cancellation aborts the tool context and requests Part cancellation. A restart marks active work

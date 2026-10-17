@@ -132,6 +132,11 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 - Badge is text plus icon where needed. Toast uses `aria-live="polite"`, never steals focus, and offers recovery when actionable.
 - On mobile the status region occupies its own row above the document instead of covering text. Prose uses Korean word-preserving wrapping; long unbroken payloads still wrap inside their containers.
 
+### Agent Tool Workbench
+- A three-tab operational surface separates managed Markdown, typed database, and mixed-backlog workflows while keeping one consistent resource/request/review/timeline grammar.
+- Exact before/after values and fingerprints use the mono recipe inside bounded, wrapping source panels. Lifecycle controls remain visible and cancellation is distinct from observer detachment.
+- Desktop uses a compact controls rail beside the wider immutable review artifact. Below 768px tabs and panels become one column; at 375px every long identifier wraps without horizontal page overflow.
+
 ### Git Document Library
 - A three-region list/document/review shell uses the existing 244px navigation measure and 320px inspector measure. The document is the primary scroll owner; library and review rails scroll independently only on wide screens.
 - The library combines a recursive file tree, full-text search, and backlinks. Active files use `accent-soft`; paths and excerpts always wrap or ellipsize without forcing shell overflow.

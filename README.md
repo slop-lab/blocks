@@ -4,6 +4,8 @@
 
 React와 ProseMirror를 사용하는 블록 편집기 및 선택 가능한 연결 모듈입니다. 기본 편집기는 저장소·도메인 서비스·협업 서버 없이 사용할 수 있습니다.
 
+공개 라이브러리는 `@slop-lab/blocks`와 `@slop-lab/blocks-*`로 구분합니다. 데모 앱 `@this-project/demo`와 저장소 웹 빌드에 의존하는 CLI `@this-project/block-docs`는 `private: true`인 로컬 패키지입니다. 공개 패키지 목록, 아직 해결해야 할 배포 차단 항목과 실사용 조건은 [릴리즈 계약](docs/contracts/release.md)에 정리합니다. 패키지 이름 변경은 npm 게시를 의미하지 않습니다.
+
 ## 실행
 
 ```sh
@@ -91,30 +93,30 @@ Markdown·협업·표·대용량 기능은 각각의 진입점을 가져오거�
 | `app/src/features/collaboration/` | Yjs 연결 및 다중 편집 surface |
 | `app/src/features/composite/` | 선택적 table schema, 복합 입력 context와 migration |
 | `app/src/features/large-content/` | 부분 로딩, 블록 캐시, 가상화 및 reveal/focus |
-| `@block-editor/bindings` | 엔진과 무관한 변경 전달, draft/ack 정책, 비동기 외부 액션 target guard, 엄격한 revision schema |
-| `@block-editor/server-bindings` | Node 파일 CAS 저장소, Yjs room 저장소, 서명된 데모 세션과 scope 검사, versioned 승인 workflow |
-| `@block-editor/model` | 엔진과 무관한 문서 계약, codec, 명시적 block registry와 React viewer |
-| `@block-editor/interactions` | 엔진 독립 선택·clipboard·cut 정책. ProseMirror 연결은 opt-in `/prosemirror` 진입점 |
-| `@block-editor/containers` | 엔진 독립 재귀 트리 이동·복제와 명시적 최소 연결 범위 감싸기 계획 |
-| `@block-editor/prosemirror` | opt-in ProseMirror schema/snapshot adapter와 block별 leaf export |
-| `@block-editor/workspace` | 엔진 독립 페이지/문서/database/synced-source Zod 계약, 계층 명령, typed row patch, filter/sort와 context heading projection |
-| `@block-editor/agent-tools` | 엔진 독립 tool schema/effect/context/budget/result/provenance 계약. 모델 실행이나 저장소를 소유하지 않습니다. |
-| `@block-editor/agent-tools-part` | 고정된 Part 0.1 `functionTool` 연결. 실행 lifecycle은 앱 서버가 소유합니다. |
+| `@slop-lab/blocks-bindings` | 엔진과 무관한 변경 전달, draft/ack 정책, 비동기 외부 액션 target guard, 엄격한 revision schema |
+| `@slop-lab/blocks-server-bindings` | Node 파일 CAS 저장소, Yjs room 저장소, 서명된 데모 세션과 scope 검사, versioned 승인 workflow |
+| `@slop-lab/blocks` | 엔진과 무관한 문서 계약, codec, 명시적 block registry와 React viewer |
+| `@slop-lab/blocks-interactions` | 엔진 독립 선택·clipboard·cut 정책. ProseMirror 연결은 opt-in `/prosemirror` 진입점 |
+| `@slop-lab/blocks-containers` | 엔진 독립 재귀 트리 이동·복제와 명시적 최소 연결 범위 감싸기 계획 |
+| `@slop-lab/blocks-prosemirror` | opt-in ProseMirror schema/snapshot adapter와 block별 leaf export |
+| `@slop-lab/blocks-workspace` | 엔진 독립 페이지/문서/database/synced-source Zod 계약, 계층 명령, typed row patch, filter/sort와 context heading projection |
+| `@slop-lab/blocks-agent-tools` | 엔진 독립 tool schema/effect/context/budget/result/provenance 계약. 모델 실행이나 저장소를 소유하지 않습니다. |
+| `@slop-lab/blocks-agent-tools-part` | 고정된 Part 0.1 `functionTool` 연결. 실행 lifecycle은 앱 서버가 소유합니다. |
 
-두 패키지는 `corepack pnpm build:packages`로 ESM과 선언 파일을 `packages/*/dist`에 생성합니다. 앱은 로컬 노트의 저장 알림, 호스트 폼의 revision bookmark, 수정안의 비동기 target guard, 부분 문서 저장 acknowledgement를 `@block-editor/bindings`에서 직접 사용합니다. 서버는 `.runtime` 아래 durable document/room/workflow 저장소와 권한 검사를 `@block-editor/server-bindings`에서 사용합니다.
+두 패키지는 `corepack pnpm build:packages`로 ESM과 선언 파일을 `packages/*/dist`에 생성합니다. 앱은 로컬 노트의 저장 알림, 호스트 폼의 revision bookmark, 수정안의 비동기 target guard, 부분 문서 저장 acknowledgement를 `@slop-lab/blocks-bindings`에서 직접 사용합니다. 서버는 `.runtime` 아래 durable document/room/workflow 저장소와 권한 검사를 `@slop-lab/blocks-server-bindings`에서 사용합니다.
 
 ```ts
-import { ChangeDelivery, PersistenceBaseline } from "@block-editor/bindings"
-import { DemoSessionAuthority, FileCasRepository } from "@block-editor/server-bindings"
+import { ChangeDelivery, PersistenceBaseline } from "@slop-lab/blocks-bindings"
+import { DemoSessionAuthority, FileCasRepository } from "@slop-lab/blocks-server-bindings"
 ```
 
 ### 사용자 schema와 tree-shaking
 
-core 문서 계약에는 필수 paragraph가 없습니다. ProseMirror를 사용할 때 소비자가 필요한 block leaf만 가져와 schema를 조립합니다. 기존 편집기는 편의를 위해 `@block-editor/prosemirror/preset`을 사용하므로 공개 동작이 유지됩니다.
+core 문서 계약에는 필수 paragraph가 없습니다. ProseMirror를 사용할 때 소비자가 필요한 block leaf만 가져와 schema를 조립합니다. 기존 편집기는 편의를 위해 `@slop-lab/blocks-prosemirror/preset`을 사용하므로 공개 동작이 유지됩니다.
 
 ```tsx
-import { BlockViewer } from "@block-editor/model/viewer"
-import { blockAttrs, createProseMirrorProfile } from "@block-editor/prosemirror"
+import { BlockViewer } from "@slop-lab/blocks/viewer"
+import { blockAttrs, createProseMirrorProfile } from "@slop-lab/blocks-prosemirror"
 
 const notesText = {
   type: "notes.text",
@@ -129,7 +131,7 @@ const renderers = new Map([[notesText.type, notesText.render]])
 const view = <BlockViewer content={document} renderers={renderers} />
 ```
 
-독립 leaf는 `@block-editor/prosemirror/paragraph`, `/heading`, `/quote`, `/code`, `/caption`, `/task-card`입니다. 공통 preset이 필요한 소비자만 `/preset`을 가져옵니다. 모든 package는 ESM과 선언 파일을 만들고 `sideEffects: false`를 선언합니다. `app/tests/tree-shaking.test.ts`는 실제 esbuild metafile의 입력 모듈을 검사하여 custom-text 소비자에 기본 block leaf가 없고 view-only 소비자에 ProseMirror가 없음을 증명합니다.
+독립 leaf는 `@slop-lab/blocks-prosemirror/paragraph`, `/heading`, `/quote`, `/code`, `/caption`, `/task-card`입니다. 공통 preset이 필요한 소비자만 `/preset`을 가져옵니다. 모든 package는 ESM과 선언 파일을 만들고 `sideEffects: false`를 선언합니다. `app/tests/tree-shaking.test.ts`는 실제 esbuild metafile의 입력 모듈을 검사하여 custom-text 소비자에 기본 block leaf가 없고 view-only 소비자에 ProseMirror가 없음을 증명합니다.
 
 구조화 도메인은 렌더링 엔진과 Node 저장소를 import하지 않습니다. 호스트는 schema로 경계를 파싱하고 명령 결과를 자체 CAS adapter에 전달합니다.
 
@@ -140,7 +142,7 @@ import {
   movePage,
   workspaceSchema,
   type WorkspaceStoragePort,
-} from "@block-editor/workspace"
+} from "@slop-lab/blocks-workspace"
 
 const workspace = workspaceSchema.parse(payload)
 const moved = movePage(workspace, "research", "project")
@@ -171,7 +173,7 @@ const htmlLevel = headingLevelAtDepth(2, 3) // 5; 저장된 2는 바뀌지 않�
 
 외부 콘텐츠 교체는 model/epoch/baseVersion을 검사하고 조합 중에는 유예합니다. 자동 재조정이 불가능하면 draft를 보존하고 충돌을 알립니다. 외부 액션, 렌더링, 본문 저장은 서로 다른 경로입니다.
 
-`@block-editor/agent-tools`는 실행 엔진과 무관한 bounded tool 계약이고, 선택적인 `@block-editor/agent-tools-part`가 고정된 Part 0.1 `functionTool`에만 연결합니다. command/query/watch lifecycle, 실행 journal, 모델 선택과 권한은 `app/server/agent/`의 예제 앱이 소유합니다. 브라우저는 같은 origin의 `/api/agent/commands`, `/api/agent/queries`, `/api/agent/events`만 사용하며 모델 자격 증명을 받지 않습니다. 기본 제공자는 `결정적 시나리오 / 모델미연결`로 표시되는 fixture이며 실제 Part model/tool loop를 실행하지만 외부 LLM 연결을 주장하지 않습니다.
+`@slop-lab/blocks-agent-tools`는 실행 엔진과 무관한 bounded tool 계약이고, 선택적인 `@slop-lab/blocks-agent-tools-part`가 고정된 Part 0.1 `functionTool`에만 연결합니다. command/query/watch lifecycle, 실행 journal, 모델 선택과 권한은 `app/server/agent/`의 예제 앱이 소유합니다. 브라우저는 같은 origin의 `/api/agent/commands`, `/api/agent/queries`, `/api/agent/events`만 사용하며 모델 자격 증명을 받지 않습니다. 기본 제공자는 `결정적 시나리오 / 모델미연결`로 표시되는 fixture이며 실제 Part model/tool loop를 실행하지만 외부 LLM 연결을 주장하지 않습니다.
 
 OpenAI-compatible 모델을 연결하려면 서버 환경에 `PART_API_BASE`, `PART_MODEL_ID`, `PART_API_KEY`를 모두 설정합니다. endpoint origin은 Part fetch transport의 allowlist에 고정되고 bearer key는 서버에만 남습니다. 세 값 중 하나라도 없으면 fixture로 명확히 전환됩니다. 실제 provider 연결은 배포 환경의 endpoint와 credential로 별도 검증해야 합니다.
 

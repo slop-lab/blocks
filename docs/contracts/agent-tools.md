@@ -2,12 +2,12 @@
 
 ## Scope
 
-`@block-editor/agent-tools` is an engine-free contract package for bounded host tools. It defines
+`@slop-lab/blocks-agent-tools` is an engine-free contract package for bounded host tools. It defines
 validated tool input/output, declared effects, execution identity, budgets, typed outcomes,
 provenance, and trace redaction. It does not create agents, choose models, store runs, expose HTTP,
 or own application data.
 
-`@block-editor/agent-tools-part` is the optional Part 0.1 adapter. It translates a defined tool to
+`@slop-lab/blocks-agent-tools-part` is the optional Part 0.1 adapter. It translates a defined tool to
 the published `functionTool` API and advertises the same JSON Schema and effect as the core
 definition. Both packages pin Part-facing dependencies to exactly `0.1.0`; Part remains
 experimental and a `0.x` minor update is treated as breaking.

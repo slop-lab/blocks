@@ -1,9 +1,9 @@
-# @block-editor/containers
+# @slop-lab/blocks-containers
 
 엔진과 무관한 재귀 블록 트리 연산입니다. `planTreeWrap`은 문서를 변경하지 않고 선택을 하나의 컨테이너로 감쌀 수 있는지 계산합니다.
 
 ```ts
-import { expandTreeWrapSelection, planTreeWrap } from "@block-editor/containers"
+import { expandTreeWrapSelection, planTreeWrap } from "@slop-lab/blocks-containers"
 
 const forest = [
   { id: "a", children: [] },

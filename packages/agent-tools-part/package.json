@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "@block-editor/agent-tools": "workspace:*",
-    "@slop-lab/part": "0.1.0"
+    "@slop-lab/part": "0.1.0",
+    "zod": "^4.1.11"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

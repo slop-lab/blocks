@@ -10,6 +10,8 @@ export type ToolUsage = {
   readonly depth: number
 }
 
+export type PreparedUsage = Omit<ToolUsage, "bytes">
+
 export type ToolProvenance = {
   readonly operationId: string
   readonly principal: Principal
@@ -56,6 +58,8 @@ export type ToolContext = {
   readonly operationId: string
   readonly signal: AbortSignal
   readonly budget: ToolBudget
+  authorize(effect: ToolEffect): Promise<boolean>
+  targetIsCurrent(): Promise<boolean>
   provenance(input: { readonly resources: readonly string[] }): ToolProvenance
 }
 
@@ -67,12 +71,22 @@ export type ToolDefinition<Input, Output> = {
   readonly effect: ToolEffect
   readonly input: z.ZodType<Input>
   readonly output: z.ZodType<Output>
-  readonly inputJsonSchema: JsonSchema
-  readonly outputJsonSchema: JsonSchema
-  readonly execute: (input: Input, context: ToolContext) => Promise<ToolResult<Output>>
+  readonly prepare: (input: Input, context: ToolContext) => Promise<PreparedToolResult<Output>>
 }
 
-export type DefinedTool<Input, Output> = Omit<ToolDefinition<Input, Output>, "execute"> & {
+export type PreparedToolResult<Output> =
+  | {
+      readonly kind: "success"
+      readonly value: Output
+      readonly provenance: ToolProvenance
+      readonly usage: PreparedUsage
+      readonly commit?: () => Promise<void>
+    }
+  | Exclude<ToolResult<Output>, { readonly kind: "success" }>
+
+export type DefinedTool<Input, Output> = Omit<ToolDefinition<Input, Output>, "prepare"> & {
+  readonly inputJsonSchema: JsonSchema
+  readonly outputJsonSchema: JsonSchema
   readonly invoke: (input: unknown, context: ToolContext) => Promise<ToolResult<Output>>
 }
 

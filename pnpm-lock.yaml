@@ -196,6 +196,9 @@ importers:
       '@slop-lab/part':
         specifier: 0.1.0
         version: 0.1.0
+      zod:
+        specifier: ^4.1.11
+        version: 4.6.5
     devDependencies:
       typescript:
         specifier: ^5.9.3

@@ -2,6 +2,64 @@ import { bearerAuth, createFetchTransport } from "@slop-lab/part/model/index.js"
 import { createOpenAICompatibleAdapter } from "@slop-lab/part-plugins/providers/openai-compatible/index.js"
 import { fakeModel } from "@slop-lab/part-plugins/testing/index.js"
 
+const STANDARD_KEYS = ["OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL"]
+const LEGACY_KEYS = ["PART_API_BASE", "PART_API_KEY", "PART_MODEL_ID"]
+
+export class ProviderConfigurationError extends Error {
+  name = "ProviderConfigurationError"
+}
+
+const selectedGroup = (environment) => {
+  if (STANDARD_KEYS.some((key) => environment[key] !== undefined)) return STANDARD_KEYS
+  if (LEGACY_KEYS.some((key) => environment[key] !== undefined)) return LEGACY_KEYS
+  return null
+}
+
+const parseUrl = (raw, kind) => {
+  let url
+  try {
+    url = new URL(raw)
+  } catch {
+    throw new ProviderConfigurationError(`${kind} must be an absolute URL`)
+  }
+  if (url.username !== "" || url.password !== "")
+    throw new ProviderConfigurationError(`${kind} must not contain credentials`)
+  if (url.search !== "") throw new ProviderConfigurationError(`${kind} must not contain a query`)
+  if (url.hash !== "") throw new ProviderConfigurationError(`${kind} must not contain a fragment`)
+  const loopback = new Set(["localhost", "127.0.0.1", "::1"]).has(url.hostname)
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback))
+    throw new ProviderConfigurationError(`${kind} must use HTTPS except for localhost loopback`)
+  return url
+}
+
+const configurationFromEnvironment = (environment) => {
+  const keys = selectedGroup(environment)
+  if (keys === null) return null
+  const missing = keys.filter((key) => environment[key] === undefined || environment[key].trim() === "")
+  if (missing.length > 0)
+    throw new ProviderConfigurationError(
+      `Incomplete provider configuration; missing ${missing.join(", ")}`,
+    )
+  const [urlKey, apiKeyKey, modelKey] = keys
+  const configuredUrl = parseUrl(environment[urlKey].trim(), urlKey)
+  if (keys === STANDARD_KEYS) {
+    if (configuredUrl.pathname.replace(/\/+$/, "").endsWith("/chat/completions"))
+      throw new ProviderConfigurationError(
+        "OPENAI_BASE_URL must be a base URL, not a Chat Completions endpoint",
+      )
+    configuredUrl.pathname = `${configuredUrl.pathname.replace(/\/+$/, "")}/chat/completions`
+  } else if (!configuredUrl.pathname.endsWith("/chat/completions")) {
+    throw new ProviderConfigurationError(
+      "PART_API_BASE must be the full OpenAI-compatible Chat Completions endpoint",
+    )
+  }
+  return {
+    endpoint: configuredUrl.href,
+    apiKey: environment[apiKeyKey].trim(),
+    model: environment[modelKey].trim(),
+  }
+}
+
 export const createFixtureModel = (options = {}) => {
   const requests = []
   return {
@@ -110,10 +168,6 @@ export const createRemoteModel = (config) => {
 }
 
 export const modelFromEnvironment = (environment) => {
-  const endpoint = environment.PART_API_BASE
-  const model = environment.PART_MODEL_ID
-  const apiKey = environment.PART_API_KEY
-  return endpoint && model && apiKey
-    ? createRemoteModel({ endpoint, model, apiKey })
-    : createFixtureModel()
+  const configuration = configurationFromEnvironment(environment)
+  return configuration === null ? createFixtureModel() : createRemoteModel(configuration)
 }

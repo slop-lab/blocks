@@ -100,7 +100,7 @@ it("runs Markdown, workspace, and mixed-backlog proposals against authoritative 
   )
   const workspaceResult = await runAndApply(
     runtime,
-    { modelId: "structured-workspace", resourceId: "research", epoch: 1, baseVersion: 1 },
+    { modelId: "structured-workspace", resourceId: "tasks", epoch: 1, baseVersion: 1 },
     "Validated workspace section",
   )
   const mixedResult = await runAndApply(
@@ -121,13 +121,22 @@ it("runs Markdown, workspace, and mixed-backlog proposals against authoritative 
     "Reviewed Markdown evidence",
   )
   expect(workspaceResult.completed.authority.kind).toBe("workspace")
+  expect(workspaceResult.completed.artifact).toMatchObject({
+    kind: "workspace-row-status",
+    rowId: "task-1",
+    before: "진행",
+    after: "완료",
+  })
   expect(workspaceResult.applied.kind).toBe("applied")
-  expect((await workspace.pages.read("research"))?.content.blocks.at(-1)?.text).toBe(
-    "Validated workspace section",
-  )
+  expect((await workspace.databases.read("tasks"))?.content.rows[0].values.status).toBe("완료")
   expect(mixedResult.completed.authority).toMatchObject({
     kind: "mixed-backlog",
     dependencyVersion: 1,
+  })
+  expect(mixedResult.completed.artifact).toMatchObject({
+    kind: "mixed-task-plan",
+    taskId: "TASK-104",
+    evidence: [expect.objectContaining({ name: "tasks/TASK-104.md" })],
   })
   expect(mixedResult.applied.kind).toBe("applied")
   expect((await mixed.read("mixed-backlog"))?.content.proposals).toEqual(

@@ -62,18 +62,19 @@ const samePrincipal = (run, context) =>
 
 export const createAgentEndpoint = (runtime) => {
   const hubs = new Map()
-  const ownerKey = (owner) => `${owner.authority}\u0000${owner.subject}`
-  const hubFor = (owner) => {
-    const key = ownerKey(owner)
+  const hubFor = (owner, sessionId, surface = "agent-runs") => {
+    const key = `${surface}\u0000${owner.authority}\u0000${owner.subject}\u0000${sessionId}`
     const existing = hubs.get(key)
     if (existing !== undefined) return existing
     const created = createWatchHub(capabilities)
     hubs.set(key, created)
     return created
   }
-  const unsubscribe = runtime.subscribe((run) => hubFor(run.owner).upsert(itemFor(run)))
+  const unsubscribe = runtime.subscribe((run) =>
+    hubFor(run.owner, run.input.sessionId).upsert(itemFor(run)),
+  )
   void runtime.list().then((runs) => {
-    for (const run of runs) hubFor(run.owner).upsert(itemFor(run))
+    for (const run of runs) hubFor(run.owner, run.input.sessionId).upsert(itemFor(run))
   })
   return {
     async command(request, context) {
@@ -212,8 +213,8 @@ export const createAgentEndpoint = (runtime) => {
       }
       return fail("agent.query", "Unsupported agent query", "unsupported")
     },
-    async watch(_request, context) {
-      return hubFor(context.principal).watch(context)
+    async watch(request, context) {
+      return hubFor(context.principal, context.scope.id, request.surface).watch(context)
     },
     async close() {
       unsubscribe()

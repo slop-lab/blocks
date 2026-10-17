@@ -62,3 +62,54 @@ it("serves session-owned Part command, query, and reconnectable watch contracts"
   await hosted.value.close()
   await endpoint.close()
 })
+
+it("isolates renewed sessions for the same principal across queries and watches", async () => {
+  const root = await mkdtemp(join(tmpdir(), "part-agent-session-watch-"))
+  roots.push(root)
+  const runtime = await createAgentRuntime({ root, model: createFixtureModel() })
+  const endpoint = createAgentEndpoint(runtime)
+  const principal = { subject: "author", authority: "test" }
+  const firstHost = await startAgentHttpHost(endpoint, () => ({
+    principal,
+    sessionId: "session-old",
+  }))
+  const renewedHost = await startAgentHttpHost(endpoint, () => ({
+    principal,
+    sessionId: "session-new",
+  }))
+  if (!firstHost.ok || !renewedHost.ok) throw new TypeError("Agent HTTP host failed")
+  const first = createAgentHttpPort(firstHost.value.url)
+  const renewed = createAgentHttpPort(renewedHost.value.url)
+  const delivery = await first.command({
+    protocolVersion: 1,
+    commandId: "session-old-command",
+    actionId: "block-editor.agent/start",
+    actionVersion: 1,
+    input: {
+      kind: "proposal",
+      requestId: "session-old-request",
+      sessionId: "session-old",
+      instruction: "Old session proposal",
+      target: { modelId: "document-http", epoch: 1, baseVersion: 1 },
+      document: { format: "block-editor/v0.3", blocks: [] },
+    },
+  })
+  if (delivery.kind !== "receipt" || delivery.receipt.kind !== "accepted")
+    throw new TypeError("Agent command was not accepted")
+  await runtime.wait(delivery.receipt.operation.id)
+
+  const denied = await renewed.query({
+    queryId: "block-editor.agent/get",
+    version: 1,
+    target: delivery.receipt.operation,
+    input: null,
+  })
+  const watch = await renewed.watch({ surface: "agent-runs" })
+
+  expect(denied.ok).toBe(false)
+  expect(watch.ok && watch.value.bootstrap.items).toHaveLength(0)
+  if (watch.ok) await watch.value.close()
+  await firstHost.value.close()
+  await renewedHost.value.close()
+  await endpoint.close()
+})

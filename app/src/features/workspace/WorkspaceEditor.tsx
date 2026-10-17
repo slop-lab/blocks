@@ -1,4 +1,4 @@
-import type { Database, PageDocument, SyncedSource, Workspace } from "@block-editor/workspace"
+import type { Database, PageDocument, SyncedSource, Workspace } from "@slop-lab/blocks-workspace"
 import { Fragment } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
 import { useEffect, useRef } from "react"

@@ -1,4 +1,4 @@
-import { blockSelectionReconcilePlugin } from "@block-editor/interactions/prosemirror"
+import { blockSelectionReconcilePlugin } from "@slop-lab/blocks-interactions/prosemirror"
 import { baseKeymap } from "prosemirror-commands"
 import { history, redo, undo } from "prosemirror-history"
 import { keymap } from "prosemirror-keymap"

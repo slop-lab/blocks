@@ -1,4 +1,3 @@
-import type { Page, Workspace } from "@block-editor/workspace"
 import {
   ArchiveIcon,
   ChevronDownIcon,
@@ -9,6 +8,7 @@ import {
   PlusIcon,
   StarIcon,
 } from "@radix-ui/react-icons"
+import type { Page, Workspace } from "@slop-lab/blocks-workspace"
 import { useEffect, useRef, useState } from "react"
 
 type Props = {

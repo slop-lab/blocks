@@ -3,7 +3,7 @@ import {
   DocumentCodecError,
   decodeDocument,
   encodeDocument,
-} from "@block-editor/model"
+} from "@slop-lab/blocks"
 
 export { DocumentCodecError, decodeDocument, encodeDocument }
 

@@ -1,4 +1,4 @@
-import { archivePage, pageDepth, restorePage } from "@block-editor/workspace"
+import { archivePage, pageDepth, restorePage } from "@slop-lab/blocks-workspace"
 import { useEffect, useState } from "react"
 import { useWorkspacePersistence } from "./useWorkspacePersistence"
 import { WorkspaceTopbar, WorkspaceTrash } from "./WorkspaceChrome"

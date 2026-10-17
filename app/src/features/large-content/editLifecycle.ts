@@ -1,2 +1,2 @@
-export type { SaveAcknowledgement } from "@block-editor/bindings"
-export { resolveSaveAcknowledgement } from "@block-editor/bindings"
+export type { SaveAcknowledgement } from "@slop-lab/blocks-bindings"
+export { resolveSaveAcknowledgement } from "@slop-lab/blocks-bindings"

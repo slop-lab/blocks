@@ -1,5 +1,5 @@
-import { type BlockDocument, encodeDocument } from "@block-editor/model"
-import { BlockViewer } from "@block-editor/model/viewer"
+import { type BlockDocument, encodeDocument } from "@slop-lab/blocks"
+import { BlockViewer } from "@slop-lab/blocks/viewer"
 import { useCallback, useRef, useState } from "react"
 import { parseDocumentText } from "../../core/codec"
 import { CanonicalBlockEditor, type CanonicalBlockEditorHandle } from "./CustomNotesEditor"

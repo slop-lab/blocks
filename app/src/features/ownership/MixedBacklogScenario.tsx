@@ -1,5 +1,5 @@
-import type { BlockDocument } from "@block-editor/model"
-import { BlockViewer } from "@block-editor/model/viewer"
+import type { BlockDocument } from "@slop-lab/blocks"
+import { BlockViewer } from "@slop-lab/blocks/viewer"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MixedLowerLayer } from "./MixedLowerLayer"
 import {

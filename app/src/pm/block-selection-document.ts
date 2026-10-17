@@ -8,4 +8,4 @@ export {
   selectedBlockIdsInDocumentOrder,
   selectedBlockNodes,
   selectionContainsLockedNode,
-} from "@block-editor/interactions/prosemirror"
+} from "@slop-lab/blocks-interactions/prosemirror"

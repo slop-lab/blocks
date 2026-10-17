@@ -1,4 +1,4 @@
-import { InteractionContextArbiter } from "@block-editor/interactions"
+import { InteractionContextArbiter } from "@slop-lab/blocks-interactions"
 import type { EditorView } from "prosemirror-view"
 import type { BlockInteractionOptions } from "./block-interaction-options"
 

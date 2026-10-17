@@ -1,4 +1,4 @@
-import type { BlockDocument } from "@block-editor/model"
+import type { BlockDocument } from "@slop-lab/blocks"
 import { useCallback, useRef, useState } from "react"
 import { CustomNotesEditor } from "./CustomNotesEditor"
 

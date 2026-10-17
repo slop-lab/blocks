@@ -1,10 +1,10 @@
-import type { SourceRuntime } from "@block-editor/bindings"
+import type { SourceRuntime } from "@slop-lab/blocks-bindings"
 import {
   InteractionContextArbiter,
   type InteractionContextHandle,
-} from "@block-editor/interactions"
-import type { ProseMirrorProfile } from "@block-editor/prosemirror"
-import type { SyncedSource } from "@block-editor/workspace"
+} from "@slop-lab/blocks-interactions"
+import type { ProseMirrorProfile } from "@slop-lab/blocks-prosemirror"
+import type { SyncedSource } from "@slop-lab/blocks-workspace"
 import type { Node as ProseMirrorNode } from "prosemirror-model"
 import { type EditorState, Selection, TextSelection } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"

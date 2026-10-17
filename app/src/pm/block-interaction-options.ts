@@ -2,11 +2,11 @@ import type {
   ClipboardEnvelope,
   ClipboardPolicy,
   InteractionContextArbiter,
-} from "@block-editor/interactions"
+} from "@slop-lab/blocks-interactions"
 import type {
   ClipboardInteractionContext,
   ReferencePasteContext,
-} from "@block-editor/interactions/prosemirror"
+} from "@slop-lab/blocks-interactions/prosemirror"
 
 export const defaultBlockClipboardPolicy = {
   namespace: "block-editor/default",

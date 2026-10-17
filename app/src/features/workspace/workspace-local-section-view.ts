@@ -1,5 +1,5 @@
-import { pmToSnapshot } from "@block-editor/prosemirror"
-import { convertSectionToSyncedSource, isOpaqueWorkspaceBlock } from "@block-editor/workspace"
+import { pmToSnapshot } from "@slop-lab/blocks-prosemirror"
+import { convertSectionToSyncedSource, isOpaqueWorkspaceBlock } from "@slop-lab/blocks-workspace"
 import type { Node as ProseMirrorNode } from "prosemirror-model"
 import type { EditorView, NodeView } from "prosemirror-view"
 import { snapshotToPageDocument } from "./workspace-editor-model"

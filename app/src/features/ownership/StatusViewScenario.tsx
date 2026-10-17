@@ -1,5 +1,5 @@
-import type { BlockRenderer } from "@block-editor/model"
-import { BlockViewer } from "@block-editor/model/viewer"
+import type { BlockRenderer } from "@slop-lab/blocks"
+import { BlockViewer } from "@slop-lab/blocks/viewer"
 import { useMemo, useState } from "react"
 
 const statusRenderer: BlockRenderer = (block, data) => {

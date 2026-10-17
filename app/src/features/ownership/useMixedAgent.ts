@@ -1,4 +1,4 @@
-import type { BlockDocument } from "@block-editor/model"
+import type { BlockDocument } from "@slop-lab/blocks"
 import { useEffect, useRef, useState } from "react"
 import { createAgentSuggestionProvider } from "../../core/agent-suggestions"
 import { SuggestionStream } from "../../core/proposals"

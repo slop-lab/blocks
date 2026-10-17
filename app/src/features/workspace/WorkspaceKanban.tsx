@@ -1,4 +1,4 @@
-import { type Database, groupDatabaseRows, patchDatabaseRow } from "@block-editor/workspace"
+import { type Database, groupDatabaseRows, patchDatabaseRow } from "@slop-lab/blocks-workspace"
 
 type Props = {
   readonly database: Database

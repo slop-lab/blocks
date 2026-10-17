@@ -1,4 +1,4 @@
-import { type SyncedSource, syncedSourceSchema } from "@block-editor/workspace"
+import { type SyncedSource, syncedSourceSchema } from "@slop-lab/blocks-workspace"
 import { HTTPError } from "ky"
 import {
   type EntityRecord,

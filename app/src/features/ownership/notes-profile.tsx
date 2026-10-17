@@ -1,9 +1,9 @@
-import type { BlockRenderer } from "@block-editor/model"
+import type { BlockRenderer } from "@slop-lab/blocks"
 import {
   type BlockRegistration,
   blockAttrs,
   createProseMirrorProfile,
-} from "@block-editor/prosemirror"
+} from "@slop-lab/blocks-prosemirror"
 
 const textRenderer: BlockRenderer = (block) => (
   <p>{block.content.flatMap((inline) => (inline.kind === "text" ? [inline.text] : []))}</p>

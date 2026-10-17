@@ -3,7 +3,7 @@ import {
   pageDocumentSchema,
   syncedSourceSchema,
   workspaceSchema,
-} from "@block-editor/workspace"
+} from "@slop-lab/blocks-workspace"
 import { entityRecordSchemas, saveWorkspaceEntity } from "./workspace-api"
 import type { QueueRecord, SaveRequest } from "./workspace-save-queue"
 

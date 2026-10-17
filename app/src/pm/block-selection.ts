@@ -2,7 +2,7 @@ import {
   attachBlockSelection as attachAdapter,
   type BlockSelectionController,
   type BlockSelectionOptions,
-} from "@block-editor/interactions/prosemirror"
+} from "@slop-lab/blocks-interactions/prosemirror"
 import type { EditorView } from "prosemirror-view"
 import { profileForState } from "./profile-plugin"
 

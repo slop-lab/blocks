@@ -1,4 +1,4 @@
-import { type ProseMirrorProfile, pmToSnapshot } from "@block-editor/prosemirror"
+import { type ProseMirrorProfile, pmToSnapshot } from "@slop-lab/blocks-prosemirror"
 import type { Transaction } from "prosemirror-state"
 import { snapshotToPageDocument } from "./workspace-editor-model"
 import type { SourceEntry, SourceOccurrence } from "./workspace-source-attachment"

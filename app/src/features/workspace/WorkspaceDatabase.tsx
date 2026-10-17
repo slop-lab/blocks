@@ -1,10 +1,10 @@
+import { PlusIcon } from "@radix-ui/react-icons"
 import {
   addDatabaseRow,
   type Database,
   filterAndSortRows,
   patchDatabaseRow,
-} from "@block-editor/workspace"
-import { PlusIcon } from "@radix-ui/react-icons"
+} from "@slop-lab/blocks-workspace"
 import { useMemo, useState } from "react"
 import { WorkspaceKanban } from "./WorkspaceKanban"
 

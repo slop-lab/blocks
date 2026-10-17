@@ -1,4 +1,4 @@
-import type { ProseMirrorProfile } from "@block-editor/prosemirror"
+import type { ProseMirrorProfile } from "@slop-lab/blocks-prosemirror"
 import type { EditorState } from "prosemirror-state"
 import { Plugin, PluginKey } from "prosemirror-state"
 

@@ -1,4 +1,4 @@
-import type { Database, PageDocument, SyncedSource, Workspace } from "@block-editor/workspace"
+import type { Database, PageDocument, SyncedSource, Workspace } from "@slop-lab/blocks-workspace"
 import { useState } from "react"
 import { WorkspaceDatabase } from "./WorkspaceDatabase"
 import { WorkspaceEditor } from "./WorkspaceEditor"

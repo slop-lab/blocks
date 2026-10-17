@@ -1,5 +1,5 @@
-import type { ProseMirrorProfile } from "@block-editor/prosemirror"
-import type { Database, SyncedSource, Workspace } from "@block-editor/workspace"
+import type { ProseMirrorProfile } from "@slop-lab/blocks-prosemirror"
+import type { Database, SyncedSource, Workspace } from "@slop-lab/blocks-workspace"
 import { Fragment, type Node as ProseMirrorNode } from "prosemirror-model"
 import type { EntityRecord } from "./workspace-api"
 

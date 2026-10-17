@@ -1,4 +1,4 @@
-import { snapshotToPm } from "@block-editor/prosemirror"
+import { snapshotToPm } from "@slop-lab/blocks-prosemirror"
 import type { Node as ProseMirrorNode } from "prosemirror-model"
 import type { EditorView, NodeView } from "prosemirror-view"
 import { pageDocumentToSnapshot } from "./workspace-editor-model"

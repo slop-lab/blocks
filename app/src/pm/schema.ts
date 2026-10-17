@@ -1,4 +1,4 @@
-import { defaultProfile } from "@block-editor/prosemirror/preset"
+import { defaultProfile } from "@slop-lab/blocks-prosemirror/preset"
 import type { Schema } from "prosemirror-model"
 
 export const editorProfile = defaultProfile

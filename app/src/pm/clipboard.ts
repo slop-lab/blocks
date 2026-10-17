@@ -1,5 +1,5 @@
-import type { ProseMirrorProfile } from "@block-editor/prosemirror"
-import { defaultProfile } from "@block-editor/prosemirror/preset"
+import type { ProseMirrorProfile } from "@slop-lab/blocks-prosemirror"
+import { defaultProfile } from "@slop-lab/blocks-prosemirror/preset"
 import type { Node as ProseMirrorNode } from "prosemirror-model"
 import { Fragment, Slice } from "prosemirror-model"
 import { Plugin } from "prosemirror-state"

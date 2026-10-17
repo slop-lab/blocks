@@ -3,16 +3,16 @@ import {
   blockAttrs,
   createProseMirrorProfile,
   type ProseMirrorProfile,
-} from "@block-editor/prosemirror"
-import { codeBlock } from "@block-editor/prosemirror/code"
+} from "@slop-lab/blocks-prosemirror"
+import { codeBlock } from "@slop-lab/blocks-prosemirror/code"
 import {
   calloutBlock,
   containerQuoteBlock,
   sectionBlock,
   sectionTitle,
-} from "@block-editor/prosemirror/containers"
-import { paragraphBlock } from "@block-editor/prosemirror/paragraph"
-import { isOpaqueWorkspaceBlock, type WorkspaceBlock } from "@block-editor/workspace"
+} from "@slop-lab/blocks-prosemirror/containers"
+import { paragraphBlock } from "@slop-lab/blocks-prosemirror/paragraph"
+import { isOpaqueWorkspaceBlock, type WorkspaceBlock } from "@slop-lab/blocks-workspace"
 
 export { pageDocumentToSnapshot, snapshotToPageDocument } from "./workspace-editor-codec"
 

@@ -1,11 +1,11 @@
-import type { BlockDocument, BlockSnapshot, InlineSnapshot } from "@block-editor/model"
+import type { BlockDocument, BlockSnapshot, InlineSnapshot } from "@slop-lab/blocks"
 import {
   blockSchema,
   isOpaqueWorkspaceBlock,
   type PageDocument,
   type SyncedSource,
   type WorkspaceBlock,
-} from "@block-editor/workspace"
+} from "@slop-lab/blocks-workspace"
 
 const textContent = (text: string) =>
   text.length === 0 ? [] : [{ kind: "text" as const, text, marks: [] }]

@@ -4,7 +4,7 @@ import {
   type HostActionRequest,
   type HostActionResult,
   PersistenceBaseline,
-} from "@block-editor/bindings"
+} from "@slop-lab/blocks-bindings"
 
 export type { ActionTarget, HostActionRequest, HostActionResult }
 export { ActionRequests, PersistenceBaseline }

@@ -1,4 +1,4 @@
-import { planTreeWrap, type TreeNode, type TreeWrapPlan } from "@block-editor/containers"
+import { planTreeWrap, type TreeNode, type TreeWrapPlan } from "@slop-lab/blocks-containers"
 import { Fragment, type NodeType, type Node as ProseMirrorNode } from "prosemirror-model"
 import type { Command } from "prosemirror-state"
 import { TextSelection } from "prosemirror-state"

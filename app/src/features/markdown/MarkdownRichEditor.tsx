@@ -1,5 +1,5 @@
-import { blockSelectionReconcilePlugin } from "@block-editor/interactions/prosemirror"
-import { parseMarkdown, serializeMarkdown } from "@block-editor/markdown"
+import { blockSelectionReconcilePlugin } from "@slop-lab/blocks-interactions/prosemirror"
+import { parseMarkdown, serializeMarkdown } from "@slop-lab/blocks-markdown"
 import { baseKeymap, toggleMark } from "prosemirror-commands"
 import { history, redo, undo } from "prosemirror-history"
 import { inputRules, textblockTypeInputRule, wrappingInputRule } from "prosemirror-inputrules"

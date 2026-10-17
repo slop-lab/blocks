@@ -1,5 +1,5 @@
-import type { BlockDocument } from "@block-editor/model"
-import type { ProseMirrorProfile } from "@block-editor/prosemirror"
+import type { BlockDocument } from "@slop-lab/blocks"
+import type { ProseMirrorProfile } from "@slop-lab/blocks-prosemirror"
 import type { Command } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react"

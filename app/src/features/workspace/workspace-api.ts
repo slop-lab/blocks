@@ -7,7 +7,7 @@ import {
   syncedSourceSchema,
   type Workspace,
   workspaceSchema,
-} from "@block-editor/workspace"
+} from "@slop-lab/blocks-workspace"
 import ky from "ky"
 import { z } from "zod"
 

@@ -1,2 +1,2 @@
-export type { ChangeBatch, DeliveryPolicy } from "@block-editor/bindings"
-export { ChangeDelivery } from "@block-editor/bindings"
+export type { ChangeBatch, DeliveryPolicy } from "@slop-lab/blocks-bindings"
+export { ChangeDelivery } from "@slop-lab/blocks-bindings"

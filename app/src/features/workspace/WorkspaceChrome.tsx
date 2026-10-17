@@ -1,5 +1,5 @@
-import type { Page } from "@block-editor/workspace"
 import { ResetIcon } from "@radix-ui/react-icons"
+import type { Page } from "@slop-lab/blocks-workspace"
 
 export const WorkspaceTopbar = ({
   title,

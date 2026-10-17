@@ -1,4 +1,4 @@
-import type { BlockDocument } from "@block-editor/model"
+import type { BlockDocument } from "@slop-lab/blocks"
 import ky from "ky"
 import { z } from "zod"
 

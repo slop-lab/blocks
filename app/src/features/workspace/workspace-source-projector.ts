@@ -1,4 +1,4 @@
-import { headingLevelAtDepth } from "@block-editor/workspace"
+import { headingLevelAtDepth } from "@slop-lab/blocks-workspace"
 import { DOMSerializer } from "prosemirror-model"
 import type { EditorState } from "prosemirror-state"
 

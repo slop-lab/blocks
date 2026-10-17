@@ -1,4 +1,4 @@
-import type { BlockDocument } from "@block-editor/model"
+import type { BlockDocument } from "@slop-lab/blocks"
 import { CanonicalBlockEditor } from "./CustomNotesEditor"
 import type { LowerDraft } from "./mixed-api"
 import { presentationProfile } from "./presentation-profile"

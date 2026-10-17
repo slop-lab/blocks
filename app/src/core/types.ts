@@ -4,7 +4,7 @@ export type {
   InlineSnapshot,
   OpaqueInline,
   TextInline,
-} from "@block-editor/model"
+} from "@slop-lab/blocks"
 
 export type ViewData = Readonly<Record<string, unknown>>
 export type OverlayState = Readonly<Record<string, unknown>>

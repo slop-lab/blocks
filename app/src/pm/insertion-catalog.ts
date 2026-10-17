@@ -1,4 +1,4 @@
-import type { BlockRegistration } from "@block-editor/prosemirror"
+import type { BlockRegistration } from "@slop-lab/blocks-prosemirror"
 import type { NodeType } from "prosemirror-model"
 import type { EditorView } from "prosemirror-view"
 import { profileForState } from "./profile-plugin"

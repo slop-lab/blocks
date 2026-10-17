@@ -48,6 +48,7 @@ export const agentRunRecordSchema = z.object({
   id: z.string(),
   owner: z.object({ subject: z.string(), authority: z.string() }),
   input: agentRunInputSchema,
+  inputHash: z.string().length(64).nullable().default(null),
   provider: z.enum(["fixture", "remote"]),
   providerLabel: z.string(),
   status: z.enum(["pending", "running", "completed", "failed", "cancelled", "interrupted"]),
@@ -64,7 +65,28 @@ export const agentRunRecordSchema = z.object({
       dependencyVersion: z.number(),
     }),
   ]),
-  application: z.enum(["not-requested", "applied", "conflict"]),
+  application: z.enum(["not-requested", "applying", "applied", "conflict"]),
+  applicationResult: z
+    .discriminatedUnion("kind", [
+      z.object({ kind: z.literal("applied"), revision: z.union([z.string(), z.number()]) }),
+      z.object({
+        kind: z.literal("conflict"),
+        actualRevision: z.union([z.string(), z.number()]),
+      }),
+    ])
+    .nullable()
+    .default(null),
+  commandReceipts: z
+    .array(
+      z.object({
+        commandId: z.string().min(1).max(200),
+        action: z.enum(["cancel", "apply"]),
+        inputHash: z.string().length(64),
+        result: z.json(),
+      }),
+    )
+    .max(100)
+    .default([]),
   operation: z.object({ owner: z.string(), kind: z.string(), id: z.string() }).nullable(),
   events: z.array(eventSchema).max(100),
   error: z.string().nullable(),

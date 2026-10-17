@@ -31,14 +31,40 @@ export class AgentJournal {
   }
 
   async put(run) {
-    const parsed = agentRunRecordSchema.parse(run)
-    this.#runs.set(parsed.id, parsed)
-    const payload = JSON.stringify({ schemaVersion: 1, runs: [...this.#runs.values()] })
-    this.#write = this.#write.then(async () => {
-      const temporary = `${this.#path}.${crypto.randomUUID()}.tmp`
-      await writeFile(temporary, payload, { encoding: "utf8", mode: 0o600 })
-      await rename(temporary, this.#path)
+    return this.#enqueue(async () => {
+      const parsed = agentRunRecordSchema.parse(run)
+      const next = new Map(this.#runs).set(parsed.id, parsed)
+      await this.#persist(next)
+      this.#runs = next
+      return structuredClone(parsed)
     })
-    await this.#write
+  }
+
+  async update(id, change) {
+    return this.#enqueue(async () => {
+      const current = this.#runs.get(id)
+      if (current === undefined) throw new RangeError(`Unknown agent run ${id}`)
+      const parsed = agentRunRecordSchema.parse(change(structuredClone(current)))
+      const next = new Map(this.#runs).set(id, parsed)
+      await this.#persist(next)
+      this.#runs = next
+      return structuredClone(parsed)
+    })
+  }
+
+  #enqueue(operation) {
+    const pending = this.#write.then(operation)
+    this.#write = pending.then(
+      () => undefined,
+      () => undefined,
+    )
+    return pending
+  }
+
+  async #persist(runs) {
+    const payload = JSON.stringify({ schemaVersion: 1, runs: [...runs.values()] })
+    const temporary = `${this.#path}.${crypto.randomUUID()}.tmp`
+    await writeFile(temporary, payload, { encoding: "utf8", mode: 0o600 })
+    await rename(temporary, this.#path)
   }
 }

@@ -120,7 +120,7 @@ const applyMarkdown = async (artifact) => {
 }
 
 const applyWorkspace = (root, artifact, actorId) =>
-  withWorkspaceMutation(root, async () => {
+  withWorkspaceMutation(join(root, "workspace"), async () => {
     const repositories = workspaceRepositories(root)
     const current = await repositories.databases.read(artifact.databaseId)
     if (current === null) return { kind: "conflict", actualRevision: "missing" }
@@ -165,20 +165,32 @@ const applyMixed = async (root, artifact, actorId) => {
   const task = content.tasks.find((item) => item.id === artifact.taskId)
   if (task === undefined || task.version !== artifact.dependencyVersion)
     return { kind: "conflict", actualRevision: task?.version ?? "missing" }
+  const currentProposal = content.proposals.find(
+    (item) =>
+      item.taskId === artifact.taskId && item.dependencyVersion === artifact.dependencyVersion,
+  )
+  if (JSON.stringify(currentProposal?.document ?? null) !== JSON.stringify(artifact.before))
+    return { kind: "conflict", actualRevision: current.revision }
   for (const evidence of artifact.evidence) {
     const linked = await loadMarkdownFile(markdownRoot(), evidence.name)
     if (linked.revision !== evidence.revision)
       return { kind: "conflict", actualRevision: linked.revision }
   }
   const proposal = {
-    id: `agent-${artifact.taskId}`,
+    id: currentProposal?.id ?? `agent-${artifact.taskId}`,
     taskId: artifact.taskId,
     document: artifact.after,
     dependencyVersion: artifact.dependencyVersion,
   }
   const next = {
     ...content,
-    proposals: [...content.proposals.filter((item) => item.id !== proposal.id), proposal],
+    proposals: [
+      ...content.proposals.filter(
+        (item) =>
+          item.taskId !== artifact.taskId || item.dependencyVersion !== artifact.dependencyVersion,
+      ),
+      proposal,
+    ],
   }
   try {
     const saved = await repository.update("mixed-backlog", artifact.repositoryRevision, next, {

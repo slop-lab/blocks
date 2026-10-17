@@ -140,9 +140,7 @@ it("runs Markdown, workspace, and mixed-backlog proposals against authoritative 
   })
   expect(mixedResult.applied.kind).toBe("applied")
   expect((await mixed.read("mixed-backlog"))?.content.proposals).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({ id: "agent-TASK-104", dependencyVersion: 1 }),
-    ]),
+    expect.arrayContaining([expect.objectContaining({ id: "proposal-1", dependencyVersion: 1 })]),
   )
   await runtime.dispose()
 })

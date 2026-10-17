@@ -76,8 +76,29 @@ or disaster recovery.
 The default provider label is `결정적 시나리오 / 모델미연결`. It executes real Part model and
 function-tool calls using Part's deterministic fake model; it does not claim an LLM connection.
 
-An optional OpenAI-compatible adapter is configured only when the server receives all three values:
-`PART_API_BASE`, `PART_MODEL_ID`, and `PART_API_KEY`. The key remains server-side and fetch is
-allowlisted to the configured origin. Repository verification covers adapter construction and the
-deterministic Part loop. No paid remote provider was contacted, so provider-specific latency,
-streaming, billing, and response compatibility remain deployment verification responsibilities.
+The preferred server-only configuration is the complete `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and
+`OPENAI_MODEL` group. The base URL ends at an API prefix such as `/v1`; the application normalizes
+its trailing slash and appends `/chat/completions`. URLs must use HTTPS, except that loopback hosts
+may use HTTP for tests, and may not contain credentials, a query, or a fragment. If any preferred
+variable is present, that group takes precedence and an incomplete group is an error rather than a
+fixture fallback.
+
+The published legacy `PART_API_BASE`, `PART_API_KEY`, and `PART_MODEL_ID` group remains supported
+only when no preferred variable is present. Its `PART_API_BASE` retains the historical exact-endpoint
+meaning and must include `/chat/completions`. Credentials stay in the server process and fetch is
+allowlisted to the parsed endpoint origin. No provider variable means the explicit deterministic
+fixture; partial configuration never silently selects it.
+
+Repository integration tests use an ephemeral loopback OpenAI-compatible server and the installed
+Part fetch transport. They prove the exact POST route, bearer authorization, configured model,
+advertised function schema, SSE tool call, returned tool-result message, review candidate creation,
+no implicit apply, abort propagation, HTTP 401 result, and absence of the test credential from the
+run journal. The mock is transport evidence, not evidence for a particular external provider.
+
+`corepack pnpm agent:check` is the opt-in external connectivity check. Both it and `pnpm start` load
+the ignored `.env.local` with Node's `--env-file-if-exists`; `.env.example` contains placeholders
+only. The check runs an isolated client-draft operation through the same Part tool loop, requires one
+`candidate_patch` turn, never invokes apply, removes its temporary journal, and prints metadata only.
+It does not call `/models`. It can consume quota through two or more Chat Completions requests and
+does not prove latency, billing, production reliability, Responses API support, media, or hosted
+tools. Those remain provider and deployment responsibilities.

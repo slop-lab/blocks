@@ -20,6 +20,23 @@ corepack pnpm start
 
 개발 서버는 `/api`와 협업 WebSocket을 기본적으로 3000 포트에 전달합니다. 백엔드 포트를 바꾸었다면 `BACKEND_URL=http://127.0.0.1:4174 corepack pnpm dev`를 사용합니다.
 
+### OpenAI-compatible 모델 연결
+
+자격 증명은 브라우저나 `VITE_` 변수에 넣지 않고 서버의 로컬 파일에만 둡니다. 추적되는 예제를 복사하고 `.env.local`을 로컬에서 편집합니다. 실제 key를 issue, 채팅, 명령행 인자 또는 Git 추적 파일에 붙여 넣지 마세요.
+
+```sh
+cp .env.example .env.local
+# .env.local에서 OPENAI_BASE_URL, OPENAI_API_KEY, OPENAI_MODEL을 수정
+corepack pnpm agent:check
+corepack pnpm start
+```
+
+`OPENAI_BASE_URL`은 `https://api.example.com/v1`처럼 API base를 받으며 앱이 `/chat/completions`를 한 번 붙입니다. 끝의 slash는 무시합니다. URL credential, query, fragment, 이미 붙은 `/chat/completions`는 거부하고, 평문 HTTP는 `localhost`, `127.0.0.1`, `::1`의 로컬 mock에만 허용합니다. `OPENAI_*` 중 하나라도 존재하면 이 표준 그룹이 우선하며 세 값이 모두 필요합니다. 일부만 설정한 경우 fixture로 숨겨서 전환하지 않고 서버와 check가 설명과 함께 실패합니다.
+
+기존 설정을 위해 `PART_API_BASE`, `PART_API_KEY`, `PART_MODEL_ID`도 유지합니다. 표준 `OPENAI_*`가 전혀 없을 때만 사용하며, 역사적 동작대로 `PART_API_BASE`는 base가 아니라 `/v1/chat/completions`까지 포함한 전체 endpoint입니다. 두 그룹을 섞지 마세요. 어떤 provider 변수도 없을 때만 서버는 결정적 fixture를 사용합니다.
+
+`agent:check`는 `/models`를 요구하지 않습니다. 격리한 임시 client draft에서 실제 Part runtime으로 Chat Completions 요청, `candidate_patch` function-tool 호출, tool result 반환, 마지막 model turn을 실행한 뒤 파일을 지웁니다. canonical 문서 apply는 호출하지 않으며 model명, 성공 상태, tool turn 수만 출력합니다. provider 응답 본문과 key는 출력하지 않습니다. 기본 제한은 45초이고 필요하면 `corepack pnpm agent:check -- --timeout-ms 60000`처럼 최대 60초까지 바꿀 수 있습니다. 이 검사는 보통 model 요청 두 번을 사용하여 quota나 비용이 발생할 수 있고, 연결된 model이 요청한 function tool을 따르지 않으면 호환성 실패로 처리합니다.
+
 ## Git 문서 라이브러리 CLI
 
 `block-docs`는 기존 non-bare Git 저장소의 주 작업 트리를 건드리지 않고, `.runtime/git-documents` 아래에 브랜치별 관리 작업 트리를 만들거나 재사용합니다. 브라우저는 같은 origin의 고정된 문서 API만 호출하며 Git 명령이나 인자를 전달하는 endpoint는 없습니다.
@@ -175,7 +192,7 @@ const htmlLevel = headingLevelAtDepth(2, 3) // 5; 저장된 2는 바뀌지 않�
 
 `@slop-lab/blocks-agent-tools`는 실행 엔진과 무관한 bounded tool 계약이고, 선택적인 `@slop-lab/blocks-agent-tools-part`가 고정된 Part 0.1 `functionTool`에만 연결합니다. command/query/watch lifecycle, 실행 journal, 모델 선택과 권한은 `app/server/agent/`의 예제 앱이 소유합니다. 브라우저는 같은 origin의 `/api/agent/commands`, `/api/agent/queries`, `/api/agent/events`만 사용하며 모델 자격 증명을 받지 않습니다. 기본 제공자는 `결정적 시나리오 / 모델미연결`로 표시되는 fixture이며 실제 Part model/tool loop를 실행하지만 외부 LLM 연결을 주장하지 않습니다.
 
-OpenAI-compatible 모델을 연결하려면 서버 환경에 `PART_API_BASE`, `PART_MODEL_ID`, `PART_API_KEY`를 모두 설정합니다. endpoint origin은 Part fetch transport의 allowlist에 고정되고 bearer key는 서버에만 남습니다. 세 값 중 하나라도 없으면 fixture로 명확히 전환됩니다. 실제 provider 연결은 배포 환경의 endpoint와 credential로 별도 검증해야 합니다.
+OpenAI-compatible 모델은 위의 서버 전용 `OPENAI_*` 설정으로 연결합니다. endpoint origin은 Part fetch transport의 allowlist에 고정되고 bearer key는 서버에만 남습니다. 저장소의 loopback 통합 검사는 실제 HTTP/SSE와 tool loop를 증명하지만 실제 외부 provider 연결은 로컬 `agent:check`로 별도 검증해야 합니다.
 
 실행 journal은 `.runtime/agent/runs.json`에 원자적으로 저장됩니다. 명시적 실행 취소만 host task를 취소하며 dialog를 닫거나 event 관찰을 끊는 동작은 observer만 분리합니다. 서버 재시작 때 진행 중이던 실행은 `interrupted`로 남고 tool을 자동 재생하지 않습니다. 모델 tool은 canonical 문서를 직접 바꾸지 않고 review candidate만 갱신합니다. Markdown hash, workspace entity revision, mixed task dependency와 repository revision을 서버가 다시 확인한 뒤 사용자의 명시적 apply에서만 반영합니다. 상세 계약과 운영상 비주장은 `docs/contracts/agent-tools.md`에 정의합니다.
 

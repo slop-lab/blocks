@@ -656,6 +656,8 @@ input:focus-visible,
   inline-size: min(680px, 100%);
   max-block-size: calc(100dvh - 32px);
   overflow: auto;
+  word-break: keep-all;
+  overflow-wrap: break-word;
   background: var(--elevated);
   border-radius: 12px;
   padding: var(--space-6);
@@ -842,6 +844,20 @@ input:focus-visible,
   }
 }
 @media (max-width: 767px) {
+  .dialog-layer {
+    align-items: start;
+    overflow: hidden;
+  }
+  .dialog {
+    block-size: calc(100dvh - 32px);
+    min-block-size: 0;
+    padding: var(--space-4);
+    overscroll-behavior: contain;
+  }
+  .dialog .review-documents {
+    max-block-size: none;
+    overflow: visible;
+  }
   .app-shell {
     display: block;
     max-block-size: none;
@@ -898,6 +914,9 @@ input:focus-visible,
   .static-viewer {
     min-block-size: calc(100dvh - 245px);
     padding: var(--space-8) var(--space-5);
+  }
+  .dialog .review-documents .static-viewer {
+    padding: var(--space-3);
   }
   .editor-content h1,
   .static-viewer h1 {

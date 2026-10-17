@@ -20,7 +20,8 @@
     "test:git-documents-browser": "node app/tests/git-documents-browser.mjs",
     "test:block-interactions-browser": "node app/tests/block-interactions-browser.mjs",
     "lint": "biome check .",
-    "start": "node app/server.mjs",
+    "start": "node --env-file-if-exists=.env.local app/server.mjs",
+    "agent:check": "node --env-file-if-exists=.env.local app/scripts/agent-check.mjs",
     "docs:start": "node packages/block-docs/dist/cli.js start"
   },
   "dependencies": {

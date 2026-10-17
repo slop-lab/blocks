@@ -1,198 +1,199 @@
-import { createAgent } from "@slop-lab/part-plugins/agent/index.js"
-import { applyAuthoritativeCandidate, loadAuthoritativeCandidate } from "./authority.mjs"
+import { applyAuthoritativeCandidate } from "./authority.mjs"
 import { AgentJournal } from "./journal.mjs"
-import { createDocumentTools, documentToolSchemas } from "./tools.mjs"
+import {
+  AgentCommandConflictError,
+  AgentRequestConflictError,
+  createSerialGate,
+  hashJson,
+  receiptFor,
+  requestKey,
+  runEvent,
+} from "./lifecycle.mjs"
+import { startAgentOperation } from "./run-operation.mjs"
 
-const runEvent = (run, type, detail) => ({
-  id: (run.events.at(-1)?.id ?? 0) + 1,
-  type,
-  detail: detail.slice(0, 2_000),
-  at: new Date().toISOString(),
-})
+export { AgentCommandConflictError, AgentRequestConflictError }
 
-export const createAgentRuntime = async ({ root, model }) => {
+const isActive = (run) => run.status === "pending" || run.status === "running"
+
+export const createAgentRuntime = async ({
+  root,
+  model,
+  applyCandidate = applyAuthoritativeCandidate,
+  observeOperation = (handle, options) => handle.observe(options),
+}) => {
   const journal = new AgentJournal(root)
   await journal.open()
   for (const run of journal.list()) {
-    if (run.status !== "pending" && run.status !== "running") continue
-    await journal.put({
-      ...run,
+    if (!isActive(run)) continue
+    await journal.update(run.id, (current) => ({
+      ...current,
       status: "interrupted",
       updatedAt: new Date().toISOString(),
       events: [
-        ...run.events,
-        runEvent(run, "run.interrupted", "server restarted; tools were not replayed"),
-      ],
-    })
+        ...current.events,
+        runEvent(current, "run.interrupted", "server restarted; tools were not replayed"),
+      ].slice(-100),
+    }))
   }
+
   const active = new Map()
   const listeners = new Set()
+  const runGate = createSerialGate()
+  const requestGate = createSerialGate()
   let shuttingDown = false
-
+  const notify = (run) => {
+    for (const listener of listeners) {
+      try {
+        listener(structuredClone(run))
+      } catch {}
+    }
+  }
   const update = async (id, change) => {
-    const current = journal.get(id)
-    if (current === null) throw new RangeError(`Unknown agent run ${id}`)
-    const next = change(current)
-    await journal.put(next)
-    for (const listener of listeners) listener(structuredClone(next))
+    const next = await journal.update(id, change)
+    notify(next)
     return next
   }
 
   const start = async (raw, owner) => {
     const input = structuredClone(raw)
-    const id = crypto.randomUUID()
-    const now = new Date().toISOString()
-    const authoritative = await loadAuthoritativeCandidate(root, input)
-    let candidate = structuredClone(authoritative.document)
-    const initial = {
-      schemaVersion: 1,
-      id,
-      owner,
-      input,
-      provider: model.kind,
-      providerLabel: model.label,
-      status: "pending",
-      cancellation: "not-requested",
-      candidate,
-      authority: authoritative.authority,
-      application: "not-requested",
-      operation: null,
-      events: [
-        {
-          id: 1,
-          type: "authority.read",
-          detail: authoritative.sources.join(", ").slice(0, 2_000),
-          at: now,
-        },
-      ],
-      error: null,
-      createdAt: now,
-      updatedAt: now,
-    }
-    await journal.put(initial)
-    for (const listener of listeners) listener(structuredClone(initial))
-    const cancellation = new AbortController()
-    const tools = createDocumentTools({
-      input,
-      owner,
-      operationId: id,
-      signal: cancellation.signal,
-      candidate: () => candidate,
-      async targetIsCurrent() {
-        const current = await loadAuthoritativeCandidate(root, input)
-        return JSON.stringify(current.authority) === JSON.stringify(authoritative.authority)
-      },
-      async writeCandidate(document) {
-        candidate = structuredClone(document)
-        await update(id, (run) => ({
-          ...run,
-          candidate,
-          updatedAt: new Date().toISOString(),
-          events: [...run.events, runEvent(run, "tool.proposal", "review candidate updated")].slice(
-            -100,
-          ),
-        }))
-      },
-    })
-    const created = createAgent({
-      model: model.create(input),
-      tools,
-      toolSchemas: documentToolSchemas,
-      principal: owner,
-      limits: {
-        maxModelInvocations: 4,
-        maxToolDispatches: 8,
-        maxExecutorAttempts: 12,
-        maxConcurrentOperations: 8,
-        maxKnownTokens: 32_000,
-        deadline: new Date(Date.now() + 60_000).toISOString(),
-      },
-    })
-    if (!created.ok) {
-      return update(id, (run) => ({
-        ...run,
-        status: "failed",
-        error: created.error.message,
-        updatedAt: new Date().toISOString(),
-      }))
-    }
-    const started = await created.value.start(
-      `Use the bounded tools. Read authoritative context, then call candidate_patch exactly once for the requested instruction: ${input.instruction}`,
-    )
-    if (!started.ok) {
-      await created.value.dispose()
-      return update(id, (run) => ({
-        ...run,
-        status: "failed",
-        error: started.error.message,
-        updatedAt: new Date().toISOString(),
-      }))
-    }
-    const observer = new AbortController()
-    const disposeAgent = async () => created.value.dispose()
-    const running = await update(id, (run) => ({
-      ...run,
-      status: "running",
-      operation: started.value.ref,
-      updatedAt: new Date().toISOString(),
-      events: [...run.events, runEvent(run, "run.started", "Part operation admitted")],
-    }))
-    void (async () => {
-      for await (const progress of started.value.observe({
-        signal: observer.signal,
-        bufferSize: 64,
-      })) {
-        if (progress.kind !== "gap") continue
-        await update(id, (run) => ({
-          ...run,
-          events: [
-            ...run.events,
-            runEvent(run, "run.progress-gap", "observer resync required"),
-          ].slice(-100),
-        }))
+    const inputHash = hashJson(input)
+    return requestGate(requestKey(owner, input), async () => {
+      const prior = journal
+        .list()
+        .find(
+          (run) =>
+            run.owner.subject === owner.subject &&
+            run.owner.authority === owner.authority &&
+            run.input.sessionId === input.sessionId &&
+            run.input.requestId === input.requestId,
+        )
+      if (prior !== undefined) {
+        if ((prior.inputHash ?? hashJson(prior.input)) !== inputHash)
+          throw new AgentRequestConflictError(
+            `Request ${input.requestId} was reused with different input`,
+          )
+        return prior
       }
-    })()
-    const terminal = started.value.done.then(async (outcome) => {
-      active.delete(id)
-      await disposeAgent()
-      if (shuttingDown) return
-      await update(id, (run) => {
-        const status = outcome.phase === "completed" ? "completed" : outcome.phase
-        return {
-          ...run,
-          status: status === "abandoned" ? "failed" : status,
-          candidate,
-          cancellation: outcome.phase === "cancelled" ? "confirmed" : run.cancellation,
-          error: "error" in outcome && outcome.error ? outcome.error.message : null,
-          updatedAt: new Date().toISOString(),
-          events: [...run.events, runEvent(run, `run.${status}`, `Part operation ${status}`)].slice(
-            -100,
-          ),
-        }
+      return startAgentOperation({
+        root,
+        model,
+        input,
+        inputHash,
+        owner,
+        journal,
+        update,
+        notify,
+        runGate,
+        active,
+        observeOperation,
+        isShuttingDown: () => shuttingDown,
       })
     })
-    active.set(id, { handle: started.value, observer, cancellation, disposeAgent, terminal })
-    return running
   }
+
+  const cancel = (id, reason, commandId = crypto.randomUUID()) =>
+    runGate(id, async () => {
+      const current = journal.get(id)
+      if (current === null) return null
+      const inputHash = hashJson({ reason })
+      const prior = receiptFor(current, commandId, "cancel", inputHash)
+      if (prior !== null) return prior
+      const running = active.get(id)
+      const cancellation =
+        running !== undefined && isActive(current) ? "requested" : current.cancellation
+      const result = { status: current.status, cancellation }
+      const next = await update(id, (run) => ({
+        ...run,
+        cancellation,
+        updatedAt: new Date().toISOString(),
+        events:
+          running === undefined || !isActive(run)
+            ? run.events
+            : [...run.events, runEvent(run, "run.cancel-requested", reason)].slice(-100),
+        commandReceipts: [
+          ...run.commandReceipts,
+          { commandId, action: "cancel", inputHash, result },
+        ].slice(-100),
+      }))
+      if (running !== undefined && isActive(next)) {
+        running.cancellation.abort(reason)
+        await running.handle.requestCancel(reason)
+      }
+      return result
+    })
+
+  const apply = (id, actorId, commandId = crypto.randomUUID()) =>
+    runGate(id, async () => {
+      const current = journal.get(id)
+      if (current === null) throw new RangeError(`Unknown agent run ${id}`)
+      const inputHash = hashJson({ actorId })
+      const prior = receiptFor(current, commandId, "apply", inputHash)
+      if (prior !== null) return prior
+      if (current.applicationResult !== null) {
+        await update(id, (run) => ({
+          ...run,
+          commandReceipts: [
+            ...run.commandReceipts,
+            { commandId, action: "apply", inputHash, result: run.applicationResult },
+          ].slice(-100),
+        }))
+        return current.applicationResult
+      }
+      if (current.application === "applying")
+        return { kind: "conflict", actualRevision: "application-incomplete" }
+      await update(id, (run) => ({ ...run, application: "applying" }))
+      const result = await applyCandidate(root, current, actorId)
+      await update(id, (run) => ({
+        ...run,
+        application: result.kind === "applied" ? "applied" : "conflict",
+        applicationResult: result,
+        updatedAt: new Date().toISOString(),
+        events: [
+          ...run.events,
+          runEvent(
+            run,
+            result.kind === "applied" ? "candidate.applied" : "candidate.conflict",
+            result.kind === "applied"
+              ? `authoritative revision ${result.revision}`
+              : `actual revision ${result.actualRevision}`,
+          ),
+        ].slice(-100),
+        commandReceipts: [
+          ...run.commandReceipts,
+          { commandId, action: "apply", inputHash, result },
+        ].slice(-100),
+      }))
+      return result
+    })
 
   const interruptForShutdown = async () => {
     shuttingDown = true
     await Promise.all(
-      [...active.entries()].map(async ([id, running]) => {
-        running.observer.abort()
-        running.cancellation.abort("server-shutdown")
-        await update(id, (run) => ({
-          ...run,
-          status: "interrupted",
-          updatedAt: new Date().toISOString(),
-          events: [...run.events, runEvent(run, "run.interrupted", "server shutdown")].slice(-100),
-        }))
-        await running.handle.requestCancel("server-shutdown")
-        await running.handle.done
-        await running.disposeAgent()
-      }),
+      [...active.entries()].map(([id, running]) =>
+        runGate(id, async () => {
+          running.observer.abort()
+          running.cancellation.abort("server-shutdown")
+          await update(id, (run) =>
+            isActive(run)
+              ? {
+                  ...run,
+                  status: "interrupted",
+                  updatedAt: new Date().toISOString(),
+                  events: [
+                    ...run.events,
+                    runEvent(run, "run.interrupted", "server shutdown"),
+                  ].slice(-100),
+                }
+              : run,
+          )
+          await running.handle.requestCancel("server-shutdown")
+          await running.handle.done
+          await running.observation
+          await running.disposeAgent()
+          if (active.get(id) === running) active.delete(id)
+        }),
+      ),
     )
-    active.clear()
     listeners.clear()
   }
 
@@ -214,43 +215,9 @@ export const createAgentRuntime = async ({ root, model }) => {
     async detach(id) {
       active.get(id)?.observer.abort()
     },
-    async cancel(id, reason) {
-      const running = active.get(id)
-      if (running === undefined) return journal.get(id)
-      await update(id, (run) => ({
-        ...run,
-        cancellation: "requested",
-        updatedAt: new Date().toISOString(),
-        events: [...run.events, runEvent(run, "run.cancel-requested", reason)].slice(-100),
-      }))
-      running.cancellation.abort(reason)
-      await running.handle.requestCancel(reason)
-      return journal.get(id)
-    },
-    async apply(id, actorId) {
-      const run = journal.get(id)
-      if (run === null) throw new RangeError(`Unknown agent run ${id}`)
-      const result = await applyAuthoritativeCandidate(root, run, actorId)
-      await update(id, (current) => ({
-        ...current,
-        application: result.kind === "applied" ? "applied" : "conflict",
-        updatedAt: new Date().toISOString(),
-        events: [
-          ...current.events,
-          runEvent(
-            current,
-            result.kind === "applied" ? "candidate.applied" : "candidate.conflict",
-            result.kind === "applied"
-              ? `authoritative revision ${result.revision}`
-              : `actual revision ${result.actualRevision}`,
-          ),
-        ].slice(-100),
-      }))
-      return result
-    },
+    cancel,
+    apply,
     interruptForShutdown,
-    async dispose() {
-      await interruptForShutdown()
-    },
+    dispose: interruptForShutdown,
   }
 }

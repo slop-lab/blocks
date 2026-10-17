@@ -3,7 +3,11 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, expect, it } from "vitest"
 import { createFixtureModel } from "../server/agent/model.mjs"
-import { createAgentRuntime } from "../server/agent/runtime.mjs"
+import {
+  AgentCommandConflictError,
+  AgentRequestConflictError,
+  createAgentRuntime,
+} from "../server/agent/runtime.mjs"
 
 const roots = []
 afterEach(async () => {
@@ -29,6 +33,16 @@ const input = (requestId) => ({
   },
 })
 
+const owner = { subject: "author", authority: "demo-session" }
+
+const deferred = () => {
+  let release
+  const promise = new Promise((resolve) => {
+    release = resolve
+  })
+  return { promise, release }
+}
+
 it("executes a review candidate through the app-owned Part lifecycle", async () => {
   const root = await mkdtemp(join(tmpdir(), "part-agent-lifecycle-"))
   roots.push(root)
@@ -49,6 +63,41 @@ it("executes a review candidate through the app-owned Part lifecycle", async () 
   expect(fixture.requests()).toHaveLength(2)
   expect(completed.events.some((event) => event.type === "tool.proposal")).toBe(true)
   await runtime.dispose()
+})
+
+it("deduplicates concurrent starts by principal, session, request, and input hash", async () => {
+  const root = await mkdtemp(join(tmpdir(), "part-agent-start-receipt-"))
+  roots.push(root)
+  const fixture = createFixtureModel({ pause: true })
+  const runtime = await createAgentRuntime({ root, model: fixture })
+
+  const [first, retry] = await Promise.all([
+    runtime.start(input("request-deduplicated"), owner),
+    runtime.start(input("request-deduplicated"), owner),
+  ])
+
+  expect(retry.id).toBe(first.id)
+  expect(first.inputHash).toMatch(/^[a-f0-9]{64}$/)
+  expect(
+    (await runtime.list()).filter((run) => run.input.requestId === "request-deduplicated"),
+  ).toHaveLength(1)
+  await expect(
+    runtime.start({ ...input("request-deduplicated"), instruction: "다른 입력" }, owner),
+  ).rejects.toBeInstanceOf(AgentRequestConflictError)
+  await runtime.cancel(first.id, "test-cleanup", "cancel-cleanup")
+  await runtime.wait(first.id)
+  expect((await runtime.get(first.id))?.commandReceipts[0]?.inputHash).toMatch(/^[a-f0-9]{64}$/)
+  await runtime.dispose()
+  const restarted = await createAgentRuntime({ root, model: createFixtureModel() })
+  const durableRetry = await restarted.start(input("request-deduplicated"), owner)
+  expect(durableRetry.id).toBe(first.id)
+  await expect(
+    restarted.start(
+      { ...input("request-deduplicated"), instruction: "재시작 후 다른 입력" },
+      owner,
+    ),
+  ).rejects.toBeInstanceOf(AgentRequestConflictError)
+  await restarted.dispose()
 })
 
 it("marks an active operation interrupted after an app restart", async () => {
@@ -86,5 +135,84 @@ it("keeps observer detach separate from explicit operation cancellation", async 
 
   expect(cancelled.status).toBe("cancelled")
   expect(cancelled.cancellation).toBe("confirmed")
+  await runtime.dispose()
+})
+
+it("keeps completed terminal state when cancellation arrives late", async () => {
+  const root = await mkdtemp(join(tmpdir(), "part-agent-late-cancel-"))
+  roots.push(root)
+  const runtime = await createAgentRuntime({ root, model: createFixtureModel() })
+  const started = await runtime.start(input("request-late-cancel"), owner)
+  const completed = await runtime.wait(started.id)
+
+  const first = await runtime.cancel(started.id, "too-late", "cancel-late")
+  const retry = await runtime.cancel(started.id, "too-late", "cancel-late")
+
+  expect(completed.status).toBe("completed")
+  expect(first).toEqual(retry)
+  expect((await runtime.get(started.id))?.status).toBe("completed")
+  await expect(runtime.cancel(started.id, "changed", "cancel-late")).rejects.toBeInstanceOf(
+    AgentCommandConflictError,
+  )
+  await runtime.dispose()
+})
+
+it("claims application once and returns the durable outcome to every retry", async () => {
+  const root = await mkdtemp(join(tmpdir(), "part-agent-apply-receipt-"))
+  roots.push(root)
+  const barrier = deferred()
+  const entered = deferred()
+  let applications = 0
+  const runtime = await createAgentRuntime({
+    root,
+    model: createFixtureModel(),
+    async applyCandidate() {
+      applications += 1
+      entered.release()
+      await barrier.promise
+      return { kind: "applied", revision: 11 }
+    },
+  })
+  const started = await runtime.start(input("request-apply-once"), owner)
+  await runtime.wait(started.id)
+
+  const first = runtime.apply(started.id, "author", "apply-once")
+  const retry = runtime.apply(started.id, "author", "apply-once")
+  const alternate = runtime.apply(started.id, "author", "apply-alternate")
+  await entered.promise
+  expect(applications).toBe(1)
+  barrier.release()
+
+  await expect(first).resolves.toEqual({ kind: "applied", revision: 11 })
+  await expect(retry).resolves.toEqual({ kind: "applied", revision: 11 })
+  await expect(alternate).resolves.toEqual({ kind: "applied", revision: 11 })
+  expect((await runtime.get(started.id))?.application).toBe("applied")
+  expect((await runtime.get(started.id))?.commandReceipts).toHaveLength(2)
+  await runtime.dispose()
+  const restarted = await createAgentRuntime({ root, model: createFixtureModel() })
+  await expect(restarted.apply(started.id, "author", "apply-after-restart")).resolves.toEqual({
+    kind: "applied",
+    revision: 11,
+  })
+  await restarted.dispose()
+})
+
+it("contains observer failures without changing the Part terminal outcome", async () => {
+  const root = await mkdtemp(join(tmpdir(), "part-agent-observer-error-"))
+  roots.push(root)
+  const runtime = await createAgentRuntime({
+    root,
+    model: createFixtureModel(),
+    observeOperation: async function* () {
+      yield { kind: "data", index: 0, type: "test", payload: null }
+      throw new Error("observer disconnected")
+    },
+  })
+
+  const started = await runtime.start(input("request-observer-error"), owner)
+  const completed = await runtime.wait(started.id)
+
+  expect(completed.status).toBe("completed")
+  expect(completed.events.some((event) => event.type === "observer.failed")).toBe(true)
   await runtime.dispose()
 })

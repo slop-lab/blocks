@@ -11,6 +11,7 @@ import {
   saveProposal,
 } from "./mixed-api"
 import { presentationRenderers } from "./presentation-profile"
+import { useMixedAgent } from "./useMixedAgent"
 
 type Props = { readonly onOpenFiles: (path: string) => void }
 export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
@@ -51,6 +52,14 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
   )
   const mergeState = (next: MixedState) =>
     setState((current) => (current === null || next.revision > current.revision ? next : current))
+  const agent = useMixedAgent({
+    state,
+    task,
+    onState: mergeState,
+    onDraft: setDraft,
+    onMessage: setMessage,
+  })
+  const busy = pending !== null || agent.running
   const runDomain = (operation: () => Promise<MixedState>, success: string) => {
     if (pending !== null) return
     setPending("domain")
@@ -176,7 +185,12 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
           </label>
           <h3>검색 결과</h3>
           {filtered.map((item) => (
-            <button type="button" key={item.id} onClick={() => setSelected(item.id)}>
+            <button
+              type="button"
+              key={item.id}
+              disabled={agent.running}
+              onClick={() => setSelected(item.id)}
+            >
               {item.id} · {item.title}
             </button>
           ))}
@@ -184,7 +198,12 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
           {state.tasks
             .filter((item) => item.status === "running")
             .map((item) => (
-              <button type="button" key={item.id} onClick={() => setSelected(item.id)}>
+              <button
+                type="button"
+                key={item.id}
+                disabled={agent.running}
+                onClick={() => setSelected(item.id)}
+              >
                 {item.title}
               </button>
             ))}
@@ -205,17 +224,31 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
           <button
             className="button button--secondary"
             type="button"
-            disabled={pending !== null}
+            disabled={busy}
             onClick={() =>
               runDomain(() => changeTaskStatus(state, task), "도메인 workflow 상태를 변경했습니다.")
             }
           >
             {pending === "domain" ? "전환 중" : "서버 workflow 전환"}
           </button>
+          {agent.running ? (
+            <button className="button button--ghost" type="button" onClick={agent.cancel}>
+              에이전트 실행 취소
+            </button>
+          ) : (
+            <button
+              className="button button--secondary"
+              type="button"
+              disabled={busy || (draft !== null && draft.editVersion > 0)}
+              onClick={() => void agent.run()}
+            >
+              에이전트 제안 실행
+            </button>
+          )}
         </div>
         <MixedLowerLayer
           draft={draft}
-          pending={pending !== null}
+          pending={busy}
           saving={pending === "draft"}
           onOpen={openLayer}
           onChange={changed}

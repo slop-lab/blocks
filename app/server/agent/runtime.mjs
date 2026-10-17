@@ -78,6 +78,10 @@ export const createAgentRuntime = async ({ root, model }) => {
       operationId: id,
       signal: cancellation.signal,
       candidate: () => candidate,
+      async targetIsCurrent() {
+        const current = await loadAuthoritativeCandidate(root, input)
+        return JSON.stringify(current.authority) === JSON.stringify(authoritative.authority)
+      },
       async writeCandidate(document) {
         candidate = structuredClone(document)
         await update(id, (run) => ({

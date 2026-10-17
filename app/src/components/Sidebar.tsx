@@ -21,6 +21,7 @@ export type RouteId =
   | "large-content"
   | "workflow"
   | "ownership"
+  | "agent-workbench"
   | "structured-workspace"
 
 const routes = [
@@ -39,6 +40,12 @@ const routes = [
   { id: "large-content", label: "문서 보관함", note: "긴 문서 · 필요한 부분 읽기", icon: RowsIcon },
   { id: "workflow", label: "공유 회의록", note: "작성 · 검토 요청 · 승인", icon: CheckCircledIcon },
   { id: "ownership", label: "소유권 예제", note: "다섯 가지 원본 경계", icon: ViewGridIcon },
+  {
+    id: "agent-workbench",
+    label: "에이전트 도구 예제",
+    note: "세 가지 원본 · 검토 · 적용",
+    icon: TokensIcon,
+  },
   {
     id: "structured-workspace",
     label: "문서와 데이터베이스",

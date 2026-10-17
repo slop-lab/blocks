@@ -52,6 +52,11 @@ const StructuredWorkspace = lazy(() =>
     default: module.StructuredWorkspace,
   })),
 )
+const AgentWorkbench = lazy(() =>
+  import("./features/agent-workbench/AgentWorkbench").then((module) => ({
+    default: module.AgentWorkbench,
+  })),
+)
 
 export const App = () => {
   const workspace = useWorkspace()
@@ -162,6 +167,9 @@ export const App = () => {
           </div>
           <div hidden={workspace.route !== "structured-workspace"}>
             {visited.has("structured-workspace") && <StructuredWorkspace />}
+          </div>
+          <div hidden={workspace.route !== "agent-workbench"}>
+            {visited.has("agent-workbench") && <AgentWorkbench />}
           </div>
         </Suspense>
       </main>

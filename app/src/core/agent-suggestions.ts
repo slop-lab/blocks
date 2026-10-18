@@ -88,6 +88,7 @@ const runsFromFrame = (raw: unknown): readonly z.infer<typeof runSchema>[] => {
 export const createAgentSuggestionProvider = (
   target: AgentSuggestionTarget,
   kind: "proposal" | "task" = "proposal",
+  inferenceModel?: string,
 ): SuggestionProvider =>
   async function* ({ document, instruction, signal }) {
     const sessionId = await querySession()
@@ -112,6 +113,7 @@ export const createAgentSuggestionProvider = (
               instruction,
               target,
               document,
+              ...(inferenceModel === undefined ? {} : { inferenceModel }),
             },
           },
           retry: 0,

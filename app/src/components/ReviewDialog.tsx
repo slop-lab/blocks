@@ -4,6 +4,7 @@ import { parseDocumentText } from "../core/codec"
 import type { SuggestionProvider } from "../core/proposals"
 import { acceptChanges, compareDocuments, SuggestionStream } from "../core/proposals"
 import type { BlockDocument } from "../core/types"
+import { AgentModelSelect } from "../features/agent-workbench/AgentModelSelect"
 import { BlockViewer } from "../Viewer"
 import { DialogFrame } from "./DialogFrame"
 
@@ -33,14 +34,19 @@ export const ReviewDialog = ({
     "다음 모임에서 이어서 나누고 싶은 주제를 적어 주세요.",
   )
   const [streaming, setStreaming] = useState(false)
+  const [inferenceModel, setInferenceModel] = useState<string>()
   const [selected, setSelected] = useState<ReadonlySet<string> | null>(null)
   const stream = useRef(new SuggestionStream())
   const run = useRef(0)
   const suggestionProvider = useMemo(
     () =>
       provider ??
-      createAgentSuggestionProvider(target ?? { modelId: "review", epoch: 0, baseVersion: 0 }),
-    [provider, target],
+      createAgentSuggestionProvider(
+        target ?? { modelId: "review", epoch: 0, baseVersion: 0 },
+        "proposal",
+        inferenceModel,
+      ),
+    [provider, target, inferenceModel],
   )
   useEffect(() => () => stream.current.cancel("observer-detach"), [])
   const parsed = useMemo(() => {
@@ -120,6 +126,13 @@ export const ReviewDialog = ({
         <span>추가할 제안 문장</span>
         <input value={instruction} onChange={(event) => setInstruction(event.target.value)} />
       </label>
+      {provider === undefined && (
+        <AgentModelSelect
+          value={inferenceModel}
+          onChange={setInferenceModel}
+          disabled={streaming}
+        />
+      )}
       <div className="button-row">
         <button
           type="button"

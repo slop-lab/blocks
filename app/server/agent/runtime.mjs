@@ -74,10 +74,12 @@ export const createAgentRuntime = async ({
           )
         return prior
       }
+      const resolvedModel = await model.resolve(input)
+      const resolvedInput = { ...input, inferenceModel: resolvedModel.id }
       return startAgentOperation({
         root,
-        model,
-        input,
+        model: resolvedModel,
+        input: resolvedInput,
         inputHash,
         owner,
         journal,
@@ -204,6 +206,7 @@ export const createAgentRuntime = async ({
 
   return {
     start,
+    models: (options) => model.catalog(options),
     get: async (id) => journal.get(id),
     list: async () => journal.list(),
     subscribe(listener) {

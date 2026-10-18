@@ -29,11 +29,11 @@ const listen = async (handler) => {
   return `http://127.0.0.1:${address.port}/v1`
 }
 
-const modelFor = (baseUrl) =>
+const modelFor = (baseUrl, defaultModel = "integration-model") =>
   modelFromEnvironment({
     OPENAI_BASE_URL: baseUrl,
     OPENAI_API_KEY: API_KEY,
-    OPENAI_MODEL: "integration-model",
+    ...(defaultModel === null ? {} : { OPENAI_MODEL: defaultModel }),
   })
 
 const input = () => ({
@@ -63,6 +63,12 @@ const completion = (delta, finishReason) => ({
 it("runs an authenticated SSE tool turn through the real Part transport", async () => {
   const requests = []
   const baseUrl = await listen(async (request, response) => {
+    if (request.method === "GET" && request.url === "/v1/models") {
+      response
+        .writeHead(200, { "content-type": "application/json" })
+        .end(JSON.stringify({ data: [{ id: "integration-model" }] }))
+      return
+    }
     const chunks = []
     for await (const chunk of request) chunks.push(chunk)
     const body = JSON.parse(Buffer.concat(chunks).toString("utf8"))
@@ -131,8 +137,54 @@ it("runs an authenticated SSE tool turn through the real Part transport", async 
   await runtime.dispose()
 })
 
+it("discovers authorized models and snapshots distinct selections into concurrent wire requests", async () => {
+  const requests = []
+  const baseUrl = await listen(async (request, response) => {
+    if (request.method === "GET" && request.url === "/v1/models") {
+      expect(request.headers.authorization).toBe(`Bearer ${API_KEY}`)
+      response
+        .writeHead(200, { "content-type": "application/json" })
+        .end(JSON.stringify({ data: [{ id: "model-a" }, { id: "model-b" }] }))
+      return
+    }
+    const chunks = []
+    for await (const chunk of request) chunks.push(chunk)
+    const body = JSON.parse(Buffer.concat(chunks).toString("utf8"))
+    requests.push(body)
+    sse(response, completion({ role: "assistant", content: "finished" }, "stop"))
+  })
+  const root = await mkdtemp(join(tmpdir(), "agent-openai-selection-"))
+  roots.push(root)
+  const runtime = await createAgentRuntime({ root, model: modelFor(baseUrl, null) })
+
+  const firstInput = { ...input(), inferenceModel: "model-a" }
+  const secondInput = { ...input(), inferenceModel: "model-b" }
+  const [first, second] = await Promise.all([
+    runtime.start(firstInput, owner),
+    runtime.start(secondInput, owner),
+  ])
+  const [firstRun, secondRun] = await Promise.all([runtime.wait(first.id), runtime.wait(second.id)])
+
+  expect(requests.map((request) => request.model).sort()).toEqual(["model-a", "model-b"])
+  expect(firstRun).toMatchObject({ providerLabel: "model-a", input: { inferenceModel: "model-a" } })
+  expect(secondRun).toMatchObject({
+    providerLabel: "model-b",
+    input: { inferenceModel: "model-b" },
+  })
+  await expect(
+    runtime.start({ ...input(), inferenceModel: "model-unknown" }, owner),
+  ).rejects.toMatchObject({ name: "ModelSelectionError" })
+  await runtime.dispose()
+})
+
 it("records an HTTP authentication failure without retaining response secrets", async () => {
-  const baseUrl = await listen(async (_request, response) => {
+  const baseUrl = await listen(async (request, response) => {
+    if (request.method === "GET" && request.url === "/v1/models") {
+      response
+        .writeHead(200, { "content-type": "application/json" })
+        .end(JSON.stringify({ data: [{ id: "integration-model" }] }))
+      return
+    }
     response
       .writeHead(401, { "content-type": "application/json" })
       .end(JSON.stringify({ error: { message: `Bearer ${API_KEY}` } }))
@@ -160,7 +212,13 @@ it("aborts an in-flight provider response when the run is cancelled", async () =
   const closed = new Promise((resolve) => {
     releaseClose = resolve
   })
-  const baseUrl = await listen(async (_request, response) => {
+  const baseUrl = await listen(async (request, response) => {
+    if (request.method === "GET" && request.url === "/v1/models") {
+      response
+        .writeHead(200, { "content-type": "application/json" })
+        .end(JSON.stringify({ data: [{ id: "integration-model" }] }))
+      return
+    }
     response.writeHead(200, { "content-type": "text/event-stream" })
     response.flushHeaders()
     response.once("close", releaseClose)

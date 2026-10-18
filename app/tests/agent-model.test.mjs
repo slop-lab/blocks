@@ -24,6 +24,15 @@ it("normalizes the standard base URL to the Chat Completions endpoint", () => {
   })
 })
 
+it("allows the standard provider to start without a configured default model", () => {
+  const model = modelFromEnvironment({
+    OPENAI_BASE_URL: standard.OPENAI_BASE_URL,
+    OPENAI_API_KEY: standard.OPENAI_API_KEY,
+  })
+
+  expect(model).toMatchObject({ kind: "remote", label: "OpenAI-compatible" })
+})
+
 it("gives the standard group precedence over a complete legacy group", () => {
   const model = modelFromEnvironment({
     ...standard,
@@ -52,8 +61,10 @@ it("preserves the legacy full-endpoint configuration", () => {
 })
 
 it.each([
-  [{ OPENAI_BASE_URL: standard.OPENAI_BASE_URL }, "OPENAI_API_KEY, OPENAI_MODEL"],
-  [{ PART_API_BASE: "https://api.example.com/v1/chat/completions" }, "PART_API_KEY, PART_MODEL_ID"],
+  [{ OPENAI_BASE_URL: standard.OPENAI_BASE_URL }, "OPENAI_API_KEY"],
+  [{ OPENAI_MODEL: standard.OPENAI_MODEL }, "OPENAI_BASE_URL, OPENAI_API_KEY"],
+  [{ PART_API_BASE: "https://api.example.com/v1/chat/completions" }, "PART_API_KEY"],
+  [{ PART_MODEL_ID: "legacy-model" }, "PART_API_BASE, PART_API_KEY"],
 ])("rejects incomplete provider groups instead of falling back", (environment, missing) => {
   expect(() => modelFromEnvironment(environment)).toThrowError(
     new ProviderConfigurationError(`Incomplete provider configuration; missing ${missing}`),

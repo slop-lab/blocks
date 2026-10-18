@@ -62,6 +62,7 @@ export const agentRunInputSchema = z.object({
   requestId: z.string().min(1).max(200),
   sessionId: z.string().min(1).max(200),
   instruction: z.string().trim().min(1).max(20_000),
+  inferenceModel: z.string().trim().min(1).max(200).optional(),
   target: z.object({
     modelId: z.string().min(1).max(200),
     epoch: z.number().int().nonnegative(),

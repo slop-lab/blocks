@@ -1,4 +1,7 @@
+import type { Node as ProseMirrorNode } from "prosemirror-model"
 import type { EditorView } from "prosemirror-view"
+import type { BlockDropTarget } from "./block-drop-commands"
+import { planBlockDrop } from "./block-drop-target"
 import { blockIndexById } from "./block-interaction-commands"
 
 type DragState = {
@@ -6,15 +9,20 @@ type DragState = {
   readonly blockIds: readonly string[]
   readonly pointerId: number
   readonly start: PointerPoint
-  targetGap: number
+  readonly document: ProseMirrorNode
+  target: BlockDropTarget
 }
 
 type PointerPoint = { readonly x: number; readonly y: number }
 
 type GripDragOptions = {
+  readonly activate: () => void
   readonly activeBlockId: () => string | null
   readonly begin: (blockId: string) => readonly string[]
-  readonly move: (blockIds: readonly string[], targetGap: number) => void
+  readonly childCount: (blockId: string) => number
+  readonly isCurrent: () => boolean
+  readonly canMove: (blockIds: readonly string[], target: BlockDropTarget) => boolean
+  readonly move: (blockIds: readonly string[], target: BlockDropTarget) => void
 }
 
 const dragThreshold = 6
@@ -66,60 +74,36 @@ export const attachGripDrag = (
       ? scrollingElement
       : null
   }
-  const showIndicator = (rect: DOMRect, atStart: boolean) => {
+  const showIndicator = (rect: DOMRect, atStart: boolean, inset = 0) => {
     indicator.hidden = false
-    indicator.style.left = `${rect.left}px`
-    indicator.style.width = `${rect.width}px`
+    indicator.style.left = `${rect.left + inset}px`
+    indicator.style.width = `${Math.max(0, rect.width - inset)}px`
     indicator.style.top = `${atStart ? rect.top : rect.bottom}px`
   }
   const updateDropTarget = (clientX: number, clientY: number) => {
     if (drag === null) return
-    const hit = ownerDocument.elementFromPoint(clientX, clientY)
-    const target = hit?.closest("[data-block-id]") ?? null
-    if (target instanceof HTMLElement && target.matches("[data-block-id]")) {
-      const id = target.dataset["blockId"]
-      if (id === undefined) return
-      const source = view.dom.querySelector<HTMLElement>(
-        `[data-block-id="${CSS.escape(drag.blockId)}"]`,
-      )
-      if (source === null || source.parentElement !== target.parentElement) {
-        indicator.hidden = true
-        return
-      }
-      const index = blockIndex(id)
-      if (index < 0) {
-        indicator.hidden = true
-        return
-      }
-      const rect = target.getBoundingClientRect()
-      const atStart = clientY < rect.top + rect.height / 2
-      drag.targetGap = atStart ? index : index + 1
-      showIndicator(rect, atStart)
-      return
-    }
-    const blocks = [...view.dom.children].filter(
-      (element): element is HTMLElement =>
-        element instanceof HTMLElement && element.hasAttribute("data-block-id"),
-    )
-    const first = blocks[0] ?? null
-    const last = blocks.at(-1) ?? null
-    const editorRect = view.dom.getBoundingClientRect()
-    if (
-      first === null ||
-      last === null ||
-      clientX < editorRect.left ||
-      clientX > editorRect.right
-    ) {
+    if (!view.state.doc.eq(drag.document) || !options.isCurrent()) {
       indicator.hidden = true
       return
     }
-    if (clientY < first.getBoundingClientRect().top) {
-      drag.targetGap = 0
-      showIndicator(first.getBoundingClientRect(), true)
-    } else if (clientY > last.getBoundingClientRect().bottom) {
-      drag.targetGap = view.state.doc.childCount
-      showIndicator(last.getBoundingClientRect(), false)
-    } else indicator.hidden = true
+    const plan = planBlockDrop(
+      {
+        root: view.dom,
+        ownerDocument,
+        edgeSize,
+        rootChildCount: view.state.doc.childCount,
+        blockIndex,
+        childCount: options.childCount,
+        canMove: options.canMove,
+      },
+      drag.blockIds,
+      { x: clientX, y: clientY },
+    )
+    if (plan === null) indicator.hidden = true
+    else {
+      drag.target = plan.target
+      showIndicator(plan.rect, plan.atStart, plan.inset)
+    }
   }
   const runAutoscroll = () => {
     scrollFrame = 0
@@ -155,11 +139,21 @@ export const attachGripDrag = (
     )
       return
     event.preventDefault()
+    options.activate()
     const blockIds = options.begin(blockId)
     if (blockIds.length === 0) return
     dragged = false
     const start = { x: event.clientX, y: event.clientY }
-    drag = { blockId, blockIds, pointerId: event.pointerId, start, targetGap: blockIndex(blockId) }
+    const source = view.dom.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(blockId)}"]`)
+    const parent = source?.parentElement?.closest<HTMLElement>("[data-block-id]")
+    drag = {
+      blockId,
+      blockIds,
+      pointerId: event.pointerId,
+      start,
+      document: view.state.doc,
+      target: { parentId: parent?.dataset["blockId"] ?? null, index: blockIndex(blockId) },
+    }
     lastPoint = { x: event.clientX, y: event.clientY }
     grip.setPointerCapture(event.pointerId)
   }
@@ -188,9 +182,10 @@ export const attachGripDrag = (
     }
     updateDropTarget(event.clientX, event.clientY)
     const current = drag
-    const validDrop = !indicator.hidden
+    const validDrop =
+      !indicator.hidden && view.state.doc.eq(current.document) && options.isCurrent()
     finish()
-    if (validDrop) options.move(current.blockIds, current.targetGap)
+    if (validDrop) options.move(current.blockIds, current.target)
   }
   const onScroll = () => {
     if (lastPoint !== null) updateDropTarget(lastPoint.x, lastPoint.y)

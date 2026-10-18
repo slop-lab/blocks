@@ -6,7 +6,7 @@ import {
   blockIndexById,
   blockNodeById,
   createBlockAfter,
-  moveBlocksById,
+  moveBlocksToById,
 } from "./block-interaction-commands"
 import { blockTargetsFor, interactionContextFor } from "./block-interaction-context"
 import {
@@ -15,8 +15,9 @@ import {
 } from "./block-interaction-options"
 import { attachBlockKeyboard } from "./block-keyboard"
 import { createBlockMenu } from "./block-menu"
+import { createBlockMenuCut } from "./block-menu-cut"
 import { blockMenuItems } from "./block-menu-items"
-import { attachRailPointerIntent } from "./block-rail-intent"
+import { attachRailPointerIntent, createSelectionRailRefresher } from "./block-rail-intent"
 import { attachBlockSelection } from "./block-selection"
 import { createBlockSelectionContext } from "./block-selection-context"
 import { createBlockSelectionStatus } from "./block-selection-status"
@@ -35,7 +36,7 @@ export const attachBlockInteractions = (
   const { rail, add, grip } = createBlockControls(ownerDocument)
   const menu = createBlockMenu(ownerDocument, "블록 작업")
   const selectionStatus = createBlockSelectionStatus(view.dom)
-  const selectionContext = createBlockSelectionContext([rail, menu.element])
+  const selectionContext = createBlockSelectionContext([rail, menu.element], options.contextId)
   const blockSelection = attachBlockSelection(view, {
     clipboard: options.clipboardPolicy ?? defaultBlockClipboardPolicy,
     ...(options.onDeferredCut === undefined ? {} : { onDeferredCut: options.onDeferredCut }),
@@ -83,6 +84,8 @@ export const attachBlockInteractions = (
       selectedIds: () => blockSelection.selectedIds(),
       contains: (id) => blockSelection.contains(id),
       replaceSelection: blockSelection.replace,
+      cut: createBlockMenuCut(view, blockSelection, options.onUnavailable),
+      ...(options.onOpenBlock === undefined ? {} : { onOpenBlock: options.onOpenBlock }),
     })
     const rect = trigger.getBoundingClientRect()
     menu.element.dataset["targetBlockId"] = blockId
@@ -134,17 +137,11 @@ export const attachBlockInteractions = (
     rail.dataset["locked"] = String(locked)
     if (locked) menu.close()
   }
-  const refreshFromSelection = () => {
-    claim()
-    const { $from } = view.state.selection
-    let id: unknown
-    for (let depth = $from.depth; depth > 0 && typeof id !== "string"; depth -= 1)
-      id = $from.node(depth).attrs["id"]
-    if (typeof id !== "string") id = ($from.nodeAfter ?? $from.nodeBefore)?.attrs["id"]
-    if (typeof id !== "string") return
-    const element = ownedBlockById(id)
-    if (element !== null) showRail(element)
-  }
+  const refreshFromSelection = createSelectionRailRefresher(view, {
+    claim,
+    ownedBlockById,
+    show: showRail,
+  })
   const refreshActiveRail = () => {
     menu.close()
     if (railId === null || rail.hidden) return
@@ -159,13 +156,17 @@ export const attachBlockInteractions = (
   rail.addEventListener("pointerdown", onRailPointerDown)
   add.addEventListener("click", () => activeId !== null && showInsertionMenu(activeId, add))
   const dragController = attachGripDrag(view, grip, {
+    activate: claim,
     activeBlockId: () => activeId,
     begin: (blockId) => {
       if (blockSelection.contains(blockId)) return [...blockSelection.selectedIds()]
       blockSelection.replace([blockId])
       return [blockId]
     },
-    move: (blockIds, gap) => run(moveBlocksById(blockIds, gap)),
+    childCount: (blockId) => blockNodeById(view.state.doc, blockId)?.childCount ?? 0,
+    isCurrent: isActive,
+    canMove: (blockIds, target) => moveBlocksToById(blockIds, target)(view.state),
+    move: (blockIds, target) => run(moveBlocksToById(blockIds, target)),
   })
   grip.addEventListener("click", (event) => {
     if (dragController.consumeClick()) return
@@ -185,6 +186,7 @@ export const attachBlockInteractions = (
     run,
   })
   const onContextMenuKey = (event: KeyboardEvent) => {
+    if (event.target instanceof Element && event.target.closest(".ProseMirror") !== view.dom) return
     if (
       (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) &&
       activeId !== null

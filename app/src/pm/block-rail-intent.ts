@@ -9,10 +9,32 @@ type RailPointerOptions = {
   readonly show: (block: HTMLElement) => void
 }
 
+type SelectionRailOptions = {
+  readonly claim: () => void
+  readonly ownedBlockById: (id: string) => HTMLElement | null
+  readonly show: (block: HTMLElement) => void
+}
+
 const blockElement = (target: EventTarget | null): HTMLElement | null => {
   const element = target instanceof HTMLElement ? target : null
   return element?.closest<HTMLElement>("[data-block-id]") ?? null
 }
+
+export const createSelectionRailRefresher =
+  (view: EditorView, options: SelectionRailOptions): ((event?: Event) => void) =>
+  (event) => {
+    if (event?.target instanceof Element && event.target.closest(".ProseMirror") !== view.dom)
+      return
+    options.claim()
+    const { $from } = view.state.selection
+    let id: unknown
+    for (let depth = $from.depth; depth > 0 && typeof id !== "string"; depth -= 1)
+      id = $from.node(depth).attrs["id"]
+    if (typeof id !== "string") id = ($from.nodeAfter ?? $from.nodeBefore)?.attrs["id"]
+    if (typeof id !== "string") return
+    const element = options.ownedBlockById(id)
+    if (element !== null) options.show(element)
+  }
 
 export const attachRailPointerIntent = (
   view: EditorView,

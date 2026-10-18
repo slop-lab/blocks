@@ -21,6 +21,8 @@ type MenuItemsOptions = {
   readonly selectedIds: () => readonly string[]
   readonly contains: (blockId: string) => boolean
   readonly replaceSelection: (blockIds: readonly string[]) => void
+  readonly cut: (blockIds: readonly string[]) => void
+  readonly onOpenBlock?: (blockId: string) => void
 }
 
 export const blockMenuItems = ({
@@ -30,6 +32,8 @@ export const blockMenuItems = ({
   selectedIds,
   contains,
   replaceSelection,
+  cut,
+  onOpenBlock,
 }: MenuItemsOptions): readonly MenuItem[] => {
   const index = blockIndexById(view.state.doc, blockId)
   if (index < 0) return []
@@ -59,7 +63,8 @@ export const blockMenuItems = ({
       })
   }
   const selection = () => (contains(blockId) ? selectedIds() : [blockId])
-  const wrapPlan = planBlockWrap(view.state.doc, selection())
+  const menuSelection = selection()
+  const wrapPlan = planBlockWrap(view.state.doc, menuSelection)
   const wrapItems: MenuItem[] = []
   if (wrapPlan.kind === "expanded") {
     wrapItems.push({
@@ -82,6 +87,8 @@ export const blockMenuItems = ({
       })
     }
   }
+  const navigationItems: readonly MenuItem[] =
+    onOpenBlock === undefined ? [] : [{ label: "집중 보기", action: () => onOpenBlock(blockId) }]
   return [
     {
       label: "위로 이동",
@@ -106,6 +113,8 @@ export const blockMenuItems = ({
       action: () => run(moveBlockById(blockId, index + 2)),
     },
     { label: "복제", hint: "Mod+Shift+D", action: () => run(duplicateBlockById(blockId)) },
+    { label: "잘라내기", hint: "Mod+X", action: () => cut(menuSelection) },
+    ...navigationItems,
     ...wrapItems,
     ...types,
     { label: "삭제", danger: true, action: () => run(deleteBlockById(blockId)) },

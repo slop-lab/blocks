@@ -1,4 +1,9 @@
-import { archivePage, pageDepth, restorePage } from "@slop-lab/blocks-workspace"
+import {
+  archivePage,
+  pageDepth,
+  restorePage,
+  WorkspaceHierarchyError,
+} from "@slop-lab/blocks-workspace"
 import { useEffect, useState } from "react"
 import { useWorkspacePersistence } from "./useWorkspacePersistence"
 import { WorkspaceTopbar, WorkspaceTrash } from "./WorkspaceChrome"
@@ -6,9 +11,12 @@ import { WorkspaceDialogs } from "./WorkspaceDialogs"
 import { WorkspaceDocument } from "./WorkspaceDocument"
 import { WorkspaceTree } from "./WorkspaceTree"
 import { pageReferenceTargets } from "./workspace-editor-model"
+import { focusHash } from "./workspace-focus-navigation"
+import { moveWorkspacePage, updateWorkspacePageTitle } from "./workspace-page-navigation"
 import { WorkspaceSourceRuntime } from "./workspace-source-runtime"
 import "./workspace.css"
 import "./workspace-overlays.css"
+import "./workspace-page-navigation.css"
 
 export const StructuredWorkspace = () => {
   const [sourceController] = useState(() => new WorkspaceSourceRuntime())
@@ -56,6 +64,12 @@ export const StructuredWorkspace = () => {
     setFavorites(next)
     localStorage.setItem("structured-favorites", JSON.stringify([...next]))
   }
+  const openPage = (id: string, blockId?: string) => {
+    setActiveId(id)
+    const url = new URL(window.location.href)
+    url.hash = blockId === undefined ? "" : focusHash({ kind: "local", blockId })
+    window.history.replaceState(null, "", url)
+  }
 
   if (payload === null || active === undefined || activePage === undefined)
     return (
@@ -71,13 +85,31 @@ export const StructuredWorkspace = () => {
         favorites={favorites}
         query={query}
         onQuery={setQuery}
-        onSelect={setActiveId}
+        onSelect={openPage}
         onCreate={() => setCreateOpen(true)}
         onFavorite={toggleFavorite}
         onArchive={(id) => persistence.updateTree(archivePage(payload.tree.content, id))}
+        onMove={(id, placement) => {
+          try {
+            persistence.updateTree(moveWorkspacePage(payload.tree.content, id, placement))
+          } catch (error) {
+            if (!(error instanceof WorkspaceHierarchyError)) throw error
+          }
+        }}
       />
       <main className="structured-main">
-        <WorkspaceTopbar title={activePage.title} status={persistence.status} />
+        <WorkspaceTopbar
+          title={activePage.title}
+          status={persistence.status}
+          onTitle={(title) =>
+            persistence.updateTree(
+              updateWorkspacePageTitle(payload.tree.content, activePage.id, title),
+            )
+          }
+          onCompositionChange={(composing) =>
+            persistence.setComposing({ kind: "trees", id: payload.tree.documentId }, composing)
+          }
+        />
         <WorkspaceDocument
           key={activeId}
           workspace={payload.tree.content}
@@ -104,12 +136,7 @@ export const StructuredWorkspace = () => {
                 title: page.title,
               }))
           })}
-          onOpenPage={(id, blockId) => {
-            setActiveId(id)
-            const url = new URL(window.location.href)
-            url.hash = blockId === undefined ? "" : encodeURIComponent(blockId)
-            window.history.replaceState(null, "", url)
-          }}
+          onOpenPage={openPage}
           onDocument={persistence.updateDocument}
           onDatabase={persistence.updateDatabase}
           onSourceEdit={persistence.updateSource}

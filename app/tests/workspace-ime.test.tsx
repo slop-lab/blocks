@@ -62,6 +62,7 @@ it("Given a composing local section, When a React update carries a remote snapsh
         onSourceCompositionChange={() => {}}
         onSourceConflictResolve={() => {}}
         onOpenPage={() => {}}
+        onOpenBlock={() => {}}
         onCompositionChange={() => {}}
         pasteMode="clone"
         sourceController={sourceController}

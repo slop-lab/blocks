@@ -2,6 +2,8 @@ import type { ProseMirrorProfile } from "@slop-lab/blocks-prosemirror"
 import type { Database, SyncedSource, Workspace } from "@slop-lab/blocks-workspace"
 import { Fragment, type Node as ProseMirrorNode } from "prosemirror-model"
 import type { EntityRecord } from "./workspace-api"
+import type { WorkspaceFocusTarget } from "./workspace-focus-navigation"
+import type { WorkspaceFocusChange } from "./workspace-focus-selection"
 
 export type WorkspaceNodeViewData = {
   readonly workspace: Workspace
@@ -9,6 +11,8 @@ export type WorkspaceNodeViewData = {
   readonly sources: readonly EntityRecord<SyncedSource>[]
   readonly profile: ProseMirrorProfile
   readonly onOpenPage: (id: string, blockId?: string) => void
+  readonly onOpenBlock?: (target: WorkspaceFocusTarget) => void
+  readonly onFocusChange?: (change: WorkspaceFocusChange) => void
   readonly onSourceEdit: (request: SourceEditRequest) => void
   readonly onSourceCreate: (source: SyncedSource) => Promise<EntityRecord<SyncedSource> | null>
   readonly onSourceCompositionChange: (sourceId: string, composing: boolean) => void
@@ -17,6 +21,7 @@ export type WorkspaceNodeViewData = {
     resolution: "accept-remote" | "keep-local",
   ) => void
   readonly embeddingDepth: number
+  readonly focusTarget: WorkspaceFocusTarget | null
 }
 
 export type SourceEditRequest = {

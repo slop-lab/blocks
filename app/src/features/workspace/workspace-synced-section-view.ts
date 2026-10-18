@@ -2,6 +2,7 @@ import { snapshotToPm } from "@slop-lab/blocks-prosemirror"
 import type { Node as ProseMirrorNode } from "prosemirror-model"
 import type { EditorView, NodeView } from "prosemirror-view"
 import { pageDocumentToSnapshot } from "./workspace-editor-model"
+import { applySharedFocusVisibility } from "./workspace-focus-view"
 import { freshClone, nodeViewButton, type WorkspaceNodeViewData } from "./workspace-node-view-types"
 import type { WorkspaceSourceRuntime } from "./workspace-source-runtime"
 
@@ -111,16 +112,21 @@ export const createSyncedSectionView = ({
         : `v${current?.revision ?? sourceRecord.revision} · 충돌`
     acceptRemote.hidden = conflict === null
     keepLocal.hidden = conflict === null
+    applySharedFocusVisibility(dom, data.current.focusTarget)
   }
   refresh()
   renders.add(refresh)
   const unsubscribeStatus = sourceController.subscribe(sourceId, refresh)
   const activate = (event: PointerEvent) => {
-    if (event.target instanceof Node && host.contains(event.target)) attachment.activate(event)
+    if (event.target instanceof Node && host.contains(event.target)) {
+      attachment.activate(event)
+      queueMicrotask(refresh)
+    }
   }
   const deactivate = (event: FocusEvent) => {
     if (event.relatedTarget instanceof Node && dom.contains(event.relatedTarget)) return
     attachment.deactivate(event)
+    queueMicrotask(refresh)
   }
   dom.addEventListener("pointerdown", activate, true)
   dom.addEventListener("focusout", deactivate, true)

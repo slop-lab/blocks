@@ -1,6 +1,7 @@
 import { type ProseMirrorProfile, pmToSnapshot } from "@slop-lab/blocks-prosemirror"
 import type { Transaction } from "prosemirror-state"
 import { snapshotToPageDocument } from "./workspace-editor-model"
+import { focusTargetAfterDocumentChange } from "./workspace-focus-selection"
 import type { SourceEntry, SourceOccurrence } from "./workspace-source-attachment"
 
 export const dispatchSourceTransaction = (
@@ -20,6 +21,15 @@ export const dispatchSourceTransaction = (
   if (!result.transactions.some((applied) => applied.docChanged)) {
     entry.runtime.updateState(occurrence.id, result.state)
     return
+  }
+  const target = occurrence.data.current.focusTarget
+  if (target?.kind === "shared" && target.occurrenceId === occurrence.id) {
+    const nextTarget = focusTargetAfterDocumentChange(
+      result.state.doc,
+      result.state.selection,
+      target,
+    )
+    if (nextTarget !== null) occurrence.data.current.onFocusChange?.(nextTarget)
   }
   entry.runtime.updateLocal(occurrence.id, result.state, crypto.randomUUID())
   const record = occurrence.data.current.sources.find(

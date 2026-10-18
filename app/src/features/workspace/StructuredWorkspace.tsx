@@ -11,7 +11,6 @@ import { WorkspaceDialogs } from "./WorkspaceDialogs"
 import { WorkspaceDocument } from "./WorkspaceDocument"
 import { WorkspaceTree } from "./WorkspaceTree"
 import { pageReferenceTargets } from "./workspace-editor-model"
-import { focusHash } from "./workspace-focus-navigation"
 import { moveWorkspacePage, updateWorkspacePageTitle } from "./workspace-page-navigation"
 import { WorkspaceSourceRuntime } from "./workspace-source-runtime"
 import "./workspace.css"
@@ -21,7 +20,9 @@ import "./workspace-page-navigation.css"
 export const StructuredWorkspace = () => {
   const [sourceController] = useState(() => new WorkspaceSourceRuntime())
   const persistence = useWorkspacePersistence(sourceController)
-  const [activeId, setActiveId] = useState("home")
+  const [activeId, setActiveId] = useState(
+    () => new URL(window.location.href).searchParams.get("page") ?? "home",
+  )
   const [query, setQuery] = useState("")
   const [createOpen, setCreateOpen] = useState(false)
   const [pasteMode, setPasteMode] = useState<"clone" | "reference">(() =>
@@ -45,6 +46,13 @@ export const StructuredWorkspace = () => {
 
   useEffect(() => () => sourceController.dispose(), [sourceController])
 
+  useEffect(() => {
+    const syncPage = () =>
+      setActiveId(new URL(window.location.href).searchParams.get("page") ?? "home")
+    window.addEventListener("popstate", syncPage)
+    return () => window.removeEventListener("popstate", syncPage)
+  }, [])
+
   const payload = persistence.payload
   const active = payload?.documents.find((record) => record.content.pageId === activeId)
   const activePage = payload?.tree.content.pages.find((page) => page.id === activeId)
@@ -67,9 +75,18 @@ export const StructuredWorkspace = () => {
   const openPage = (id: string, blockId?: string) => {
     setActiveId(id)
     const url = new URL(window.location.href)
-    url.hash = blockId === undefined ? "" : focusHash({ kind: "local", blockId })
-    window.history.replaceState(null, "", url)
+    url.searchParams.set("page", id)
+    url.hash = blockId === undefined ? "" : encodeURIComponent(blockId)
+    window.history.replaceState(window.history.state, "", url)
   }
+
+  useEffect(() => {
+    if (payload === null || (active !== undefined && activePage !== undefined)) return
+    setActiveId("home")
+    const url = new URL(window.location.href)
+    url.searchParams.delete("page")
+    window.history.replaceState(window.history.state, "", url)
+  }, [active, activePage, payload])
 
   if (payload === null || active === undefined || activePage === undefined)
     return (

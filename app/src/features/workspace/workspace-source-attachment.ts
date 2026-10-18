@@ -9,7 +9,9 @@ import type { Node as ProseMirrorNode } from "prosemirror-model"
 import { type EditorState, Selection, TextSelection } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { attachBlockInteractions } from "../../pm/block-interactions"
+import { isBlockContextTarget } from "../../pm/block-selection-context"
 import type { EntityRecord } from "./workspace-api"
+import { sharedFocusDecorations } from "./workspace-focus-view"
 import type { WorkspaceNodeViewData } from "./workspace-node-view-types"
 import { dispatchSourceTransaction } from "./workspace-source-editor-dispatch"
 import { renderSourceProjection } from "./workspace-source-projector"
@@ -155,7 +157,8 @@ export class WorkspaceSourceAttachments {
   private deactivate(entry: SourceEntry, occurrence: SourceOccurrence, event?: FocusEvent): void {
     if (
       event?.relatedTarget instanceof Node &&
-      occurrence.host.parentElement?.contains(event.relatedTarget)
+      (occurrence.host.parentElement?.contains(event.relatedTarget) ||
+        isBlockContextTarget(event.relatedTarget, entry.runtime.sourceId))
     )
       return
     if (entry.runtime.activeOccurrenceId !== occurrence.id) return
@@ -173,6 +176,11 @@ export class WorkspaceSourceAttachments {
   private createView(entry: SourceEntry, occurrence: SourceOccurrence): void {
     const view = new EditorView(null, {
       state: entry.runtime.state,
+      decorations: (state) => {
+        const active = this.active(entry)
+        const target = active?.data.current.focusTarget ?? null
+        return sharedFocusDecorations(state.doc, target, active?.id ?? null)
+      },
       attributes: {
         class: "structured-sync__editor",
         "aria-label": `동기화된 섹션 ${occurrence.id}`,
@@ -191,6 +199,13 @@ export class WorkspaceSourceAttachments {
     entry.view = view
     entry.detachInteractions = attachBlockInteractions(view, {
       readOnly: false,
+      contextId: entry.runtime.sourceId,
+      onOpenBlock: (blockId) => {
+        const active = this.active(entry)
+        if (active === null) return
+        this.context(entry, active.id).release()
+        active.data.current.onOpenBlock?.({ kind: "shared", occurrenceId: active.id, blockId })
+      },
       isActive: () => {
         const active = entry.runtime.activeOccurrenceId
         return active !== null && this.context(entry, active).isActive()

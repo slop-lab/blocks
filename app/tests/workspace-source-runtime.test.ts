@@ -38,14 +38,75 @@ const dataPointer = (runtime: WorkspaceSourceRuntime, depth: number) => ({
     onSourceCompositionChange: () => {},
     onSourceConflictResolve: () => {},
     embeddingDepth: depth,
+    focusTarget: null,
   } satisfies WorkspaceNodeViewData,
 })
 
 afterEach(() => {
   vi.useRealTimers()
+  vi.unstubAllGlobals()
 })
 
 describe("WorkspaceSourceRuntime occurrence lifecycle", () => {
+  it("keeps shared focus with the active occurrence when one editor changes hosts", () => {
+    vi.stubGlobal("CSS", { escape: (value: string) => value })
+    const runtime = new WorkspaceSourceRuntime()
+    const source = record(1, "Initial")
+    const withSibling = {
+      ...source,
+      content: syncedSourceSchema.parse({
+        ...source.content,
+        section: {
+          ...source.content.section,
+          children: [
+            { id: "shared-paragraph", type: "paragraph", text: "Initial" },
+            { id: "other-paragraph", type: "paragraph", text: "Other" },
+          ],
+        },
+      }),
+    }
+    const firstData: { current: WorkspaceNodeViewData } = dataPointer(runtime, 1)
+    const secondData: { current: WorkspaceNodeViewData } = dataPointer(runtime, 1)
+    firstData.current = {
+      ...firstData.current,
+      focusTarget: { kind: "shared", occurrenceId: "first", blockId: "shared-paragraph" },
+    }
+    secondData.current = {
+      ...secondData.current,
+      focusTarget: { kind: "shared", occurrenceId: "second", blockId: "other-paragraph" },
+    }
+    const firstHost = document.createElement("div")
+    const secondHost = document.createElement("div")
+    document.body.append(firstHost, secondHost)
+    const previousHitTest = Object.getOwnPropertyDescriptor(document, "elementFromPoint")
+    Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => null })
+    try {
+      const first = runtime.attach(withSibling, "first", firstHost, firstData)
+      const second = runtime.attach(withSibling, "second", secondHost, secondData)
+      first.activate(new PointerEvent("pointerdown"))
+      const editor = firstHost.querySelector(".ProseMirror")
+      second.activate(new PointerEvent("pointerdown"))
+
+      expect(secondHost.querySelector(".ProseMirror")).toBe(editor)
+      expect(
+        secondHost
+          .querySelector('[data-block-id="shared-paragraph"]')
+          ?.classList.contains("workspace-focus-hidden"),
+      ).toBe(true)
+      expect(
+        secondHost
+          .querySelector('[data-block-id="other-paragraph"]')
+          ?.classList.contains("workspace-focus-hidden"),
+      ).toBe(false)
+    } finally {
+      runtime.dispose()
+      firstHost.remove()
+      secondHost.remove()
+      if (previousHitTest === undefined) Reflect.deleteProperty(document, "elementFromPoint")
+      else Object.defineProperty(document, "elementFromPoint", previousHitTest)
+    }
+  })
+
   it("Given the final occurrence is detached, When the retention window expires, Then a remount opens the latest source record", () => {
     vi.useFakeTimers()
     const runtime = new WorkspaceSourceRuntime({ inactiveRetentionMs: 30_000 })

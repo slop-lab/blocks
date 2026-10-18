@@ -1,14 +1,21 @@
 import type { Database, PageDocument, SyncedSource, Workspace } from "@slop-lab/blocks-workspace"
-import { Fragment } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
 import { useEffect, useRef } from "react"
 import { parseInternalTarget } from "../../core/links"
 import { attachBlockInteractions } from "../../pm/block-interactions"
 import { ModelSession } from "../../pm/session"
+import { useWorkspaceFocusView } from "./useWorkspaceFocusView"
 import type { EntityRecord } from "./workspace-api"
 import { pageDocumentToSnapshot, snapshotToPageDocument } from "./workspace-editor-model"
-import type { SourceEditRequest } from "./workspace-node-view-types"
+import type { WorkspaceFocusTarget } from "./workspace-focus-navigation"
+import {
+  focusTargetAfterDocumentChange,
+  type WorkspaceFocusChange,
+} from "./workspace-focus-selection"
+import { workspaceFocusDecorations } from "./workspace-focus-view"
+import type { SourceEditRequest, WorkspaceNodeViewData } from "./workspace-node-view-types"
 import { createWorkspaceNodeViews } from "./workspace-node-views"
+import { pasteWorkspaceReferences } from "./workspace-reference-paste"
 import type { WorkspaceSourceRuntime } from "./workspace-source-runtime"
 
 type Props = {
@@ -30,8 +37,10 @@ type Props = {
   readonly pasteMode: "clone" | "reference"
   readonly sourceController: WorkspaceSourceRuntime
   readonly autoFocus?: boolean
+  readonly focusTarget?: WorkspaceFocusTarget | null
+  readonly onOpenBlock: (target: WorkspaceFocusTarget) => void
+  readonly onFocusChange?: (change: WorkspaceFocusChange) => void
 }
-
 export const WorkspaceEditor = (props: Props) => {
   const documentId = props.document.pageId
   const mount = useRef<HTMLDivElement>(null)
@@ -42,17 +51,20 @@ export const WorkspaceEditor = (props: Props) => {
   const propsRef = useRef(props)
   propsRef.current = props
   const profile = props.sourceController.profile
-  const dataRef = useRef({
+  const dataRef = useRef<WorkspaceNodeViewData>({
     workspace: props.workspace,
     databases: props.databases,
     sources: props.sources,
     profile,
     onOpenPage: props.onOpenPage,
+    onOpenBlock: props.onOpenBlock,
+    ...(props.onFocusChange === undefined ? {} : { onFocusChange: props.onFocusChange }),
     onSourceEdit: props.onSourceEdit,
     onSourceCreate: props.onSourceCreate,
     onSourceCompositionChange: props.onSourceCompositionChange,
     onSourceConflictResolve: props.onSourceConflictResolve,
     embeddingDepth: props.depth,
+    focusTarget: props.focusTarget ?? null,
   })
   dataRef.current = {
     workspace: props.workspace,
@@ -60,12 +72,21 @@ export const WorkspaceEditor = (props: Props) => {
     sources: props.sources,
     profile,
     onOpenPage: props.onOpenPage,
+    onOpenBlock: props.onOpenBlock,
+    ...(props.onFocusChange === undefined ? {} : { onFocusChange: props.onFocusChange }),
     onSourceEdit: props.onSourceEdit,
     onSourceCreate: props.onSourceCreate,
     onSourceCompositionChange: props.onSourceCompositionChange,
     onSourceConflictResolve: props.onSourceConflictResolve,
     embeddingDepth: props.depth,
+    focusTarget: props.focusTarget ?? null,
   }
+  useWorkspaceFocusView({
+    view: viewRef,
+    data: dataRef,
+    refreshNodeViews: refreshViewsRef,
+    target: props.focusTarget ?? null,
+  })
 
   useEffect(() => {
     const target = mount.current
@@ -94,6 +115,8 @@ export const WorkspaceEditor = (props: Props) => {
         "aria-label": "구조화 문서 편집기",
       },
       nodeViews: workspaceViews.nodeViews,
+      decorations: (state) =>
+        workspaceFocusDecorations(state.doc, propsRef.current.focusTarget ?? null),
       handleDOMEvents: {
         compositionstart: () => {
           clearTimeout(compositionTimer)
@@ -113,6 +136,13 @@ export const WorkspaceEditor = (props: Props) => {
       },
       dispatchTransaction: (transaction) => {
         session.dispatch(transaction)
+        if (!transaction.docChanged || propsRef.current.focusTarget?.kind !== "local") return
+        const nextTarget = focusTargetAfterDocumentChange(
+          session.state.doc,
+          session.state.selection,
+          propsRef.current.focusTarget,
+        )
+        if (nextTarget !== null) propsRef.current.onFocusChange?.(nextTarget)
       },
     })
     const unsubscribe = session.subscribe((event) => {
@@ -131,35 +161,17 @@ export const WorkspaceEditor = (props: Props) => {
       claim: interactionContext.claim,
       release: interactionContext.release,
       subscribeActive: interactionContext.subscribe,
+      onOpenBlock: (blockId) => {
+        interactionContext.release()
+        propsRef.current.onOpenBlock({ kind: "local", blockId })
+      },
       clipboardPolicy: {
         namespace: "block-editor/workspace",
         cut: "remove-after-write",
         paste: () => (propsRef.current.pasteMode === "reference" ? "link" : "clone"),
       },
-      onReferencePaste: (envelope, context) => {
-        const sourceIds = [...new Set(envelope.externalReferences)]
-        const section = context.view.state.schema.nodes["section"]
-        if (section === undefined || sourceIds.length === 0) return
-        const references = sourceIds.flatMap((sourceId) =>
-          propsRef.current.sources.some((record) => record.content.id === sourceId)
-            ? [
-                section.create({
-                  id: crypto.randomUUID(),
-                  locked: false,
-                  occurrenceId: crypto.randomUUID(),
-                  sourceId,
-                }),
-              ]
-            : [],
-        )
-        if (references.length === 0) return
-        context.view.dispatch(
-          context.view.state.tr
-            .insert(context.insertion, Fragment.fromArray(references))
-            .setMeta("origin", "paste")
-            .scrollIntoView(),
-        )
-      },
+      onReferencePaste: (envelope, context) =>
+        pasteWorkspaceReferences(envelope, context, propsRef.current.sources),
     })
     const openInternalLink = (event: MouseEvent) => {
       if (!(event.target instanceof Element)) return

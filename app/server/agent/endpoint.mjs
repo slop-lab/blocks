@@ -201,6 +201,7 @@ export const createAgentEndpoint = (runtime) => {
       if (request.queryId === "part/capabilities") return ok(capabilities)
       if (request.queryId === "block-editor.agent/session")
         return ok({ sessionId: context.scope.id })
+      if (request.queryId === "block-editor.agent/models") return ok(await runtime.models())
       if (request.queryId === "block-editor.agent/list") {
         const runs = (await runtime.list()).filter((run) => samePrincipal(run, context))
         return ok(wire(runs))

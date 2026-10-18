@@ -52,6 +52,14 @@ it("serves session-owned Part command, query, and reconnectable watch contracts"
   })
 
   expect(queried.ok && queried.value).toMatchObject({ status: "completed", provider: "fixture" })
+  const catalog = await port.query({
+    queryId: "block-editor.agent/models",
+    version: 1,
+    input: null,
+  })
+  expect(catalog.ok && catalog.value).toMatchObject({
+    defaultModel: "fixture/deterministic",
+  })
   await watch.value.close()
   const reconnected = await port.watch({
     surface: "agent-runs",

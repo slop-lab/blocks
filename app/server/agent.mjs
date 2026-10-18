@@ -1,6 +1,6 @@
 import { createAgentEndpoint } from "./agent/endpoint.mjs"
 import { startAgentHttpHost } from "./agent/http.mjs"
-import { modelFromEnvironment } from "./agent/model.mjs"
+import { ModelCatalogError, modelFromEnvironment } from "./agent/model.mjs"
 import { createAgentRuntime } from "./agent/runtime.mjs"
 
 const MAX_BODY_BYTES = 256 * 1024
@@ -47,6 +47,40 @@ export const createAgentHandler = ({ root, host, environment = process.env, mode
     async handle(request, response) {
       const url = new URL(request.url ?? "/", "http://localhost")
       if (!url.pathname.startsWith("/api/agent/")) return false
+      if (url.pathname === "/api/agent/models" && request.method === "GET") {
+        if (!originAllowed(request)) {
+          response
+            .writeHead(403, { "content-type": "application/json" })
+            .end('{"error":"forbidden"}')
+          return true
+        }
+        const session = host.sessionFor(request)
+        if (session === null || session.subject !== "author") {
+          response
+            .writeHead(403, { "content-type": "application/json" })
+            .end('{"error":"forbidden"}')
+          return true
+        }
+        try {
+          host.authority.require(session, "agent-runtime", "write")
+          const catalog = await (await runtime).models({
+            refresh: url.searchParams.get("refresh") === "1",
+          })
+          response
+            .writeHead(200, {
+              "content-type": "application/json; charset=utf-8",
+              "cache-control": "no-store",
+              "x-content-type-options": "nosniff",
+            })
+            .end(JSON.stringify(catalog))
+        } catch (error) {
+          if (!(error instanceof ModelCatalogError)) throw error
+          response
+            .writeHead(502, { "content-type": "application/json" })
+            .end('{"error":"model_catalog_unavailable"}')
+        }
+        return true
+      }
       if (request.method !== "POST") {
         response
           .writeHead(405, { "content-type": "application/json" })

@@ -36,6 +36,28 @@ const post = (base, cookie, path, body) =>
     body: JSON.stringify(body),
   }).then((response) => response.json())
 
+it("exposes only the authorized model catalog to an author session", async () => {
+  root = await mkdtemp(join(tmpdir(), "agent-model-catalog-"))
+  const base = await open()
+  const author = await cookieFor(base, "author")
+  const viewer = await cookieFor(base, "viewer")
+
+  const allowed = await fetch(`${base}/api/agent/models`, { headers: { cookie: author } })
+  const denied = await fetch(`${base}/api/agent/models`, { headers: { cookie: viewer } })
+
+  expect(allowed.status).toBe(200)
+  expect(await allowed.json()).toEqual({
+    models: [
+      {
+        id: "fixture/deterministic",
+        providerLabel: "결정적 시나리오 / 모델미연결",
+      },
+    ],
+    defaultModel: "fixture/deterministic",
+  })
+  expect(denied.status).toBe(403)
+})
+
 it("runs and queries a session-owned proposal through the same-origin Part bridge", async () => {
   root = await mkdtemp(join(tmpdir(), "agent-server-"))
   const base = await open()

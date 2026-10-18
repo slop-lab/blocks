@@ -74,6 +74,12 @@ it("fails clearly when provider configuration is absent", async () => {
 it("drives a real remote tool loop and prints metadata without content or secrets", async () => {
   const requests = []
   const baseUrl = await listen(async (request, response) => {
+    if (request.method === "GET" && request.url === "/v1/models") {
+      response
+        .writeHead(200, { "content-type": "application/json" })
+        .end(JSON.stringify({ data: [{ id: "check-model" }, { id: "selected-model" }] }))
+      return
+    }
     const chunks = []
     for await (const chunk of request) chunks.push(chunk)
     requests.push(JSON.parse(Buffer.concat(chunks).toString("utf8")))
@@ -103,16 +109,16 @@ it("drives a real remote tool loop and prints metadata without content or secret
     sse(response, completion({ role: "assistant", content: "private completion" }, "stop"))
   })
   const apiKey = "check-secret-do-not-print"
-  const result = await execute([], {
+  const result = await execute(["--model", "selected-model"], {
     ...cleanEnvironment(),
     OPENAI_BASE_URL: baseUrl,
     OPENAI_API_KEY: apiKey,
-    OPENAI_MODEL: "check-model",
   })
 
   expect(requests).toHaveLength(2)
   expect(result.stdout).toContain("status: passed")
-  expect(result.stdout).toContain("model: check-model")
+  expect(result.stdout).toContain("model: selected-model")
+  expect(requests.every((request) => request.model === "selected-model")).toBe(true)
   expect(result.stdout).toContain("tool turns: 1")
   expect(result.stdout).not.toContain("private provider response")
   expect(result.stdout).not.toContain("private completion")
@@ -124,7 +130,13 @@ it("cancels a provider request when the configured timeout expires", async () =>
   const closed = new Promise((resolve) => {
     releaseClose = resolve
   })
-  const baseUrl = await listen(async (_request, response) => {
+  const baseUrl = await listen(async (request, response) => {
+    if (request.method === "GET" && request.url === "/v1/models") {
+      response
+        .writeHead(200, { "content-type": "application/json" })
+        .end(JSON.stringify({ data: [{ id: "check-model" }] }))
+      return
+    }
     response.writeHead(200, { "content-type": "text/event-stream" })
     response.flushHeaders()
     response.once("close", releaseClose)

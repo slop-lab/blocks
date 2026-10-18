@@ -26,16 +26,16 @@ corepack pnpm start
 
 ```sh
 cp .env.example .env.local
-# .env.local에서 OPENAI_BASE_URL, OPENAI_API_KEY, OPENAI_MODEL을 수정
+# .env.local에서 OPENAI_BASE_URL, OPENAI_API_KEY를 수정
 corepack pnpm agent:check
 corepack pnpm start
 ```
 
-`OPENAI_BASE_URL`은 `https://api.example.com/v1`처럼 API base를 받으며 앱이 `/chat/completions`를 한 번 붙입니다. 끝의 slash는 무시합니다. URL credential, query, fragment, 이미 붙은 `/chat/completions`는 거부하고, 평문 HTTP는 `localhost`, `127.0.0.1`, `::1`의 로컬 mock에만 허용합니다. `OPENAI_*` 중 하나라도 존재하면 이 표준 그룹이 우선하며 세 값이 모두 필요합니다. 일부만 설정한 경우 fixture로 숨겨서 전환하지 않고 서버와 check가 설명과 함께 실패합니다.
+`OPENAI_BASE_URL`은 `https://api.example.com/v1`처럼 API base를 받으며 앱이 `/chat/completions`를 한 번 붙입니다. 끝의 slash는 무시합니다. URL credential, query, fragment, 이미 붙은 `/chat/completions`는 거부하고, 평문 HTTP는 `localhost`, `127.0.0.1`, `::1`의 로컬 mock에만 허용합니다. `OPENAI_*` 중 하나라도 존재하면 이 표준 그룹이 우선하며 base URL과 API key가 필요합니다. `OPENAI_MODEL`은 기본 model을 고정할 때만 선택적으로 설정합니다. 일부 필수 값을 빠뜨리면 fixture로 숨겨서 전환하지 않고 서버와 check가 설명과 함께 실패합니다.
 
 기존 설정을 위해 `PART_API_BASE`, `PART_API_KEY`, `PART_MODEL_ID`도 유지합니다. 표준 `OPENAI_*`가 전혀 없을 때만 사용하며, 역사적 동작대로 `PART_API_BASE`는 base가 아니라 `/v1/chat/completions`까지 포함한 전체 endpoint입니다. 두 그룹을 섞지 마세요. 어떤 provider 변수도 없을 때만 서버는 결정적 fixture를 사용합니다.
 
-`agent:check`는 `/models`를 요구하지 않습니다. 격리한 임시 client draft에서 실제 Part runtime으로 Chat Completions 요청, `candidate_patch` function-tool 호출, tool result 반환, 마지막 model turn을 실행한 뒤 파일을 지웁니다. canonical 문서 apply는 호출하지 않으며 model명, 성공 상태, tool turn 수만 출력합니다. provider 응답 본문과 key는 출력하지 않습니다. 기본 제한은 45초이고 필요하면 `corepack pnpm agent:check -- --timeout-ms 60000`처럼 최대 60초까지 바꿀 수 있습니다. 이 검사는 보통 model 요청 두 번을 사용하여 quota나 비용이 발생할 수 있고, 연결된 model이 요청한 function tool을 따르지 않으면 호환성 실패로 처리합니다.
+`agent:check`는 인증된 `/models` 목록에서 기본 model을 선택합니다. 특정 model은 `corepack pnpm agent:check -- --model model-id`로 검사합니다. 격리한 임시 client draft에서 실제 Part runtime으로 Chat Completions 요청, `candidate_patch` function-tool 호출, tool result 반환, 마지막 model turn을 실행한 뒤 파일을 지웁니다. canonical 문서 apply는 호출하지 않으며 model명, 성공 상태, tool turn 수만 출력합니다. provider 응답 본문과 key는 출력하지 않습니다. 기본 제한은 45초이고 필요하면 `corepack pnpm agent:check -- --timeout-ms 60000`처럼 최대 60초까지 바꿀 수 있습니다. 이 검사는 catalog 조회와 보통 model 요청 두 번을 사용하여 quota나 비용이 발생할 수 있고, 연결된 model이 요청한 function tool을 따르지 않으면 호환성 실패로 처리합니다.
 
 ## Git 문서 라이브러리 CLI
 

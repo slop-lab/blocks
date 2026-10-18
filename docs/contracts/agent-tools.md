@@ -76,12 +76,16 @@ or disaster recovery.
 The default provider label is `결정적 시나리오 / 모델미연결`. It executes real Part model and
 function-tool calls using Part's deterministic fake model; it does not claim an LLM connection.
 
-The preferred server-only configuration is the complete `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and
-`OPENAI_MODEL` group. The base URL ends at an API prefix such as `/v1`; the application normalizes
+The preferred server-only configuration requires `OPENAI_BASE_URL` and `OPENAI_API_KEY`;
+`OPENAI_MODEL` optionally pins the startup default. The base URL ends at an API prefix such as `/v1`; the application normalizes
 its trailing slash and appends `/chat/completions`. URLs must use HTTPS, except that loopback hosts
 may use HTTP for tests, and may not contain credentials, a query, or a fragment. If any preferred
 variable is present, that group takes precedence and an incomplete group is an error rather than a
-fixture fallback.
+fixture fallback. The server discovers `/models` with the same bearer credential, validates and caps
+the response, caches it for 30 seconds, and exposes only model IDs and provider labels through the
+author-only same-origin `GET /api/agent/models` route. Credentials and raw provider errors never enter
+browser payloads or logs. Each start request may select one advertised `inferenceModel`; that exact ID
+and its provider label are snapshotted in the durable run before tool execution.
 
 The published legacy `PART_API_BASE`, `PART_API_KEY`, and `PART_MODEL_ID` group remains supported
 only when no preferred variable is present. Its `PART_API_BASE` retains the historical exact-endpoint
@@ -99,6 +103,6 @@ run journal. The mock is transport evidence, not evidence for a particular exter
 the ignored `.env.local` with Node's `--env-file-if-exists`; `.env.example` contains placeholders
 only. The check runs an isolated client-draft operation through the same Part tool loop, requires one
 `candidate_patch` turn, never invokes apply, removes its temporary journal, and prints metadata only.
-It does not call `/models`. It can consume quota through two or more Chat Completions requests and
+It calls `/models`, and `--model <model-id>` can select a specific advertised entry. It can consume quota through two or more Chat Completions requests and
 does not prove latency, billing, production reliability, Responses API support, media, or hosted
 tools. Those remain provider and deployment responsibilities.

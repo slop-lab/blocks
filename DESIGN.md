@@ -147,6 +147,7 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 
 ### Structured Workspace
 - A fixed-sidenav list/detail shell presents a nested page tree beside one paper document. The document is the only primary scroll owner; database tables may scroll inline on narrow screens.
+- At desktop widths, the page rail reserves eight `--space-10` units for the added grip and move controls. Page labels stay on one line with ellipsis and a full-title tooltip; short Korean titles must not collapse into one-syllable stacks. Below 768px the existing full-width collapsible rail remains unchanged.
 - Page, database, and synced-source status use the shared badge and action-button primitives. Synced occurrences use a subtle `sync-soft` surface, thin purple `sync` strip, icon, and the text `동기화`; blue remains reserved for structural selection and color never acts alone.
 - Section titles derive HTML h1-h6 from semantic section nesting and embedding depth. Structured JSON does not store fixed Markdown heading levels; rendering never changes content.
 - A canonical shared source owns one runtime and history. Occurrences supply placement, depth, focus and bookmarks; inactive occurrences are readonly projections and cannot route commands. Saving and remote conflicts are independent of which occurrence currently has focus.

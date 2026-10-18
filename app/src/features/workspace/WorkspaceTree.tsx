@@ -156,6 +156,7 @@ export const WorkspaceTree = (props: Props) => {
                   type="button"
                   aria-current={page.id === props.activeId ? "page" : undefined}
                   className={page.id === props.activeId ? "is-active" : ""}
+                  title={page.title}
                   ref={page.id === props.activeId ? activeItemRef : undefined}
                   onClick={() => props.onSelect(page.id)}
                 >

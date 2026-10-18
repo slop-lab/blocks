@@ -148,6 +148,10 @@ try {
   await page.screenshot({ path: "/tmp/pages-editing-1280.png", fullPage: true })
   await page.setViewportSize({ width: 375, height: 900 })
   await workspace.getByRole("button", { name: /페이지 탐색/ }).click()
+  for (const control of await workspace.locator(".structured-tree__actions button").all()) {
+    const bounds = await control.boundingBox()
+    assert.ok(bounds !== null && bounds.width >= 44 && bounds.height >= 44)
+  }
   await page.screenshot({ path: "/tmp/pages-editing-375.png", fullPage: true })
   assert.equal(
     await page.evaluate(

@@ -33,6 +33,29 @@
   background: var(--accent-soft);
 }
 
+.structured-tree__row > button:nth-of-type(2) {
+  display: flex;
+  min-inline-size: 0;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: start;
+}
+
+.structured-tree__row > button:nth-of-type(2) > svg {
+  flex-shrink: 0;
+}
+
+.structured-tree__row > button:nth-of-type(2) > span {
+  min-inline-size: 0;
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .structured-workspace {
+    grid-template-columns: calc(var(--space-10) * 8) minmax(0, 1fr);
+  }
+}
+
 .structured-tree__grip {
   opacity: 0;
   cursor: grab;
@@ -81,6 +104,10 @@
 }
 
 @media (max-width: 767px), (pointer: coarse) {
+  .structured-tree__actions button {
+    min-inline-size: var(--touch-target-size);
+  }
+
   .structured-tree__row {
     grid-template-columns: var(--touch-target-size) minmax(0, 1fr) var(--touch-target-size) var(
         --touch-target-size

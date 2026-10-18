@@ -1,0 +1,101 @@
+.structured-topbar h1 input {
+  inline-size: min(100%, var(--document-measure));
+  padding: 0;
+  border: 0;
+  border-block-end: var(--drop-rule-size) solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.structured-topbar__title-text {
+  display: none;
+}
+
+.structured-topbar h1 input:hover {
+  border-block-end-color: var(--line);
+}
+
+.structured-topbar h1 input:focus-visible {
+  border-block-end-color: var(--accent);
+  outline: 0;
+}
+
+.structured-tree__row {
+  grid-template-columns: var(--control-size) minmax(0, 1fr) var(--control-size) var(--control-size) var(
+      --control-size
+    );
+  border-block: var(--drop-rule-size) solid transparent;
+}
+
+.structured-tree__row[data-drop-target="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.structured-tree__grip {
+  opacity: 0;
+  cursor: grab;
+}
+
+.structured-tree__row:hover .structured-tree__grip,
+.structured-tree__grip:focus-visible {
+  opacity: 1;
+}
+
+.structured-tree__move-menu {
+  position: relative;
+  display: grid;
+  place-items: center;
+  block-size: var(--control-size);
+  color: var(--ink-muted);
+}
+
+.structured-tree__move-menu:focus-within {
+  outline: var(--drop-rule-size) solid var(--accent);
+  outline-offset: var(--drop-rule-size);
+}
+
+.structured-tree__move-menu select {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.structured-tree .structured-tree__root-drop {
+  inline-size: 100%;
+  margin-block-start: var(--space-2);
+  border: var(--drop-rule-size) dashed var(--line-strong);
+  border-radius: var(--space-1);
+  color: var(--ink-muted);
+}
+
+.structured-tree__root-drop[data-drop-target="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  .structured-tree__row {
+    grid-template-columns: var(--touch-target-size) minmax(0, 1fr) var(--touch-target-size) var(
+        --touch-target-size
+      ) var(--touch-target-size);
+  }
+
+  .structured-tree__grip {
+    opacity: 1;
+  }
+
+  .structured-tree__move-menu {
+    block-size: var(--touch-target-size);
+  }
+
+  .structured-tree .structured-tree__root-drop {
+    min-block-size: var(--touch-target-size);
+  }
+}

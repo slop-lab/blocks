@@ -1,0 +1,73 @@
+.workspace-focus {
+  margin-block-end: var(--space-4);
+  padding-block-end: var(--space-3);
+  border-block-end: 1px solid var(--line);
+  color: var(--ink-muted);
+  font: var(--type-small);
+}
+
+.structured-prosemirror .workspace-focus-hidden,
+.structured-prosemirror .workspace-focus-shared-hidden {
+  display: none;
+}
+
+.workspace-focus ol,
+.workspace-focus li {
+  display: flex;
+  align-items: center;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workspace-focus ol {
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.workspace-focus li {
+  flex: 0 1 auto;
+  gap: var(--space-1);
+  max-inline-size: 100%;
+}
+
+.workspace-focus button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: var(--control-size);
+  min-inline-size: 0;
+  padding-inline: var(--space-2);
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.workspace-focus button:hover {
+  background: var(--accent-soft);
+}
+
+.workspace-focus button:focus-visible {
+  outline: var(--drop-rule-size) solid var(--accent);
+  outline-offset: var(--drop-rule-size);
+}
+
+.workspace-focus button[aria-current="location"] {
+  color: var(--ink);
+  cursor: default;
+}
+
+.workspace-focus button span {
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  .workspace-focus button {
+    min-block-size: var(--touch-target-size);
+  }
+}

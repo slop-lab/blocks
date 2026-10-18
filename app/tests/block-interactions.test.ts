@@ -10,6 +10,7 @@ import {
   indentBlocksById,
   moveBlockById,
   moveBlocksById,
+  moveBlocksToById,
   outdentBlocksById,
   planBlockWrap,
   wrapBlocksById,
@@ -194,6 +195,122 @@ describe("block interaction commands", () => {
     expect(state.doc.childCount).toBe(3)
     expect(state.doc.child(1).attrs["id"]).toBe("a")
     expect(state.doc.child(2).attrs["id"]).toBe("b")
+  })
+
+  it("moves a stable block identity between the root and a nested container in one undo step", () => {
+    const profile = createWorkspaceProfile(0)
+    const documentType = profile.schema.nodes["doc"]
+    const sectionType = profile.schema.nodes["section"]
+    const paragraphType = profile.schema.nodes["paragraph"]
+    if (documentType === undefined || sectionType === undefined || paragraphType === undefined)
+      throw new TypeError("Workspace nested move schema is incomplete")
+    const block = (id: string) =>
+      paragraphType.create({ id, locked: false }, profile.schema.text(id))
+    let state = createEditorState({
+      document: documentType.create(undefined, [
+        block("root"),
+        sectionType.create({ id: "section", locked: false }, [block("nested")]),
+        block("after"),
+      ]),
+      readonly: false,
+      profile,
+    })
+    const dispatch = (transaction: Parameters<typeof state.apply>[0]) => {
+      state = state.apply(transaction)
+    }
+
+    expect(moveBlocksToById(["root"], { parentId: "section", index: 1 })(state, dispatch)).toBe(
+      true,
+    )
+    expect(state.doc.child(0).child(1).attrs["id"]).toBe("root")
+    expect(undo(state, dispatch)).toBe(true)
+    expect(state.doc.child(0).attrs["id"]).toBe("root")
+
+    expect(moveBlocksToById(["nested"], { parentId: null, index: 3 })(state, dispatch)).toBe(true)
+    expect(state.doc.child(3).attrs["id"]).toBe("nested")
+    expect(undo(state, dispatch)).toBe(true)
+    expect(state.doc.child(1).child(0).attrs["id"]).toBe("nested")
+  })
+
+  it("rejects moving a container into its own subtree or a locked destination", () => {
+    const profile = createWorkspaceProfile(0)
+    const documentType = profile.schema.nodes["doc"]
+    const sectionType = profile.schema.nodes["section"]
+    const paragraphType = profile.schema.nodes["paragraph"]
+    if (documentType === undefined || sectionType === undefined || paragraphType === undefined)
+      throw new TypeError("Workspace nested move schema is incomplete")
+    const child = paragraphType.create({ id: "child", locked: false })
+    const state = EditorState.create({
+      schema: profile.schema,
+      doc: documentType.create(undefined, [
+        sectionType.create({ id: "section", locked: false }, [child]),
+        sectionType.create({ id: "locked", locked: true }, [
+          paragraphType.create({ id: "locked-child", locked: false }),
+        ]),
+      ]),
+    })
+
+    expect(moveBlocksToById(["section"], { parentId: "child", index: 0 })(state)).toBe(false)
+    expect(moveBlocksToById(["child"], { parentId: "locked", index: 1 })(state)).toBe(false)
+    expect(moveBlocksToById(["locked-child"], { parentId: null, index: 2 })(state)).toBe(false)
+  })
+
+  it("allows a cross-level move when unrelated siblings are locked", () => {
+    const profile = createWorkspaceProfile(0)
+    const documentType = profile.schema.nodes["doc"]
+    const sectionType = profile.schema.nodes["section"]
+    const paragraphType = profile.schema.nodes["paragraph"]
+    if (documentType === undefined || sectionType === undefined || paragraphType === undefined)
+      throw new TypeError("Workspace nested move schema is incomplete")
+    const block = (id: string, locked = false) => paragraphType.create({ id, locked })
+    let state = createEditorState({
+      document: documentType.create(undefined, [
+        sectionType.create({ id: "source", locked: false }, [
+          block("moving"),
+          block("source-locked-sibling", true),
+        ]),
+        sectionType.create({ id: "target", locked: false }, [block("target-locked-sibling", true)]),
+      ]),
+      readonly: false,
+      profile,
+    })
+
+    expect(
+      moveBlocksToById(["moving"], { parentId: "target", index: 1 })(state, (transaction) => {
+        state = state.apply(transaction)
+      }),
+    ).toBe(true)
+    expect(state.doc.child(1).child(1).attrs["id"]).toBe("moving")
+  })
+
+  it("moves an unlocked root block despite an unrelated locked root sibling", () => {
+    const profile = createWorkspaceProfile(0)
+    const documentType = profile.schema.nodes["doc"]
+    const sectionType = profile.schema.nodes["section"]
+    const paragraphType = profile.schema.nodes["paragraph"]
+    if (documentType === undefined || sectionType === undefined || paragraphType === undefined)
+      throw new TypeError("Workspace nested move schema is incomplete")
+    const moving = paragraphType.create({ id: "moving", locked: false })
+    const lockedSibling = paragraphType.create({ id: "locked-root-sibling", locked: true })
+    const targetChild = paragraphType.create({ id: "target-child", locked: false })
+    let state = createEditorState({
+      document: documentType.create(undefined, [
+        moving,
+        lockedSibling,
+        sectionType.create({ id: "target", locked: false }, [targetChild]),
+      ]),
+      readonly: false,
+      profile,
+    })
+    const lockedBefore = state.doc.child(1).toJSON()
+
+    expect(
+      moveBlocksToById(["moving"], { parentId: "target", index: 1 })(state, (transaction) => {
+        state = state.apply(transaction)
+      }),
+    ).toBe(true)
+    expect(state.doc.child(0).toJSON()).toEqual(lockedBefore)
+    expect(state.doc.child(1).child(1).attrs["id"]).toBe("moving")
   })
 
   it.each([

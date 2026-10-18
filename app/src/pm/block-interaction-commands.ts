@@ -5,6 +5,7 @@ import { locateBlock } from "./block-structure-commands"
 import { defaultNodeForState } from "./profile-plugin"
 
 export { safeLinkHref } from "../core/links"
+export { moveBlocksToById } from "./block-drop-commands"
 export {
   indentBlocksById,
   moveBlockById,

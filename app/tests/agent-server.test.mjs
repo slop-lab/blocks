@@ -171,8 +171,7 @@ it("rejects viewer admission and preserves an interrupted run across restart", a
   })
   await new Promise((resolve) => server.close(resolve))
   const restartedBase = await open()
-  const restartedAuthor = await cookieFor(restartedBase, "author")
-  const recovered = await post(restartedBase, restartedAuthor, "queries", {
+  const recovered = await post(restartedBase, author, "queries", {
     queryId: "block-editor.agent/get",
     version: 1,
     target: started.operation,

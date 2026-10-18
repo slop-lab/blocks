@@ -76,6 +76,22 @@ it("treats a nested editor pointer as outside the parent editor owner", () => {
   expect(controller.selectedIds()).toEqual([])
 })
 
+it("does not reclaim the parent context when a nested editor receives focus", () => {
+  const arbiter = new InteractionContextArbiter()
+  const parent = arbiter.context("parent")
+  const child = arbiter.context("child")
+  const { view } = createSelectionView({ isActive: parent.isActive, claim: parent.claim })
+  const nested = document.createElement("div")
+  nested.className = "ProseMirror"
+  view.dom.append(nested)
+  child.claim()
+
+  nested.dispatchEvent(new FocusEvent("focusin", { bubbles: true }))
+
+  expect(child.isActive()).toBe(true)
+  expect(parent.isActive()).toBe(false)
+})
+
 it("switches native character selection to text mode without structural IDs", () => {
   const { view, controller } = createSelectionView()
   controller.replace(["first"])

@@ -154,7 +154,8 @@ export const attachBlockSelection = (
     event.preventDefault()
     clear()
   }
-  const onFocusIn = () => claim()
+  const onFocusIn = (event: FocusEvent) =>
+    event.target instanceof Element && isOwnedTarget(view, event.target) && claim()
   const onPointerDown = (event: PointerEvent) => {
     if (
       event.button !== 0 ||

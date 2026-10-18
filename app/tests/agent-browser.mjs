@@ -33,6 +33,7 @@ try {
   await page.goto(`http://127.0.0.1:${address.port}`, { waitUntil: "networkidle" })
   await page.getByRole("button", { name: /에이전트 도구 예제/ }).click()
   await page.getByRole("heading", { name: "에이전트 도구 예제" }).waitFor()
+  assert.equal(await page.getByLabel("실행 모델").inputValue(), "fixture/deterministic")
 
   const runStory = async (tab, instruction, artifactKind) => {
     await page.getByRole("tab", { name: new RegExp(tab) }).click()

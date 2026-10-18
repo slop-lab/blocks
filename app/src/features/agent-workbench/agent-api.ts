@@ -23,9 +23,14 @@ const runSchema = z.object({
 const operationSchema = z.object({ owner: z.string(), kind: z.string(), id: z.string() })
 const receiptSchema = z.object({ kind: z.literal("accepted"), operation: operationSchema })
 const querySchema = z.object({ ok: z.literal(true), value: z.unknown() })
+const modelCatalogSchema = z.object({
+  models: z.array(z.object({ id: z.string(), providerLabel: z.string() })),
+  defaultModel: z.string().nullable(),
+})
 
 export type AgentRun = z.infer<typeof runSchema>
 export type AgentOperation = z.infer<typeof operationSchema>
+export type AgentModelCatalog = z.infer<typeof modelCatalogSchema>
 
 const post = (path: string, json: unknown) =>
   ky.post(`/api/agent/${path}`, { json, retry: 0, timeout: 10_000 }).json()
@@ -40,6 +45,7 @@ export const queryAgent = async (queryId: string, target?: AgentOperation) => {
 export const startAgent = async (input: {
   readonly instruction: string
   readonly target: Readonly<Record<string, string | number>>
+  readonly inferenceModel?: string
 }) => {
   const session = z
     .object({ sessionId: z.string() })
@@ -57,11 +63,15 @@ export const startAgent = async (input: {
         instruction: input.instruction,
         target: input.target,
         document: { format: "block-editor/v0.3", blocks: [] },
+        ...(input.inferenceModel === undefined ? {} : { inferenceModel: input.inferenceModel }),
       },
     }),
   )
   return receipt.operation
 }
+
+export const loadAgentModels = async (): Promise<AgentModelCatalog> =>
+  modelCatalogSchema.parse(await ky.get("/api/agent/models", { retry: 0, timeout: 10_000 }).json())
 
 export const getAgentRun = async (operation: AgentOperation) =>
   runSchema.parse(await queryAgent("block-editor.agent/get", operation))

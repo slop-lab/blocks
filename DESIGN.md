@@ -134,6 +134,7 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 
 ### Agent Tool Workbench
 - A three-tab operational surface separates managed Markdown, typed database, and mixed-backlog workflows while keeping one consistent resource/request/review/timeline grammar.
+- The shared model selector is a labeled native select with loading, error, disabled, and selected states. It appears only on user-initiated agent surfaces; autonomous lower-layer flows use the server default.
 - Exact before/after values and fingerprints use the mono recipe inside bounded, wrapping source panels. Lifecycle controls remain visible and cancellation is distinct from observer detachment.
 - Desktop uses a compact controls rail beside the wider immutable review artifact. Below 768px tabs and panels become one column; at 375px every long identifier wraps without horizontal page overflow.
 

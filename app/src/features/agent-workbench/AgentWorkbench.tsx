@@ -1,5 +1,6 @@
 import { CheckCircledIcon, Cross2Icon, FileTextIcon, RowsIcon } from "@radix-ui/react-icons"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { AgentModelSelect } from "./AgentModelSelect"
 import {
   type AgentOperation,
   type AgentRun,
@@ -24,6 +25,7 @@ export const AgentWorkbench = () => {
   )
   const [selected, setSelected] = useState("")
   const [instruction, setInstruction] = useState("검토 근거를 명확한 다음 단계로 정리해 주세요.")
+  const [inferenceModel, setInferenceModel] = useState<string>()
   const [operation, setOperation] = useState<AgentOperation | null>(null)
   const [run, setRun] = useState<AgentRun | null>(null)
   const [message, setMessage] = useState("")
@@ -94,7 +96,13 @@ export const AgentWorkbench = () => {
               epoch: 1,
               baseVersion: resources.tasks.revision,
             }
-    setOperation(await startAgent({ instruction, target }))
+    setOperation(
+      await startAgent({
+        instruction,
+        target,
+        ...(inferenceModel === undefined ? {} : { inferenceModel }),
+      }),
+    )
   }
 
   const apply = async () => {
@@ -121,7 +129,7 @@ export const AgentWorkbench = () => {
             적용합니다.
           </p>
         </div>
-        <span className="status-badge">결정적 시나리오 / 모델미연결</span>
+        <span className="status-badge">{run?.providerLabel ?? "실행 모델 선택 대기"}</span>
       </header>
       <div className="agent-story-tabs" role="tablist" aria-label="에이전트 워크플로">
         {(Object.entries(stories) as [Story, (typeof stories)[Story]][]).map(([id, item]) => (
@@ -149,6 +157,11 @@ export const AgentWorkbench = () => {
       </div>
       <div className="agent-workbench__grid">
         <section className="agent-control-panel" aria-label="실행 설정">
+          <AgentModelSelect
+            value={inferenceModel}
+            onChange={setInferenceModel}
+            disabled={run?.status === "running"}
+          />
           <label className="field">
             <span>권한 있는 원본</span>
             <select value={resourceId} onChange={(event) => setSelected(event.target.value)}>

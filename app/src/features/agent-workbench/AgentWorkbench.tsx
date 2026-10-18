@@ -49,13 +49,14 @@ export const AgentWorkbench = () => {
           label: database.content.name,
         }))
       case "mixed":
-        return resources.tasks.tasks
+        return (resources.tasks?.tasks ?? [])
           .filter((task) => task.status === "running")
           .map((task) => ({ id: task.id, label: `${task.id} · ${task.title}` }))
       default:
         return story satisfies never
     }
   }, [resources, story])
+  const resourceError = resources?.errors[story]
   const resourceId = choices.some((choice) => choice.id === selected)
     ? selected
     : (choices[0]?.id ?? "")
@@ -79,23 +80,26 @@ export const AgentWorkbench = () => {
   }, [operation])
 
   const begin = async () => {
-    if (resources === null || resourceId.length === 0) return
+    if (resources === null || resourceId.length === 0 || resourceError !== undefined) return
     polling.current = true
     setRun(null)
     setMessage("")
+    const selectedTask = resources.tasks?.tasks.find((task) => task.id === resourceId)
     const target =
       story === "markdown"
         ? { modelId: "markdown-git", resourceId, epoch: 1, baseVersion: 1 }
         : story === "workspace"
           ? { modelId: "structured-workspace", resourceId, epoch: 1, baseVersion: 1 }
-          : {
-              modelId: "mixed-backlog",
-              taskId: resourceId,
-              dependencyVersion:
-                resources.tasks.tasks.find((task) => task.id === resourceId)?.version ?? 1,
-              epoch: 1,
-              baseVersion: resources.tasks.revision,
-            }
+          : resources.tasks === null || selectedTask === undefined
+            ? null
+            : {
+                modelId: "mixed-backlog",
+                taskId: resourceId,
+                dependencyVersion: selectedTask.version,
+                epoch: 1,
+                baseVersion: resources.tasks.revision,
+              }
+    if (target === null) return
     setOperation(
       await startAgent({
         instruction,
@@ -164,7 +168,15 @@ export const AgentWorkbench = () => {
           />
           <label className="field">
             <span>권한 있는 원본</span>
-            <select value={resourceId} onChange={(event) => setSelected(event.target.value)}>
+            <select
+              value={resourceId}
+              disabled={resources === null || resourceError !== undefined || choices.length === 0}
+              onChange={(event) => setSelected(event.target.value)}
+            >
+              {resources === null && <option>리소스 불러오는 중</option>}
+              {resources !== null && resourceError === undefined && choices.length === 0 && (
+                <option>사용 가능한 원본 없음</option>
+              )}
               {choices.map((choice) => (
                 <option key={choice.id} value={choice.id}>
                   {choice.label}
@@ -172,6 +184,11 @@ export const AgentWorkbench = () => {
               ))}
             </select>
           </label>
+          {resourceError !== undefined && (
+            <p className="agent-message agent-message--warning" role="alert">
+              {stories[story].label} 리소스를 불러오지 못했습니다. {resourceError}
+            </p>
+          )}
           <label className="field">
             <span>요청</span>
             <textarea
@@ -186,6 +203,7 @@ export const AgentWorkbench = () => {
               type="button"
               disabled={
                 resourceId.length === 0 ||
+                resourceError !== undefined ||
                 instruction.trim().length === 0 ||
                 run?.status === "running"
               }

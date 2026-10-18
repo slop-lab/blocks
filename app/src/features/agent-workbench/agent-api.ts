@@ -27,10 +27,31 @@ const modelCatalogSchema = z.object({
   models: z.array(z.object({ id: z.string(), providerLabel: z.string() })),
   defaultModel: z.string().nullable(),
 })
+const markdownResourcesSchema = z.object({ files: z.array(z.string()) })
+const workspaceResourcesSchema = z.object({
+  databases: z.array(
+    z.object({
+      documentId: z.string(),
+      revision: z.number(),
+      content: z.object({ name: z.string() }),
+    }),
+  ),
+})
+const mixedResourcesSchema = z.object({
+  revision: z.number(),
+  tasks: z.array(
+    z.object({ id: z.string(), title: z.string(), status: z.string(), version: z.number() }),
+  ),
+})
+
+type ResourceResult<T> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly error: string }
 
 export type AgentRun = z.infer<typeof runSchema>
 export type AgentOperation = z.infer<typeof operationSchema>
 export type AgentModelCatalog = z.infer<typeof modelCatalogSchema>
+export type AgentResourceErrors = Partial<Record<"markdown" | "workspace" | "mixed", string>>
 
 const post = (path: string, json: unknown) =>
   ky.post(`/api/agent/${path}`, { json, retry: 0, timeout: 10_000 }).json()
@@ -86,32 +107,31 @@ export const commandAgent = async (operation: AgentOperation, action: "apply" | 
     input: action === "cancel" ? "user-request" : null,
   })
 
+const loadResource = async <T>(path: string, schema: z.ZodType<T>): Promise<ResourceResult<T>> => {
+  try {
+    return { ok: true, value: schema.parse(await ky.get(path, { retry: 0 }).json()) }
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "알 수 없는 리소스 오류",
+    }
+  }
+}
+
 export const loadAgentResources = async () => {
   const [markdown, workspace, mixed] = await Promise.all([
-    ky.get("/api/markdown", { retry: 0 }).json(),
-    ky.get("/api/workspace", { retry: 0 }).json(),
-    ky.get("/api/ownership/mixed", { retry: 0 }).json(),
+    loadResource("/api/markdown", markdownResourcesSchema),
+    loadResource("/api/workspace", workspaceResourcesSchema),
+    loadResource("/api/ownership/mixed", mixedResourcesSchema),
   ])
   return {
-    markdown: z.object({ files: z.array(z.string()) }).parse(markdown).files,
-    databases: z
-      .object({
-        databases: z.array(
-          z.object({
-            documentId: z.string(),
-            revision: z.number(),
-            content: z.object({ name: z.string() }),
-          }),
-        ),
-      })
-      .parse(workspace).databases,
-    tasks: z
-      .object({
-        revision: z.number(),
-        tasks: z.array(
-          z.object({ id: z.string(), title: z.string(), status: z.string(), version: z.number() }),
-        ),
-      })
-      .parse(mixed),
+    markdown: markdown.ok ? markdown.value.files : [],
+    databases: workspace.ok ? workspace.value.databases : [],
+    tasks: mixed.ok ? mixed.value : null,
+    errors: {
+      ...(markdown.ok ? {} : { markdown: markdown.error }),
+      ...(workspace.ok ? {} : { workspace: workspace.error }),
+      ...(mixed.ok ? {} : { mixed: mixed.error }),
+    } satisfies AgentResourceErrors,
   }
 }

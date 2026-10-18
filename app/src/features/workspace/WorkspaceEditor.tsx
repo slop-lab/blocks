@@ -105,6 +105,7 @@ export const WorkspaceEditor = (props: Props) => {
           clearTimeout(compositionTimer)
           compositionTimer = setTimeout(() => {
             session.setComposing(false)
+            session.flushExternal()
             propsRef.current.onCompositionChange(false)
           }, 0)
           return false

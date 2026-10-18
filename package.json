@@ -14,7 +14,7 @@
     "typecheck": "pnpm build:packages && pnpm --filter \"./packages/**\" --fail-if-no-match typecheck && tsc --noEmit",
     "pretest": "pnpm build:packages",
     "test": "vitest run",
-    "test:browser": "node app/tests/browser.mjs && node app/tests/advanced-browser.mjs && node app/tests/block-interactions-browser.mjs && node app/tests/workflow-browser.mjs && node app/tests/ownership-browser.mjs && node app/tests/agent-browser.mjs && node app/tests/structured-workspace-browser.mjs && node app/tests/structured-workspace-features-browser.mjs && node app/tests/structured-workspace-nested-browser.mjs && node app/tests/source-runtime-browser.mjs",
+    "test:browser": "node app/tests/browser.mjs && node app/tests/advanced-browser.mjs && node app/tests/block-interactions-browser.mjs && node app/tests/workflow-browser.mjs && node app/tests/ownership-browser.mjs && node app/tests/agent-browser.mjs && node app/tests/structured-workspace-browser.mjs && node app/tests/structured-workspace-features-browser.mjs && node app/tests/structured-workspace-nested-browser.mjs && node app/tests/source-runtime-browser.mjs && node app/tests/pages-editing-browser.mjs && node app/tests/workspace-ime-browser.mjs && node app/tests/block-level-drag-browser.mjs && node app/tests/workspace-focus-browser.mjs",
     "test:structured-workspace-browser": "node app/tests/structured-workspace-browser.mjs",
     "test:markdown-browser": "node app/tests/advanced-browser.mjs",
     "test:git-documents-browser": "node app/tests/git-documents-browser.mjs",

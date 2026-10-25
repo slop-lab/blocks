@@ -26,7 +26,9 @@ class BlockBoundary extends Component<
   }
   render() {
     return this.state.failed ? (
-      <section role="status">표시 실패 · {this.props.blockId} · 원본 데이터는 유지됩니다.</section>
+      <section role="status">
+        Display failed · {this.props.blockId} · Source data is preserved.
+      </section>
     ) : (
       this.props.children
     )
@@ -52,7 +54,7 @@ const RenderBlock = ({
   const content = block.content.map((inline) => {
     const key = `${block.id}:${offset}`
     offset += inline.kind === "text" ? Math.max(1, inline.text.length) : 1
-    if (inline.kind === "opaque") return <span key={key}>[미지원 인라인]</span>
+    if (inline.kind === "opaque") return <span key={key}>[Unsupported inline content]</span>
     let text: ReactNode = inline.text
     for (const mark of inline.marks) {
       if (typeof mark !== "object" || mark === null || !("type" in mark)) continue
@@ -109,7 +111,7 @@ const RenderBlock = ({
         <section className="opaque-block">
           <strong>{block.type}</strong>
           <p>{content}</p>
-          <small>읽기 전용 확장 콘텐츠</small>
+          <small>Read-only extension content</small>
         </section>
       )
   }
@@ -143,7 +145,7 @@ export const BlockViewer = (props: ViewerProps) => {
         ?.filter((item) => !known.has(item.blockId))
         .map((item) => (
           <aside key={item.id} role="note">
-            위치 소실 · {item.message}
+            Position unavailable · {item.message}
           </aside>
         ))}
     </article>

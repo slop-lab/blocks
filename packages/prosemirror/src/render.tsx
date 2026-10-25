@@ -17,7 +17,7 @@ export const renderInline = (block: BlockSnapshot): ReactNode => {
   return block.content.map((inline) => {
     const key = `${block.id}:${offset}`
     offset += inline.kind === "text" ? Math.max(1, inline.text.length) : 1
-    if (inline.kind === "opaque") return <span key={key}>[미지원 인라인]</span>
+    if (inline.kind === "opaque") return <span key={key}>[Unsupported inline content]</span>
     let text: ReactNode = inline.text
     for (const mark of inline.marks) {
       if (typeof mark !== "object" || mark === null || !("type" in mark)) continue

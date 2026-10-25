@@ -6,7 +6,7 @@ export const paragraphBlock: BlockRegistration = {
   type: "paragraph",
   nodeName: "paragraph",
   text: true,
-  insertMenu: [{ label: "본문", description: "일반 텍스트", keywords: ["문단", "text"] }],
+  insertMenu: [{ label: "Paragraph", description: "Plain text", keywords: ["paragraph", "text"] }],
   nodeSpec: {
     group: "block",
     content: "inline*",

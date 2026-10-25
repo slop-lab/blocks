@@ -2,9 +2,9 @@
 
 ## 1. Atmosphere & Identity
 
-A quiet editorial workshop: warm paper in the center, muted utility surfaces around it, and one ink-blue accent reserved for intent. The signature is the **living margin**—block controls and diagnostics stay peripheral until selected, so rich Korean and Latin content remains the visual center.
+A quiet editorial workshop: warm paper in the center, muted utility surfaces around it, and one ink-blue accent reserved for intent. The signature is the **living margin**: block controls and diagnostics stay peripheral until selected, so rich multilingual content remains the visual center.
 
-Primary persona: a keyboard-first knowledge worker authoring mixed Korean/English documents. Secondary persona: a product engineer inspecting event and capability contracts. Stress contexts include 200% zoom, keyboard-only use, reduced motion, narrow mobile widths, temporary motor impairment, and long unbroken payloads.
+Primary persona: a keyboard-first knowledge worker authoring multilingual documents. Secondary persona: a product engineer inspecting event and capability contracts. Stress contexts include 200% zoom, keyboard-only use, reduced motion, narrow mobile widths, temporary motor impairment, and long unbroken payloads.
 
 ## 2. Color
 
@@ -100,13 +100,15 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 - Hover or editor focus reveals a compact plus and grip rail beside the current logical block, including nested children. Parent-to-child targeting is not suppressed by the parent's rectangle. Coarse pointers keep the rail discoverable at the focused block with 44px targets. Readonly surfaces omit mutation controls entirely; locked blocks expose identity and status but no destructive actions.
 - The grip is the only drag origin. Its menu opens by click, `Shift+F10`, or the Context Menu key and includes duplicate, delete, move, and supported type changes. Every action resolves the stable block ID against the current document when invoked; menu position is never treated as document identity.
 - Drag shows one accent insertion rule between blocks, supports document-start and document-end gaps, and autoscrolls the nearest editor scroll owner. Cancel, Escape, pointer cancellation, and leaving the same editor clear all transient drag state. Keyboard move actions remain first-class.
-- Grip click selects the block and opens its context menu. Shift adds/removes a range from the last focus, Ctrl/Cmd toggles, Escape clears, and Delete/Backspace owns the canonical structural batch. Ancestor and descendant are never simultaneous explicit selection roots. Dragging empty editor chrome draws a rectangular marquee; starting inside editable text activates native text mode. Pointer-down outside the context clears selection, except declared rail/menu/format controls; entering another editor deactivates the previous context.
-- Selected blocks use one `selection-soft` subtree wash plus a blue `selection` outline. Children do not repaint white islands or acquire a second explicit selection fill. Synced blocks retain a thin purple `sync` strip and a labeled sync icon when selected, while keyboard focus uses the warning token as a third independent state. Selection state, anchor, focus, and marquee geometry are view-only and never enter document JSON or collaborative state. The interaction contract, not DOM classes, defines selection state.
+- Grip click selects the block and opens its context menu. Shift adds/removes a range from the last focus, Ctrl/Cmd toggles, Escape clears, and Delete/Backspace owns the canonical structural batch. Ancestor and descendant are never simultaneous explicit selection roots.
+  Dragging empty editor chrome draws a rectangular marquee; starting inside editable text activates native text mode. Pointer-down outside the context clears selection, except declared rail/menu/format controls; entering another editor deactivates the previous context.
+- Selected blocks use one `selection-soft` subtree wash plus a blue `selection` outline. Children do not repaint white islands or acquire a second explicit selection fill. Synced blocks retain a thin purple `sync` strip and a labeled sync icon when selected, while keyboard focus uses the warning token as a third independent state.
+  Selection state, anchor, focus, and marquee geometry are view-only and never enter document JSON or collaborative state. The interaction contract, not DOM classes, defines selection state.
 
 ### Editor Popover / Command Menu
 - Structure: owner-document portal, anchored to a block control or text caret, with viewport-clamped position, whisper border, paper/elevated surface, and the documented popover shadow.
 - Slash commands appear only for a leading `/query` in an eligible native text block. Arrow keys move the active option, Enter applies it, and Escape closes without changing content. Choosing a command removes only the query before transforming the current block or inserting a sibling.
-- Context and slash rows use roving focus, visible active fill, concise Korean labels, optional keyboard hints, and semantic `menu` / `menuitem` roles. Open/close uses opacity and a short scale transform; reduced motion uses opacity only.
+- Context and slash rows use roving focus, visible active fill, concise labels, optional keyboard hints, and semantic `menu` / `menuitem` roles. Open/close uses opacity and a short scale transform; reduced motion uses opacity only.
 
 ### Selection Format Bar
 - A compact floating toolbar appears above a non-empty text selection and preserves that selection on pointer down. It offers only marks present in the active schema: bold, italic, inline code, and link.
@@ -130,11 +132,12 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 
 ### Status Badge / Toast
 - Badge is text plus icon where needed. Toast uses `aria-live="polite"`, never steals focus, and offers recovery when actionable.
-- On mobile the status region occupies its own row above the document instead of covering text. Prose uses Korean word-preserving wrapping; long unbroken payloads still wrap inside their containers.
+- On mobile the status region occupies its own row above the document instead of covering text. Prose preserves words when wrapping; long unbroken payloads still wrap inside their containers.
 
 ### Agent Tool Workbench
 - A three-tab operational surface separates managed Markdown, typed database, and mixed-backlog workflows while keeping one consistent resource/request/review/timeline grammar.
 - The shared model selector is a labeled native select with loading, error, disabled, and selected states. It appears only on user-initiated agent surfaces; autonomous lower-layer flows use the server default.
+- The native option shows the model ID. Selected provider status and the complete model ID also appear in wrapping metadata linked with `aria-describedby`, so narrow panels never hide the selected identity.
 - Exact before/after values and fingerprints use the mono recipe inside bounded, wrapping source panels. Lifecycle controls remain visible and cancellation is distinct from observer detachment.
 - Desktop uses a compact controls rail beside the wider immutable review artifact. Below 768px tabs and panels become one column; at 375px every long identifier wraps without horizontal page overflow.
 
@@ -147,8 +150,8 @@ Editor interaction dimensions: `--control-size` 32px, `--selection-control-size`
 
 ### Structured Workspace
 - A fixed-sidenav list/detail shell presents a nested page tree beside one paper document. The document is the only primary scroll owner; database tables may scroll inline on narrow screens.
-- At desktop widths, the page rail reserves eight `--space-10` units for the added grip and move controls. Page labels stay on one line with ellipsis and a full-title tooltip; short Korean titles must not collapse into one-syllable stacks. Below 768px the existing full-width collapsible rail remains unchanged.
-- Page, database, and synced-source status use the shared badge and action-button primitives. Synced occurrences use a subtle `sync-soft` surface, thin purple `sync` strip, icon, and the text `동기화`; blue remains reserved for structural selection and color never acts alone.
+- At desktop widths, the page rail reserves eight `--space-10` units for the added grip and move controls. Page labels stay on one line with ellipsis and a full-title tooltip; short titles in languages without spaces must not collapse into one-character stacks. Below 768px the existing full-width collapsible rail remains unchanged.
+- Page, database, and synced-source status use the shared badge and action-button primitives. Synced occurrences use a subtle `sync-soft` surface, thin purple `sync` strip, icon, and the text `Synced`; blue remains reserved for structural selection and color never acts alone.
 - Section titles derive HTML h1-h6 from semantic section nesting and embedding depth. Structured JSON does not store fixed Markdown heading levels; rendering never changes content.
 - A canonical shared source owns one runtime and history. Occurrences supply placement, depth, focus and bookmarks; inactive occurrences are readonly projections and cannot route commands. Saving and remote conflicts are independent of which occurrence currently has focus.
 - Below 768px the page tree becomes a collapsible top rail and the document keeps 16px gutters. Search and the Ctrl-K command palette remain keyboard reachable at every width.
@@ -180,7 +183,7 @@ Mixed restrained strategy: tonal separation and whisper borders at rest; one mul
 
 ## 8. Accessibility Constraints & Accepted Debt
 
-Target WCAG 2.2 AA: 4.5:1 normal text, 3:1 large text and controls, visible 2px focus, full keyboard navigation, semantic landmarks, zoom to 200%, no color-only state, reduced motion, Korean line breaking, and minimum 44px touch targets on coarse pointers.
+Target WCAG 2.2 AA: 4.5:1 normal text, 3:1 large text and controls, visible 2px focus, full keyboard navigation, semantic landmarks, zoom to 200%, no color-only state, reduced motion, appropriate multilingual line breaking, and minimum 44px touch targets on coarse pointers.
 
 Block interactions additionally require: grip-only drag initiation, `Shift+F10` context access, non-drag reorder commands, selection-preserving format controls, viewport-clamped portals in the editor's `ownerDocument`, and synchronous cleanup on Escape/pointer cancellation. Slash handling must not run during IME composition or in code, caption, locked, readonly, or unsupported schema contexts.
 

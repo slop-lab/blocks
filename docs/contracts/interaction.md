@@ -8,7 +8,8 @@ The engine owns character selection. The interaction package owns engine-indepen
 
 `BlockSelection` remains a compatibility helper around the pure reducer. It is not a second adapter authority.
 
-An interaction scope groups surfaces whose commands can share a toolbar or clipboard route. Its context arbiter owns one active context ID and activation epoch. Activating another context deactivates the previous one before it can handle input. Engine state and native text selection remain owned by each engine session; the arbiter does not copy them. Separate embedded applications may use separate scopes. A surface's inactive bookmark is storage for later restoration, not another active selection.
+An interaction scope groups surfaces whose commands can share a toolbar or clipboard route. Its context arbiter owns one active context ID and activation epoch. Activating another context deactivates the previous one before it can handle input. Engine state and native text selection remain owned by each engine session; the arbiter does not copy them.
+Separate embedded applications may use separate scopes. A surface's inactive bookmark is storage for later restoration, not another active selection.
 
 ## Selection State
 
@@ -22,7 +23,8 @@ Block state contains ordered selected root IDs, anchor ID, and focus ID. IDs are
 
 Replace selects one root. Ctrl/Cmd toggles one root. Shift applies an additive or subtractive range from the last focus over the flattened visible interactable block list, then canonicalizes roots. Hidden, collapsed, or unloaded blocks are never guessed into a range.
 
-Modifier precedence is Shift first, then Ctrl/Cmd, then unmodified replace. Thus Ctrl/Cmd+Shift uses the same range intent as Shift alone. Range polarity is computed from the pre-intent state: if the clicked target is an explicit selected root, remove the range; otherwise add it. The range endpoints use the previous focus and the clicked target, and focus advances to the clicked target after the operation. During a batch range or marquee normalization, an included ancestor wins over its included descendants regardless of input order. An explicit single-target child intent instead removes selected ancestors so the child is the target. These are distinct operations, not order-dependent applications of a series of toggles.
+Modifier precedence is Shift first, then Ctrl/Cmd, then unmodified replace. Thus Ctrl/Cmd+Shift uses the same range intent as Shift alone. Range polarity is computed from the pre-intent state: if the clicked target is an explicit selected root, remove the range; otherwise add it. The range endpoints use the previous focus and the clicked target, and focus advances to the clicked target after the operation.
+During a batch range or marquee normalization, an included ancestor wins over its included descendants regardless of input order. An explicit single-target child intent instead removes selected ancestors so the child is the target. These are distinct operations, not order-dependent applications of a series of toggles.
 
 ## Scope And Routing
 
@@ -37,7 +39,8 @@ One coordinator owns pointer, keyboard, clipboard, rail, menu, and dismissal rou
 
 The rail corridor extends only from the near edge of the current block to the rail. It never covers the block body. A descendant under the actual pointer is always eligible after the 160 ms dwell. Delayed callbacks bind the candidate ID and runtime epoch and re-resolve the current node before acting.
 
-The default grip click selects its operation root and opens that root's contextual menu. Escape from the menu returns focus to the grip without erasing the block selection. An unmodified text click activates native text selection; a pointer-down outside this context clears active selection. Rail, menu and an open selection-format form are declared context controls, not arbitrary DOM descendants exempt from dismissal. Entering a different nested editor deactivates the previous context. Projects may choose a select-only grip presentation, but the input adapter does not infer that policy from CSS or element names.
+The default grip click selects its operation root and opens that root's contextual menu. Escape from the menu returns focus to the grip without erasing the block selection. An unmodified text click activates native text selection; a pointer-down outside this context clears active selection.
+Rail, menu and an open selection-format form are declared context controls, not arbitrary DOM descendants exempt from dismissal. Entering a different nested editor deactivates the previous context. Projects may choose a select-only grip presentation, but the input adapter does not infer that policy from CSS or element names.
 
 Generic editor-root, canvas, sidebar, and blank-surface clicks never create document content. New blocks require an explicit insertion control or an engine editing command such as Enter; a rendered empty-root placeholder is not persisted content.
 
@@ -55,7 +58,8 @@ Clipboard routing snapshots the active context, mode, canonical roots, model/epo
 - A failed clipboard write preserves content.
 - Deferred cut completion may mutate only the captured model/epoch/version target; it cannot delete a later selection.
 
-Cut/delete policy and paste representation are independent. `remove-after-write` removes only the successfully copied captured range; `host-deferred` leaves the content until the host explicitly completes the operation; copy-only never removes it. Paste clone creates independent local identities; paste link creates an explicit host-resolved reference; reject consumes the offered structural operation without falling through to a different native mutation. Neither policy grants authorization. Identity/version checks establish whether the request still targets the same content; the current host permission and local locked-boundary checks must also allow a mutation when it executes.
+Cut/delete policy and paste representation are independent. `remove-after-write` removes only the successfully copied captured range; `host-deferred` leaves the content until the host explicitly completes the operation; copy-only never removes it. Paste clone creates independent local identities; paste link creates an explicit host-resolved reference; reject consumes the offered structural operation without falling through to a different native mutation.
+Neither policy grants authorization. Identity/version checks establish whether the request still targets the same content; the current host permission and local locked-boundary checks must also allow a mutation when it executes.
 
 ## History And Updates
 

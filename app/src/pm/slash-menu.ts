@@ -46,7 +46,7 @@ const applyChoice = (view: EditorView, choice: InsertionChoice): void => {
 
 export const attachSlashMenu = (
   view: EditorView,
-  menu: MenuController = createBlockMenu(view.dom.ownerDocument, "블록 삽입 메뉴"),
+  menu: MenuController = createBlockMenu(view.dom.ownerDocument, "Insert block menu"),
 ): (() => void) => {
   const update = () => {
     const query = parseSlashQuery(view.state, view.composing)

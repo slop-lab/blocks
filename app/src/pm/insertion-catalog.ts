@@ -18,43 +18,53 @@ export const insertionChoices = (view: EditorView): readonly InsertionChoice[] =
   if (profile === null) {
     const nodes = view.state.schema.nodes
     const definitions = [
-      { name: "paragraph", label: "본문", description: "일반 텍스트", keywords: ["문단", "text"] },
+      {
+        name: "paragraph",
+        label: "Text",
+        description: "Plain text",
+        keywords: ["paragraph", "text"],
+      },
       {
         name: "heading",
-        label: "제목 1",
-        description: "1단계 제목",
-        keywords: ["제목", "h1"],
+        label: "Heading 1",
+        description: "Level 1 heading",
+        keywords: ["heading", "h1"],
         attrs: { level: 1 },
       },
       {
         name: "heading",
-        label: "제목 2",
-        description: "2단계 제목",
-        keywords: ["제목", "h2"],
+        label: "Heading 2",
+        description: "Level 2 heading",
+        keywords: ["heading", "h2"],
         attrs: { level: 2 },
       },
       {
         name: "blockquote",
-        label: "인용",
-        description: "인용문",
+        label: "Quote",
+        description: "Block quote",
         keywords: ["quote"],
         container: "body" as const,
       },
       {
         name: "bullet_list",
-        label: "글머리 목록",
-        description: "순서 없는 목록",
+        label: "Bulleted list",
+        description: "Unordered list",
         keywords: ["bullet", "list"],
         wrap: "list_item",
       },
       {
         name: "ordered_list",
-        label: "번호 목록",
-        description: "순서 있는 목록",
+        label: "Numbered list",
+        description: "Ordered list",
         keywords: ["ordered", "list"],
         wrap: "list_item",
       },
-      { name: "code_block", label: "코드 블록", description: "서식 없는 코드", keywords: ["code"] },
+      {
+        name: "code_block",
+        label: "Code block",
+        description: "Unformatted code",
+        keywords: ["code"],
+      },
     ]
     return definitions.flatMap((definition): readonly InsertionChoice[] => {
       const type = nodes[definition.name]

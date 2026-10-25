@@ -34,7 +34,7 @@ export const attachBlockInteractions = (
   const ownerDocument = view.dom.ownerDocument
   const { isActive, claim, release, subscribeActive } = interactionContextFor(view, options)
   const { rail, add, grip } = createBlockControls(ownerDocument)
-  const menu = createBlockMenu(ownerDocument, "블록 작업")
+  const menu = createBlockMenu(ownerDocument, "Block actions")
   const selectionStatus = createBlockSelectionStatus(view.dom)
   const selectionContext = createBlockSelectionContext([rail, menu.element], options.contextId)
   const blockSelection = attachBlockSelection(view, {
@@ -68,7 +68,8 @@ export const attachBlockInteractions = (
 
   const run = (command: Command) => {
     const handled = command(view.state, view.dispatch, view)
-    if (!handled) options.onUnavailable?.("잠긴 블록이거나 현재 위치에서 실행할 수 없습니다.")
+    if (!handled)
+      options.onUnavailable?.("This block is locked, or the action is unavailable here.")
     view.focus()
     refreshFromSelection()
     return handled

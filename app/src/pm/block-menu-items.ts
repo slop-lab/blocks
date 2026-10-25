@@ -46,12 +46,12 @@ export const blockMenuItems = ({
     readonly name: string
     readonly attrs: Readonly<Record<string, unknown>>
   }[] = [
-    { label: "본문", name: defaultRegistration?.nodeName ?? "paragraph", attrs: {} },
-    { label: "제목 1", name: "heading", attrs: { level: 1 } },
-    { label: "제목 2", name: "heading", attrs: { level: 2 } },
-    { label: "제목 3", name: "heading", attrs: { level: 3 } },
-    { label: "인용", name: "blockquote", attrs: {} },
-    { label: "코드 블록", name: "code_block", attrs: {} },
+    { label: "Text", name: defaultRegistration?.nodeName ?? "paragraph", attrs: {} },
+    { label: "Heading 1", name: "heading", attrs: { level: 1 } },
+    { label: "Heading 2", name: "heading", attrs: { level: 2 } },
+    { label: "Heading 3", name: "heading", attrs: { level: 3 } },
+    { label: "Quote", name: "blockquote", attrs: {} },
+    { label: "Code block", name: "code_block", attrs: {} },
   ]
   const types: MenuItem[] = []
   for (const definition of definitions) {
@@ -68,7 +68,7 @@ export const blockMenuItems = ({
   const wrapItems: MenuItem[] = []
   if (wrapPlan.kind === "expanded") {
     wrapItems.push({
-      label: `선택 범위 확장 (${wrapPlan.additionalIds.length}개의 중간 블록 포함)`,
+      label: `Expand selection (include ${wrapPlan.additionalIds.length} intermediate blocks)`,
       action: () => replaceSelection(wrapPlan.coveredIds),
     })
   } else if (wrapPlan.kind === "exact") {
@@ -78,7 +78,7 @@ export const blockMenuItems = ({
       const type = schema.nodes[registration.nodeName]
       if (type === undefined) continue
       wrapItems.push({
-        label: `선택 영역 감싸기 → ${item.label}`,
+        label: `Wrap selection → ${item.label}`,
         action: () => {
           const wrapperId = crypto.randomUUID()
           if (run(wrapBlocksById(wrapPlan.coveredIds, type, wrapperId)))
@@ -88,35 +88,35 @@ export const blockMenuItems = ({
     }
   }
   const navigationItems: readonly MenuItem[] =
-    onOpenBlock === undefined ? [] : [{ label: "집중 보기", action: () => onOpenBlock(blockId) }]
+    onOpenBlock === undefined ? [] : [{ label: "Focus view", action: () => onOpenBlock(blockId) }]
   return [
     {
-      label: "위로 이동",
+      label: "Move up",
       hint: "Alt+↑",
       disabled: index === 0,
       action: () => run(moveBlockById(blockId, index - 1)),
     },
     {
-      label: "들여쓰기",
+      label: "Indent",
       hint: "Tab",
       action: () => run(indentBlocksById(selection())),
     },
     {
-      label: "내어쓰기",
+      label: "Outdent",
       hint: "Shift+Tab",
       action: () => run(outdentBlocksById(selection())),
     },
     {
-      label: "아래로 이동",
+      label: "Move down",
       hint: "Alt+↓",
       disabled: index === siblingCount - 1,
       action: () => run(moveBlockById(blockId, index + 2)),
     },
-    { label: "복제", hint: "Mod+Shift+D", action: () => run(duplicateBlockById(blockId)) },
-    { label: "잘라내기", hint: "Mod+X", action: () => cut(menuSelection) },
+    { label: "Duplicate", hint: "Mod+Shift+D", action: () => run(duplicateBlockById(blockId)) },
+    { label: "Cut", hint: "Mod+X", action: () => cut(menuSelection) },
     ...navigationItems,
     ...wrapItems,
     ...types,
-    { label: "삭제", danger: true, action: () => run(deleteBlockById(blockId)) },
+    { label: "Delete", danger: true, action: () => run(deleteBlockById(blockId)) },
   ]
 }

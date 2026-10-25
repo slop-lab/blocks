@@ -21,7 +21,7 @@ it("does not mount an optional provider when IME rejects navigation", async () =
     await act(async () => root.render(<App />))
     const editor = host.querySelector(".ProseMirror")
     const navigate = [...host.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("함께 쓰기"),
+      button.textContent?.includes("Write together"),
     )
     if (editor === null || navigate === undefined) throw new TypeError("Workspace controls missing")
     await act(async () =>
@@ -73,8 +73,8 @@ it.each(["empty", "error"])(
         ),
       )
       const buttons = [...host.querySelectorAll("button")]
-      const generate = buttons.find((button) => button.textContent === "문장으로 수정안 만들기")
-      const apply = buttons.find((button) => button.textContent === "선택한 변경 수락")
+      const generate = buttons.find((button) => button.textContent === "Generate revision")
+      const apply = buttons.find((button) => button.textContent === "Accept selected changes")
       expect(apply?.disabled).toBe(false)
       await act(async () => generate?.click())
       expect(apply?.disabled).toBe(true)

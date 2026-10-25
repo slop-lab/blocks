@@ -50,7 +50,7 @@ it("exposes only the authorized model catalog to an author session", async () =>
     models: [
       {
         id: "fixture/deterministic",
-        providerLabel: "결정적 시나리오 / 모델미연결",
+        providerLabel: "Deterministic fixture / No model connected",
       },
     ],
     defaultModel: "fixture/deterministic",
@@ -124,7 +124,7 @@ it("runs and queries a session-owned proposal through the same-origin Part bridg
   })
   expect(completed.value).toMatchObject({
     provider: "fixture",
-    providerLabel: "결정적 시나리오 / 모델미연결",
+    providerLabel: "Deterministic fixture / No model connected",
   })
 })
 

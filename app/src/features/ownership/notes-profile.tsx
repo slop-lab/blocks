@@ -13,7 +13,7 @@ export const notesTextBlock: BlockRegistration = {
   type: "notes.text",
   nodeName: "notes_text",
   text: true,
-  insertMenu: [{ label: "본문", description: "노트 텍스트", keywords: ["문단", "text"] }],
+  insertMenu: [{ label: "Text", description: "Note text", keywords: ["paragraph", "text"] }],
   nodeSpec: {
     group: "block",
     content: "inline*",
@@ -27,7 +27,9 @@ export const notesCalloutBlock: BlockRegistration = {
   type: "notes.callout",
   nodeName: "notes_callout",
   text: true,
-  insertMenu: [{ label: "콜아웃", description: "강조 노트", keywords: ["callout", "강조"] }],
+  insertMenu: [
+    { label: "Callout", description: "Highlighted note", keywords: ["callout", "highlight"] },
+  ],
   nodeSpec: {
     group: "block",
     content: "inline*",

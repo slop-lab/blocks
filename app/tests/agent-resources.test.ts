@@ -3,6 +3,7 @@
 import { act, createElement } from "react"
 import { createRoot } from "react-dom/client"
 import { beforeEach, expect, it, vi } from "vitest"
+import { AgentModelSelect } from "../src/features/agent-workbench/AgentModelSelect"
 import { AgentWorkbench } from "../src/features/agent-workbench/AgentWorkbench"
 import { loadAgentResources } from "../src/features/agent-workbench/agent-api"
 
@@ -53,6 +54,32 @@ it("keeps Markdown and database resources when the mixed catalog fails", async (
   })
 })
 
+it("exposes the complete selected model outside the single-line option", async () => {
+  // Given a selected model returned by the server catalog.
+  const host = document.createElement("div")
+  document.body.append(host)
+  const root = createRoot(host)
+  try {
+    // When the shared model selector loads its catalog.
+    await act(async () =>
+      root.render(
+        createElement(AgentModelSelect, { value: "fixture/deterministic", onChange: vi.fn() }),
+      ),
+    )
+
+    // Then its accessible description exposes the identity in wrapping content.
+    const select = host.querySelector("select")
+    const detailsId = select?.getAttribute("aria-describedby")
+    const details = detailsId ? document.getElementById(detailsId) : null
+    expect(details?.textContent).toContain("fixture/deterministic")
+    expect(details?.textContent).toContain("Fixture")
+    expect(details?.closest("select")).toBeNull()
+  } finally {
+    await act(async () => root.unmount())
+    host.remove()
+  }
+})
+
 it("shows the mixed failure only on its disabled story while Markdown stays selectable", async () => {
   const host = document.createElement("div")
   document.body.append(host)
@@ -61,14 +88,14 @@ it("shows the mixed failure only on its disabled story while Markdown stays sele
   await act(async () => root.render(createElement(AgentWorkbench)))
 
   const resourceSelect = Array.from(host.querySelectorAll<HTMLSelectElement>("select")).find(
-    (select) => select.labels.item(0)?.textContent?.includes("권한 있는 원본"),
+    (select) => select.labels.item(0)?.textContent?.includes("Authorized source"),
   )
   expect(resourceSelect?.value).toBe("README.md")
   expect(resourceSelect?.disabled).toBe(false)
   expect(host.querySelector('[role="alert"]')).toBeNull()
 
   const mixedTab = Array.from(host.querySelectorAll<HTMLButtonElement>('[role="tab"]')).find(
-    (tab) => tab.textContent?.includes("혼합 백로그"),
+    (tab) => tab.textContent?.includes("Mixed backlog"),
   )
   await act(async () => mixedTab?.click())
 

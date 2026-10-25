@@ -20,14 +20,14 @@ export const useMixedAgent = ({ state, task, onState, onDraft, onMessage }: Mixe
   const run = async () => {
     if (running || state === null || task === undefined) return
     setRunning(true)
-    onMessage("에이전트 작업을 시작합니다.")
+    onMessage("Starting the agent task.")
     try {
       const runningState = task.status === "running" ? state : await changeTaskStatus(state, task)
       onState(runningState)
       const runningTask = runningState.tasks.find((item) => item.id === task.id)
       const presentation = runningState.presentations[task.id]
       if (runningTask === undefined || presentation === undefined)
-        throw new TypeError("에이전트 작업 대상을 찾지 못했습니다.")
+        throw new TypeError("Could not find the agent task target.")
       const proposal = runningState.proposals.find((item) => item.taskId === runningTask.id)
       const source =
         proposal?.dependencyVersion === runningTask.version ? proposal.document : presentation
@@ -49,7 +49,7 @@ export const useMixedAgent = ({ state, task, onState, onDraft, onMessage }: Mixe
         },
       )
       if (outcome === "cancelled") {
-        onMessage("에이전트 실행을 취소했습니다.")
+        onMessage("Canceled the agent run.")
         return
       }
       onDraft({
@@ -63,9 +63,9 @@ export const useMixedAgent = ({ state, task, onState, onDraft, onMessage }: Mixe
         document: candidate,
         editVersion: 1,
       })
-      onMessage("에이전트 후보를 만들었습니다. 검토한 뒤 하위 문서 저장을 선택하세요.")
+      onMessage("Created an agent candidate. Review it, then choose Save child document.")
     } catch (error) {
-      onMessage(error instanceof Error ? error.message : "에이전트 작업이 중단되었습니다.")
+      onMessage(error instanceof Error ? error.message : "The agent task was interrupted.")
     } finally {
       setRunning(false)
     }

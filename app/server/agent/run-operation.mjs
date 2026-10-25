@@ -107,7 +107,7 @@ export const startAgentOperation = async ({
     tools.map((tool) => [tool.id, documentToolSchemas[tool.id]]),
   )
   const created = createAgent({
-    model: model.create(input),
+    model: model.create(input, authoritative.context),
     tools,
     toolSchemas,
     principal: owner,

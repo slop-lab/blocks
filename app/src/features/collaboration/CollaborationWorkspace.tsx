@@ -9,11 +9,11 @@ import { CollaborationEditor } from "./CollaborationEditor"
 import "./collaboration.css"
 
 const statusLabel: Readonly<Record<CollaborationStatus, string>> = {
-  offline: "오프라인",
-  connecting: "연결 중",
-  connected: "연결됨",
-  reconnecting: "재연결 중",
-  incompatible: "스키마 불일치",
+  offline: "Offline",
+  connecting: "Connecting",
+  connected: "Connected",
+  reconnecting: "Reconnecting",
+  incompatible: "Schema mismatch",
 }
 
 const cssColor = (token: string): string =>
@@ -28,25 +28,25 @@ const collaborationSeed: BlockDocument = {
       id: "collaboration-title",
       type: "heading",
       attrs: { level: 1 },
-      content: text("공동 편집 회의록"),
+      content: text("Collaborative meeting notes"),
     },
     {
       id: "collaboration-agenda",
       type: "paragraph",
       attrs: {},
-      content: text("다음 모임의 주제를 정합니다."),
+      content: text("Choose a topic for the next meeting."),
     },
     {
       id: "collaboration-preparation",
       type: "paragraph",
       attrs: {},
-      content: text("준비물을 함께 정리합니다."),
+      content: text("Organize the materials together."),
     },
     {
       id: "collaboration-locked-policy",
       type: "paragraph",
       attrs: {},
-      content: text("사진: 동의 후 공유합니다."),
+      content: text("Photos: share only with consent."),
       locked: true,
     },
   ],
@@ -83,7 +83,7 @@ const PeerPanel = ({ label, binding, onActive }: PeerPanelProps) => {
     <section className="collaboration-peer" aria-labelledby={`collaboration-${label}`}>
       <header className="collaboration-peer__header">
         <div>
-          <span className="eyebrow">함께 쓰는 문서</span>
+          <span className="eyebrow">Shared document</span>
           <h2 id={`collaboration-${label}`}>{label}</h2>
         </div>
         <span
@@ -98,7 +98,7 @@ const PeerPanel = ({ label, binding, onActive }: PeerPanelProps) => {
           {statusLabel[status]}
         </span>
       </header>
-      <ul className="collaboration-peer__presence" aria-label={`${label} 참여자`}>
+      <ul className="collaboration-peer__presence" aria-label={`${label} participants`}>
         {users.map((user) => (
           <li className="collaboration-person" key={`${user.name}-${user.color}`}>
             <span className="collaboration-person__dot" style={{ backgroundColor: user.color }} />
@@ -108,7 +108,7 @@ const PeerPanel = ({ label, binding, onActive }: PeerPanelProps) => {
       </ul>
       {status === "incompatible" && (
         <p className="collaboration-error" role="alert">
-          서버와 편집기 스키마 버전이 달라 연결을 중단했습니다.
+          The server and editor schema versions differ, so the connection was stopped.
         </p>
       )}
       {hasConnected ? (
@@ -119,7 +119,7 @@ const PeerPanel = ({ label, binding, onActive }: PeerPanelProps) => {
         />
       ) : (
         <div className="collaboration-editor collaboration-editor--loading" role="status">
-          권위 있는 공동 문서를 동기화하고 있습니다.
+          Synchronizing the authoritative shared document.
         </div>
       )}
       <button
@@ -128,7 +128,7 @@ const PeerPanel = ({ label, binding, onActive }: PeerPanelProps) => {
         onClick={() => (online ? binding.disconnect() : binding.connect())}
         disabled={status === "incompatible"}
       >
-        {online ? "오프라인으로 전환" : "다시 연결"}
+        {online ? "Go offline" : "Reconnect"}
       </button>
     </section>
   )
@@ -148,12 +148,12 @@ export const CollaborationWorkspace = () => {
     const nextBindings = [
       new CollaborationBinding({
         room,
-        user: { name: "민서", color: cssColor("--accent") },
+        user: { name: "Minseo", color: cssColor("--accent") },
         initialDocument: collaborationSeed,
       }),
       new CollaborationBinding({
         room,
-        user: { name: "지우", color: cssColor("--locked") },
+        user: { name: "Jiwoo", color: cssColor("--locked") },
         initialDocument: collaborationSeed,
       }),
     ] as const
@@ -172,31 +172,31 @@ export const CollaborationWorkspace = () => {
   }
 
   return (
-    <section className="collaboration-workspace" aria-label="실시간 공동 편집">
+    <section className="collaboration-workspace" aria-label="Real-time collaborative editing">
       <header className="collaboration-intro">
         <div>
-          <span className="eyebrow">함께 쓰기</span>
-          <h1>한 문서, 두 개의 독립된 선택</h1>
+          <span className="eyebrow">Collaborative editing</span>
+          <h1>One document, two independent selections</h1>
           <p>
-            각 편집기는 자체 선택과 로컬 실행 취소 기록을 가지며, 문서 변경과 현재 위치는
-            WebSocket으로 공유됩니다.
+            Each editor has its own selection and local undo history, while document changes and
+            presence are shared over WebSocket.
           </p>
         </div>
         <p className="collaboration-intro__note">
-          표시 이름은 현재 위치를 설명하기 위한 정보이며 접근 권한을 부여하지 않습니다.
+          Display names describe presence and do not grant access.
         </p>
       </header>
       <div
         className="collaboration-toolbar toolbar"
         role="toolbar"
-        aria-label="활성 공동 편집기 도구"
+        aria-label="Active collaborative editor tools"
       >
-        <strong>{active === null ? "편집기를 선택하세요" : `${active.label} 활성`}</strong>
+        <strong>{active === null ? "Select an editor" : `${active.label} active`}</strong>
         <span className="toolbar__divider" />
         <button
           className="tool"
           type="button"
-          aria-label="실행 취소"
+          aria-label="Undo"
           onClick={() => run((view) => undo(view.state))}
           disabled={active === null}
         >
@@ -205,7 +205,7 @@ export const CollaborationWorkspace = () => {
         <button
           className="tool"
           type="button"
-          aria-label="다시 실행"
+          aria-label="Redo"
           onClick={() => run((view) => redo(view.state))}
           disabled={active === null}
         >
@@ -214,7 +214,7 @@ export const CollaborationWorkspace = () => {
         <button
           className="tool"
           type="button"
-          aria-label="굵게"
+          aria-label="Bold"
           onClick={() => run((view) => toggleFormat("strong")(view.state, view.dispatch, view))}
           disabled={active === null}
         >
@@ -223,7 +223,7 @@ export const CollaborationWorkspace = () => {
         <button
           className="tool"
           type="button"
-          aria-label="기울임"
+          aria-label="Italic"
           onClick={() => run((view) => toggleFormat("em")(view.state, view.dispatch, view))}
           disabled={active === null}
         >
@@ -232,17 +232,17 @@ export const CollaborationWorkspace = () => {
       </div>
       {bindings === null ? (
         <div className="collaboration-editor collaboration-editor--loading" role="status">
-          공동 편집 연결을 준비하고 있습니다.
+          Preparing the collaborative editing connection.
         </div>
       ) : (
         <div className="collaboration-grid">
           <PeerPanel
-            label="편집자 A"
+            label="Editor A"
             binding={bindings[0]}
             onActive={(view, label) => setActive({ view, label })}
           />
           <PeerPanel
-            label="편집자 B"
+            label="Editor B"
             binding={bindings[1]}
             onActive={(view, label) => setActive({ view, label })}
           />

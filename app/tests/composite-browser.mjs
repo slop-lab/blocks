@@ -1,7 +1,7 @@
 import { chromium } from "playwright"
 
 const browser = await chromium.launch({
-  executablePath: process.env.CHROME_PATH ?? "/opt/google/chrome/chrome",
+  ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),
   headless: true,
   args: ["--no-sandbox"],
 })
@@ -17,34 +17,34 @@ await page.goto(
 )
 await page.evaluate(() => localStorage.clear())
 await page.reload()
-await page.getByRole("heading", { name: "여행 워크숍 계획" }).waitFor({ state: "attached" })
+await page.getByRole("heading", { name: "Travel workshop plan" }).waitFor({ state: "attached" })
 
 const cells = page.locator(".composite-prose td")
 await cells.first().click()
-await page.getByRole("button", { name: "아래 행 추가" }).click()
+await page.getByRole("button", { name: "Add row below" }).click()
 if ((await page.locator(".composite-prose tr").count()) !== 3)
   throw new TypeError("Table row command did not add a native row")
 
-const code = page.getByRole("textbox", { name: "여행 준비 코드 편집기" })
+const code = page.getByRole("textbox", { name: "Travel preparation code editor" })
 await code.click()
 await page.keyboard.press("ControlOrMeta+A")
 await page.keyboard.insertText("const scoped = true")
 await page.keyboard.press("Tab")
-if (!(await page.getByRole("button", { name: "문서와 코드 저장" }).isEnabled()))
+if (!(await page.getByRole("button", { name: "Save document and code" }).isEnabled()))
   throw new TypeError("Independent code draft did not become dirty")
 await page.reload()
-await page.getByRole("heading", { name: "여행 워크숍 계획" }).waitFor({ state: "attached" })
+await page.getByRole("heading", { name: "Travel workshop plan" }).waitFor({ state: "attached" })
 if ((await page.locator(".composite-prose tr").count()) !== 3)
   throw new TypeError("Table draft did not survive reload")
 if (
-  !(await page.getByRole("textbox", { name: "여행 준비 코드 편집기" }).textContent()).includes(
-    "scoped",
-  )
+  !(
+    await page.getByRole("textbox", { name: "Travel preparation code editor" }).textContent()
+  ).includes("scoped")
 )
   throw new TypeError("Code draft did not survive reload")
-await page.getByRole("button", { name: "문서와 코드 저장" }).click()
+await page.getByRole("button", { name: "Save document and code" }).click()
 await page.reload()
-if (await page.getByRole("button", { name: "문서와 코드 저장" }).isEnabled())
+if (await page.getByRole("button", { name: "Save document and code" }).isEnabled())
   throw new TypeError("Saved workspace reloaded as dirty")
 
 for (const viewport of [
@@ -53,7 +53,7 @@ for (const viewport of [
   { width: 375, height: 812 },
 ]) {
   await page.setViewportSize(viewport)
-  await page.getByRole("heading", { name: "여행 워크숍 계획" }).waitFor({ state: "attached" })
+  await page.getByRole("heading", { name: "Travel workshop plan" }).waitFor({ state: "attached" })
   if (await page.locator("body").evaluate((body) => body.scrollWidth > body.clientWidth))
     throw new TypeError(`Composite workspace overflows at ${viewport.width}px`)
 }

@@ -24,9 +24,9 @@ try {
     const errors = []
     page.on("pageerror", (error) => errors.push(error.message))
     await page.goto(`http://127.0.0.1:${address.port}`, { waitUntil: "networkidle" })
-    await page.getByRole("button", { name: /소유권 예제/ }).click()
-    await page.getByRole("button", { name: "프로젝트 보드", exact: true }).click()
-    const board = page.getByLabel("프로젝트 보드 표현 편집기")
+    await page.getByRole("button", { name: /Ownership examples/ }).click()
+    await page.getByRole("button", { name: "Project board", exact: true }).click()
+    const board = page.getByLabel("Project board presentation editor")
     await board.locator("article").first().click()
     await page.keyboard.press("End")
     await page.keyboard.type(" 연속입력검증")
@@ -46,28 +46,28 @@ try {
           ?.getAttribute("data-target-block-id") === id,
       firstBlockId,
     )
-    await page.getByRole("button", { name: "이 블록 뒤에 블록 추가", exact: true }).click()
-    await page.getByRole("menuitem", { name: "본문", exact: true }).click()
+    await page.getByRole("button", { name: "Add a block after this one", exact: true }).click()
+    await page.getByRole("menuitem", { name: "Text", exact: true }).click()
     assert.equal(await board.locator("[data-block-id]").count(), blocksBeforeAdd + 1)
-    await page.getByRole("button", { name: "표현 저장", exact: true }).click()
+    await page.getByRole("button", { name: "Save presentation", exact: true }).click()
     const before = await board.locator("article").count()
-    await page.getByRole("button", { name: "카드 복제", exact: true }).click()
+    await page.getByRole("button", { name: "Duplicate card", exact: true }).click()
     assert.equal(
-      await page.getByLabel("프로젝트 보드 표현 편집기").locator("article").count(),
+      await page.getByLabel("Project board presentation editor").locator("article").count(),
       before + 1,
     )
     await page.keyboard.press("Control+z")
     assert.equal(
-      await page.getByLabel("프로젝트 보드 표현 편집기").locator("article").count(),
+      await page.getByLabel("Project board presentation editor").locator("article").count(),
       before,
     )
-    await page.getByRole("button", { name: "혼합 백로그", exact: true }).click()
-    await page.getByRole("button", { name: "표현 편집", exact: true }).click()
-    await page.getByLabel("혼합 표현 편집기").locator("p").first().click()
+    await page.getByRole("button", { name: "Mixed backlog", exact: true }).click()
+    await page.getByRole("button", { name: "Edit presentation", exact: true }).click()
+    await page.getByLabel("Mixed presentation editor").locator("p").first().click()
     await page.keyboard.press("End")
     await page.keyboard.insertText(" 수정")
     await page.getByRole("button", { name: /TASK-108 ·/ }).click()
-    const saveButton = page.getByRole("button", { name: "하위 문서 저장", exact: true })
+    const saveButton = page.getByRole("button", { name: "Save child document", exact: true })
     assert.equal(await saveButton.isEnabled(), true)
     const saveRequest = page.waitForRequest((request) =>
       request.url().includes("/api/ownership/mixed/presentation"),
@@ -82,7 +82,7 @@ try {
     )
     assert.match(JSON.stringify(savedState.presentations["TASK-104"]), /수정/)
     assert.doesNotMatch(JSON.stringify(savedState.presentations["TASK-108"]), /수정/)
-    await page.getByRole("button", { name: "작업 Markdown 열기", exact: true }).click()
+    await page.getByRole("button", { name: "Open task Markdown", exact: true }).click()
     await page.getByRole("heading", { name: "tasks/TASK-108.md" }).waitFor()
     assert.equal(errors.length, 0)
     await page.close()

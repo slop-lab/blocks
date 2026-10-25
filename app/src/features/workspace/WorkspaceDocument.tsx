@@ -108,7 +108,7 @@ export const WorkspaceDocument = (props: Props) => {
     navigateFocus(resolvedTarget, true)
   }, [focus, focusTarget, navigateFocus])
   return (
-    <article className="structured-document" aria-label="구조화 문서 편집기">
+    <article className="structured-document" aria-label="Structured document editor">
       {focus !== null && (
         <WorkspaceFocusBreadcrumbs focus={focus} onNavigate={(target) => navigateFocus(target)} />
       )}
@@ -135,7 +135,7 @@ export const WorkspaceDocument = (props: Props) => {
       {embeddedDatabaseIds(focusedLocalBlocks(props.document, focus)).map((databaseId) => {
         const database = props.databases.find((candidate) => candidate.id === databaseId)
         return database === undefined ? (
-          <p key={databaseId}>데이터베이스를 찾을 수 없습니다.</p>
+          <p key={databaseId}>Database not found.</p>
         ) : (
           <WorkspaceDatabase key={databaseId} database={database} onChange={props.onDatabase} />
         )

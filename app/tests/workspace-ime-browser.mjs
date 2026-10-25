@@ -73,7 +73,7 @@ const composeKoreanAcrossPoll = async (page, paragraph, editor, token, duringCom
   assert.match(await paragraph.innerText(), /한글$/u)
   await client.send("Input.insertText", { text: "한글" })
   await client.detach()
-  await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
+  await page.getByRole("status").filter({ hasText: "Saved all changes." }).waitFor()
   assert.equal(await editor.getAttribute("data-ime-owner"), token)
   assert.equal(await editor.getAttribute("data-composition-starts"), "1")
   assert.equal(await editor.getAttribute("data-composition-ends"), "1")
@@ -84,7 +84,7 @@ try {
   const errors = []
   page.on("pageerror", (error) => errors.push(error.message))
   await page.goto(`${base}/?workspace=structured-workspace`, { waitUntil: "networkidle" })
-  const workspace = page.getByLabel("문서와 데이터베이스")
+  const workspace = page.getByLabel("Documents and databases")
   await workspace.waitFor()
 
   const rootEditor = workspace.locator(".structured-prosemirror")
@@ -95,7 +95,7 @@ try {
   assert.doesNotMatch(await rootParagraph.innerText(), /한글$/u)
   await page.keyboard.press("Control+Shift+z")
   assert.match(await rootParagraph.innerText(), /한글$/u)
-  await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
+  await page.getByRole("status").filter({ hasText: "Saved all changes." }).waitFor()
   await page.reload({ waitUntil: "networkidle" })
   assert.match(await workspace.locator('[data-block-id="home-p"]').innerText(), /한글$/u)
 
@@ -121,7 +121,7 @@ try {
   })
   assert.equal(seeded.status(), 200)
   await page.reload({ waitUntil: "networkidle" })
-  await workspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
+  await workspace.getByRole("button", { name: "User Research", exact: true }).click()
   const localEditor = workspace.locator(".structured-prosemirror")
   const localSection = localEditor.locator('[data-block-id="local-section"]')
   await composeKoreanAcrossPoll(
@@ -132,10 +132,10 @@ try {
   )
   assert.match(await localSection.innerText(), /한글/u)
   await page.reload({ waitUntil: "networkidle" })
-  await workspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
+  await workspace.getByRole("button", { name: "User Research", exact: true }).click()
   assert.match(await workspace.locator('[data-block-id="local-section"]').innerText(), /한글/u)
 
-  await workspace.getByRole("button", { name: "제품 출시", exact: true }).click()
+  await workspace.getByRole("button", { name: "Product Launch", exact: true }).click()
   const sharedSection = workspace.locator(".structured-sync").first()
   const sharedEditor = sharedSection.locator(".structured-sync__editor")
   const sharedParagraph = sharedEditor.locator("p").first()
@@ -152,11 +152,11 @@ try {
     assert.equal(response.status(), 200)
   })
   assert.match(await sharedParagraph.innerText(), /한글$/u)
-  await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
+  await page.getByRole("status").filter({ hasText: "Saved all changes." }).waitFor()
   const projectedCopy = workspace.locator(".structured-sync").nth(1).locator("p").first()
   assert.match(await projectedCopy.innerText(), /한글$/u)
   await page.reload({ waitUntil: "networkidle" })
-  await workspace.getByRole("button", { name: "제품 출시", exact: true }).click()
+  await workspace.getByRole("button", { name: "Product Launch", exact: true }).click()
   assert.match(
     await workspace.locator(".structured-sync").first().locator("p").first().innerText(),
     /한글$/u,

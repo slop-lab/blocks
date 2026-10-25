@@ -26,12 +26,12 @@ try {
   const errors = []
   page.on("pageerror", (error) => errors.push(error.message))
   await page.goto(base, { waitUntil: "networkidle" })
-  const editor = page.getByLabel("블록 문서 편집기", { exact: true })
+  const editor = page.getByLabel("Block document editor", { exact: true })
   const firstBlock = editor.locator("[data-block-id]").first()
 
   await firstBlock.hover()
-  const add = page.getByRole("button", { name: "이 블록 뒤에 블록 추가", exact: true })
-  const grip = page.getByRole("button", { name: "블록 메뉴 및 드래그", exact: true })
+  const add = page.getByRole("button", { name: "Add a block after this one", exact: true })
+  const grip = page.getByRole("button", { name: "Block menu and drag handle", exact: true })
   await assert.doesNotReject(add.waitFor({ state: "visible" }))
   await firstBlock.evaluate((element) => {
     element.style.transform = "translateY(18px)"
@@ -39,7 +39,7 @@ try {
   })
   await page.waitForTimeout(20)
   const anchored = await page.evaluate(() => {
-    const block = document.querySelector("[aria-label='블록 문서 편집기'] [data-block-id]")
+    const block = document.querySelector("[aria-label='Block document editor'] [data-block-id]")
     const rail = document.querySelector(".block-controls:not([hidden])")
     return block !== null && rail !== null
       ? Math.abs(block.getBoundingClientRect().top - rail.getBoundingClientRect().top) < 1
@@ -52,17 +52,17 @@ try {
   })
   const countBeforeAdd = await editor.locator("[data-block-id]").count()
   await add.click()
-  await page.getByRole("menuitem", { name: "본문", exact: true }).click()
+  await page.getByRole("menuitem", { name: "Paragraph", exact: true }).click()
   assert.equal(await editor.locator("[data-block-id]").count(), countBeforeAdd + 1)
 
-  await page.keyboard.type("/제")
-  await page.getByRole("menu", { name: "블록 삽입 메뉴" }).waitFor()
+  await page.keyboard.type("/hea")
+  await page.getByRole("menu", { name: "Insert block menu" }).waitFor()
   await page.keyboard.press("ArrowDown")
   await page.keyboard.press("Enter")
   assert.ok((await editor.locator("h1, h2, h3").count()) > 0)
 
   await firstBlock.hover()
-  const blockMenu = page.getByRole("menu", { name: "블록 작업" })
+  const blockMenu = page.getByRole("menu", { name: "Block actions" })
   const jitterBox = await grip.boundingBox()
   if (jitterBox === null) throw new TypeError("Missing grip geometry")
   await page.mouse.move(jitterBox.x + jitterBox.width / 2, jitterBox.y + jitterBox.height / 2)
@@ -74,7 +74,7 @@ try {
   await grip.click()
   await blockMenu.waitFor()
   const countBeforeDuplicate = await editor.locator("[data-block-id]").count()
-  await blockMenu.getByRole("menuitem", { name: /복제/ }).click()
+  await blockMenu.getByRole("menuitem", { name: /Duplicate/ }).click()
   assert.equal(await editor.locator("[data-block-id]").count(), countBeforeDuplicate + 1)
 
   const countBeforeCut = await editor.locator("[data-block-id]").count()
@@ -154,15 +154,11 @@ try {
   const thirdSelectable = selectable.nth(2)
   const clickWith = async (target, modifier) => {
     await target.waitFor({ state: "visible" })
-    const box = await target.boundingBox()
-    if (box === null) throw new TypeError("Missing selection target geometry")
-    await page.keyboard.down(modifier)
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
-    await page.keyboard.up(modifier)
+    await target.click({ modifiers: [modifier] })
   }
   await clickWith(secondSelectable, "Control")
   await page.waitForFunction(
-    () => document.querySelector("[aria-label='블록 문서 편집기'] .block-selected") !== null,
+    () => document.querySelector("[aria-label='Block document editor'] .block-selected") !== null,
   )
   assert.equal(
     await editor.locator(".block-selected").count(),
@@ -178,7 +174,9 @@ try {
   assert.equal(await editor.locator(".block-selected").count(), 4)
   await clickWith(secondSelectable, "Control")
   await page.waitForFunction(
-    () => document.querySelectorAll("[aria-label='블록 문서 편집기'] .block-selected").length === 3,
+    () =>
+      document.querySelectorAll("[aria-label='Block document editor'] .block-selected").length ===
+      3,
   )
   assert.equal(await editor.locator(".block-selected").count(), 3)
   await thirdSelectable.click()
@@ -208,7 +206,7 @@ try {
     true,
   )
   const countBeforeOutsideClick = await editor.locator("[data-block-id]").count()
-  await page.locator("aside[aria-label='예제 탐색']").click({ position: { x: 4, y: 4 } })
+  await page.locator("aside[aria-label='Example navigation']").click({ position: { x: 4, y: 4 } })
   assert.equal(await editor.locator(".block-selected").count(), 0)
   assert.equal(await editor.locator("[data-block-id]").count(), countBeforeOutsideClick)
 
@@ -231,7 +229,11 @@ try {
     .locator(":scope > [data-block-id]")
     .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-block-id")))
   const destination = editor.locator("[data-block-id]").last()
-  await grip.dragTo(destination)
+  const destinationBox = await destination.boundingBox()
+  if (destinationBox === null) throw new TypeError("Missing drag destination geometry")
+  await grip.dragTo(destination, {
+    targetPosition: { x: Math.min(20, destinationBox.width / 2), y: destinationBox.height - 2 },
+  })
   const idsAfterSingleDrag = await editor
     .locator(":scope > [data-block-id]")
     .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-block-id")))
@@ -275,12 +277,12 @@ try {
   await page.keyboard.press("Escape")
   const paragraph = editor.locator("p").first()
   await paragraph.dblclick()
-  await page.getByRole("toolbar", { name: "선택한 글자 서식" }).waitFor()
-  await page.getByRole("button", { name: "굵게", exact: true }).last().click()
+  await page.getByRole("toolbar", { name: "Format selected text" }).waitFor()
+  await page.getByRole("button", { name: "Bold", exact: true }).last().click()
   assert.ok((await editor.locator("strong").count()) > 0)
-  const linkButton = page.getByRole("button", { name: "링크 편집", exact: true }).last()
+  const linkButton = page.getByRole("button", { name: "Edit link", exact: true }).last()
   await linkButton.click()
-  const linkInput = page.getByLabel("링크 주소", { exact: true })
+  const linkInput = page.getByLabel("Link address", { exact: true })
   assert.equal(await linkInput.getAttribute("type"), "text")
   assert.equal(await linkInput.getAttribute("inputmode"), "url")
   await linkInput.fill("/relative")
@@ -289,11 +291,11 @@ try {
   await linkInput.press("Control+c")
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), "/relative")
   assert.equal(await editor.locator("[data-block-id]").count(), countBeforeNativeCopy)
-  await page.getByRole("button", { name: "적용", exact: true }).click()
+  await page.getByRole("button", { name: "Apply", exact: true }).click()
   const relativeLink = editor.locator("a[href='/relative']")
   assert.equal(await relativeLink.count(), 1)
 
-  await page.getByRole("button", { name: "정적 미리보기", exact: true }).click()
+  await page.getByRole("button", { name: "Static preview", exact: true }).click()
   const previewLink = page.locator(".static-viewer a[href='/relative']")
   assert.equal(await previewLink.count(), 1)
   let previewLinkFocused = false
@@ -305,43 +307,43 @@ try {
     if (previewLinkFocused) break
   }
   assert.equal(previewLinkFocused, true)
-  await page.getByRole("button", { name: "편집기", exact: true }).click()
+  await page.getByRole("button", { name: "Editor", exact: true }).click()
 
   await relativeLink.dblclick()
   await linkButton.click()
   assert.equal(await linkInput.inputValue(), "/relative")
   await linkInput.fill("mailto:reader@example.com")
-  await page.getByRole("button", { name: "적용", exact: true }).click()
+  await page.getByRole("button", { name: "Apply", exact: true }).click()
   const mailLink = editor.locator("a[href='mailto:reader@example.com']")
   assert.equal(await mailLink.count(), 1)
 
   await mailLink.dblclick()
   await linkButton.click()
-  await page.getByRole("button", { name: "링크 제거", exact: true }).click()
+  await page.getByRole("button", { name: "Remove link", exact: true }).click()
   assert.equal(await editor.locator("a[href='mailto:reader@example.com']").count(), 0)
   await linkButton.click()
   await linkInput.fill("javascript:alert(1)")
-  await page.getByRole("button", { name: "적용", exact: true }).click()
+  await page.getByRole("button", { name: "Apply", exact: true }).click()
   await page
     .getByRole("alert")
-    .filter({ hasText: /안전한/ })
+    .filter({ hasText: /safe web/ })
     .waitFor()
   assert.equal(await linkInput.isVisible(), true)
-  await page.getByRole("button", { name: "취소", exact: true }).click()
+  await page.getByRole("button", { name: "Cancel", exact: true }).click()
   assert.equal(await linkInput.isVisible(), false)
 
-  await page.getByRole("button", { name: /C · 읽기 전용/ }).click()
-  await page.getByLabel("읽기 전용 문서", { exact: true }).locator("p").first().hover()
+  await page.getByRole("button", { name: /C · Read-only/ }).click()
+  await page.getByLabel("Read-only document", { exact: true }).locator("p").first().hover()
   assert.equal(await page.locator(".block-controls:not([hidden])").count(), 0)
 
-  await page.getByRole("button", { name: /B · 작업 브리핑/ }).click()
+  await page.getByRole("button", { name: /B · Work briefing/ }).click()
   await page.locator(".task-card").first().hover()
   await grip.click()
-  assert.ok(await page.getByRole("menuitem", { name: "삭제", exact: true }).isVisible())
+  assert.ok(await page.getByRole("menuitem", { name: "Delete", exact: true }).isVisible())
   await page.keyboard.press("Escape")
 
-  await page.getByRole("button", { name: /함께 쓰기/ }).click()
-  const peer = page.getByLabel("편집자 A 공동 편집기", { exact: true })
+  await page.getByRole("button", { name: /Write together/ }).click()
+  const peer = page.getByLabel("Editor A collaborative editor", { exact: true })
   await peer.locator("p").first().hover()
   await assert.doesNotReject(page.locator(".block-control--grip:visible").waitFor())
   const collaborationScroller = page.locator(".collaboration-workspace")
@@ -376,28 +378,31 @@ try {
   const collaborationLinkButton = page
     .locator(".selection-toolbar:not([hidden])")
     .getByRole("button", {
-      name: "링크 편집",
+      name: "Edit link",
     })
   await collaborationLinkButton.click()
   const collaborationLinkInput = page
     .locator(".selection-toolbar:not([hidden])")
-    .getByLabel("링크 주소")
+    .getByLabel("Link address")
   await collaborationLinkInput.fill("/stale")
-  const remotePeer = page.getByLabel("편집자 B 공동 편집기", { exact: true })
+  const remotePeer = page.getByLabel("Editor B collaborative editor", { exact: true })
   await remotePeer.locator("p").first().click()
   await page.keyboard.type("원격")
   await page
     .locator(".selection-toolbar:not([hidden])")
-    .getByRole("button", { name: "적용" })
+    .getByRole("button", { name: "Apply" })
     .click()
-  await page.getByRole("alert").filter({ hasText: /선택/ }).waitFor()
+  await page
+    .getByRole("alert")
+    .filter({ hasText: /selected text/ })
+    .waitFor()
   assert.equal(await peer.locator("a[href='/stale']").count(), 0)
 
-  await page.getByRole("button", { name: /표와 코드/ }).click()
-  const composite = page.getByLabel("구조화 문서와 표 편집기", { exact: true })
+  await page.getByRole("button", { name: /Tables and code/ }).click()
+  const composite = page.getByLabel("Structured document and table editor", { exact: true })
   await composite.locator(":scope > [data-block-id]").first().hover()
   await assert.doesNotReject(page.locator(".block-control--grip:visible").waitFor())
-  await page.getByLabel("여행 준비 코드 편집기", { exact: true }).click()
+  await page.getByLabel("Travel preparation code editor", { exact: true }).click()
   assert.equal(await page.locator(".block-controls:not([hidden])").count(), 0)
   assert.deepEqual(errors, [])
   console.log(

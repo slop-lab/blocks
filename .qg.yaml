@@ -1,0 +1,41 @@
+presets: [js-test-fixtures]
+artifacts:
+  generated:
+    include: [".pnpm-store/**", ".runtime/**", ".omo/**", "test-results/**", "playwright-report/**"]
+ruleModules:
+  - ./qg-rules.mjs
+  - "@slop-lab/qg-rules-biome"
+
+hooks:
+  preCommit:
+    installation: auto
+
+rules:
+  package/allowed-name:
+    severity: error
+    options:
+      allowedPatterns: ["@slop-lab/blocks(-[a-z-]+)?", "@this-project/(demo|block-docs)"]
+  package-manager/no-npm-lock-with-pnpm: error
+  pnpm/lockfile-is-current: error
+  test/no-directory-fixture-copy:
+    severity: error
+    options:
+      testFileSuffixes: [".test.ts", ".test.tsx", ".test.mjs", "-browser.mjs"]
+  external/biome:
+    severity: error
+    options: { mode: format }
+
+checks:
+  - name: lint
+    command: pnpm
+    args: [lint]
+    message: "Run pnpm lint and fix formatting, lint, and import diagnostics."
+  - name: typecheck
+    command: pnpm
+    args: [typecheck]
+    message: "Fix package and application type errors."
+  - name: tests
+    command: pnpm
+    args: [test]
+    timeoutMs: 300000
+    message: "Fix the failing unit and integration tests."

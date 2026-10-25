@@ -112,7 +112,7 @@ export const WorkspaceEditor = (props: Props) => {
       state: session.state,
       attributes: {
         class: "editor-content structured-prosemirror",
-        "aria-label": "구조화 문서 편집기",
+        "aria-label": "Structured document editor",
       },
       nodeViews: workspaceViews.nodeViews,
       decorations: (state) =>

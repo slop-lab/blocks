@@ -15,13 +15,13 @@ export const GitDocumentsWorkspace = () => {
     return (
       <section className="git-docs-unavailable">
         <span className="eyebrow">GIT DOCUMENTS</span>
-        <h1>문서 라이브러리를 연결하세요</h1>
+        <h1>Connect a document library</h1>
         <p>{workspace.status}</p>
         <code>pnpm docs:start -- --repo /path/to/repository --docs docs</code>
       </section>
     )
   return (
-    <section className="git-docs-shell" aria-label="Git 문서 작업 공간">
+    <section className="git-docs-shell" aria-label="Git document workspace">
       <GitDocumentTree
         tree={workspace.state.tree}
         active={workspace.file?.path ?? null}
@@ -36,7 +36,7 @@ export const GitDocumentsWorkspace = () => {
             <span className="eyebrow">
               {workspace.state.repository} / {workspace.state.branch}
             </span>
-            <h1>{workspace.file?.path ?? "새 문서를 만드세요"}</h1>
+            <h1>{workspace.file?.path ?? "Create a document"}</h1>
           </div>
           <div className="git-docs-action-row">
             <button
@@ -46,7 +46,7 @@ export const GitDocumentsWorkspace = () => {
               onClick={workspace.backlinks}
             >
               <Link2Icon />
-              백링크
+              Backlinks
             </button>
             <button
               type="button"
@@ -54,27 +54,24 @@ export const GitDocumentsWorkspace = () => {
               disabled={workspace.file === null}
               onClick={() => {
                 if (workspace.file === null) return
-                const path = window.prompt("새 문서 경로", workspace.file.path)
+                const path = window.prompt("New document path", workspace.file.path)
                 if (path !== null && path !== workspace.file.path) workspace.rename(path)
               }}
             >
               <Pencil2Icon />
-              이동
+              Move
             </button>
             <button
               type="button"
               className="button button--ghost"
               disabled={workspace.file === null}
               onClick={() => {
-                if (
-                  workspace.file !== null &&
-                  window.confirm(`${workspace.file.path} 문서를 삭제하시겠습니까?`)
-                )
+                if (workspace.file !== null && window.confirm(`Delete ${workspace.file.path}?`))
                   workspace.remove()
               }}
             >
               <TrashIcon />
-              삭제
+              Delete
             </button>
             <button
               type="button"
@@ -83,19 +80,19 @@ export const GitDocumentsWorkspace = () => {
               onClick={workspace.save}
             >
               <CheckIcon />
-              작업 트리에 저장
+              Save to working tree
             </button>
           </div>
         </header>
         {workspace.file?.draft !== null && workspace.file?.draft !== undefined && (
           <div className="git-docs-recovery" role="status">
-            자동 저장된 초안을 복구했습니다. Git 파일은 바뀌지 않았습니다.
+            Recovered an autosaved draft. The Git file has not changed.
             <button type="button" onClick={workspace.discardDraft}>
-              초안 버리기
+              Discard draft
             </button>
           </div>
         )}
-        <div className="git-docs-tabs" role="tablist" aria-label="편집 모드">
+        <div className="git-docs-tabs" role="tablist" aria-label="Editing mode">
           <button
             type="button"
             role="tab"
@@ -105,7 +102,7 @@ export const GitDocumentsWorkspace = () => {
               setMode("visual")
             }}
           >
-            문서
+            Document
           </button>
           <button
             type="button"
@@ -113,7 +110,7 @@ export const GitDocumentsWorkspace = () => {
             aria-selected={mode === "source"}
             onClick={() => setMode("source")}
           >
-            Markdown 원문
+            Markdown source
           </button>
         </div>
         <div className="git-docs-paper">
@@ -130,7 +127,7 @@ export const GitDocumentsWorkspace = () => {
               />
               {mode === "source" && (
                 <textarea
-                  aria-label="Git Markdown 원문"
+                  aria-label="Git Markdown source"
                   value={workspace.draft}
                   onChange={(event) => workspace.setDraft(event.target.value)}
                 />
@@ -146,7 +143,7 @@ export const GitDocumentsWorkspace = () => {
             className="button button--primary git-docs-resolve"
             onClick={workspace.resolve}
           >
-            현재 원문으로 충돌 해결
+            Resolve conflict with current source
           </button>
         )}
         <footer className="git-docs-status" role="status">

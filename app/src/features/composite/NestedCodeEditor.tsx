@@ -22,7 +22,7 @@ export const codeAttachmentFactory = createAttachmentFactory<CodeAttachmentConte
         keymap.of([indentWithTab, ...historyKeymap, ...defaultKeymap]),
         EditorView.lineWrapping,
         EditorView.contentAttributes.of({
-          "aria-label": "여행 준비 코드 편집기",
+          "aria-label": "Travel preparation code editor",
           spellcheck: "false",
         }),
         EditorView.domEventHandlers({

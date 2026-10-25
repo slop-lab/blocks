@@ -3,6 +3,7 @@ import { createOpenAICompatibleAdapter } from "@slop-lab/part-plugins/providers/
 import { fakeModel } from "@slop-lab/part-plugins/testing/index.js"
 import ky from "ky"
 import { z } from "zod"
+import { workspaceFixtureCalls } from "./workspace-fixture.mjs"
 
 const STANDARD_KEYS = ["OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL"]
 const LEGACY_KEYS = ["PART_API_BASE", "PART_API_KEY", "PART_MODEL_ID"]
@@ -127,14 +128,14 @@ export const createFixtureModel = (options = {}) => {
     models: [
       {
         id: FIXTURE_MODEL_ID,
-        providerLabel: "결정적 시나리오 / 모델미연결",
+        providerLabel: "Deterministic fixture / No model connected",
       },
     ],
     defaultModel: FIXTURE_MODEL_ID,
   }
   const model = {
     kind: "fixture",
-    label: "결정적 시나리오 / 모델미연결",
+    label: "Deterministic fixture / No model connected",
     catalog: async () => catalog,
     resolve: async (input) => {
       const selected = input.inferenceModel ?? FIXTURE_MODEL_ID
@@ -143,11 +144,11 @@ export const createFixtureModel = (options = {}) => {
       return {
         id: FIXTURE_MODEL_ID,
         kind: "fixture",
-        label: "결정적 시나리오 / 모델미연결",
-        create: (resolvedInput) => model.create(resolvedInput),
+        label: "Deterministic fixture / No model connected",
+        create: (resolvedInput, context) => model.create(resolvedInput, context),
       }
     },
-    create(input) {
+    create(input, context) {
       const scenarios = {
         "markdown-git": [
           { name: "search_documents", arguments: { query: input.instruction } },
@@ -160,13 +161,6 @@ export const createFixtureModel = (options = {}) => {
             arguments: { append: input.instruction },
           },
         ],
-        "structured-workspace": [
-          { name: "query_database_rows", arguments: {} },
-          {
-            name: "propose_row_status_patch",
-            arguments: { rowId: "task-1", propertyId: "status", after: "완료" },
-          },
-        ],
         "mixed-backlog": [
           { name: "list_running_tasks", arguments: {} },
           { name: "read_task_context", arguments: {} },
@@ -175,7 +169,10 @@ export const createFixtureModel = (options = {}) => {
         ],
         default: [{ name: "candidate_patch", arguments: { text: input.instruction } }],
       }
-      const calls = scenarios[input.target.modelId] ?? scenarios.default
+      const calls =
+        input.target.modelId === "structured-workspace"
+          ? workspaceFixtureCalls(context.database)
+          : (scenarios[input.target.modelId] ?? scenarios.default)
       const configured = fakeModel([
         ...calls.map((call) => ({ toolCalls: [call] })),
         { text: "review artifact ready" },

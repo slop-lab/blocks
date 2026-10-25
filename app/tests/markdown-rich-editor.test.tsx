@@ -50,7 +50,7 @@ describe("Markdown rich editor transaction boundaries", () => {
         />,
       )
     await act(async () => render("Before\n"))
-    const editor = host.querySelector<HTMLElement>("[aria-label='Markdown 문서 편집기']")
+    const editor = host.querySelector<HTMLElement>("[aria-label='Markdown document editor']")
     if (editor === null) throw new TypeError("Markdown editor did not mount")
 
     await act(async () =>
@@ -79,7 +79,7 @@ describe("Markdown rich editor transaction boundaries", () => {
         />,
       ),
     )
-    const editor = host.querySelector<HTMLElement>("[aria-label='Markdown 문서 편집기']")
+    const editor = host.querySelector<HTMLElement>("[aria-label='Markdown document editor']")
     if (editor === null) throw new TypeError("Markdown editor did not mount")
 
     const event = new KeyboardEvent("keydown", {

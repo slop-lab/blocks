@@ -47,7 +47,7 @@ export const WorkspaceTree = (props: Props) => {
     if (expanded) activeItemRef.current?.scrollIntoView({ block: "nearest" })
   }, [expanded])
   return (
-    <aside className="structured-tree" aria-label="페이지 탐색" data-expanded={expanded}>
+    <aside className="structured-tree" aria-label="Page navigation" data-expanded={expanded}>
       <header>
         <strong>Atlas</strong>
         <span className="structured-tree__actions">
@@ -56,12 +56,12 @@ export const WorkspaceTree = (props: Props) => {
             className="structured-tree__disclosure"
             aria-expanded={expanded}
             aria-controls="structured-page-tree"
-            aria-label={`페이지 탐색${activeTitle === undefined ? "" : `, 현재 ${activeTitle}`}`}
+            aria-label={`Page navigation${activeTitle === undefined ? "" : `, current page: ${activeTitle}`}`}
             onClick={() => setExpanded((current) => !current)}
           >
             {expanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
           </button>
-          <button type="button" aria-label="새 페이지" onClick={props.onCreate}>
+          <button type="button" aria-label="New page" onClick={props.onCreate}>
             <PlusIcon />
           </button>
         </span>
@@ -69,18 +69,18 @@ export const WorkspaceTree = (props: Props) => {
       <label className="structured-search">
         <MagnifyingGlassIcon />
         <input
-          aria-label="페이지 검색"
+          aria-label="Search pages"
           value={props.query}
           onChange={(event) => props.onQuery(event.target.value)}
-          placeholder="페이지 검색 · Ctrl K"
+          placeholder="Search pages · Ctrl K"
         />
         {props.query !== "" && (
-          <button type="button" aria-label="검색 지우기" onClick={() => props.onQuery("")}>
+          <button type="button" aria-label="Clear search" onClick={() => props.onQuery("")}>
             <Cross2Icon />
           </button>
         )}
       </label>
-      <nav id="structured-page-tree" aria-label="페이지 트리">
+      <nav id="structured-page-tree" aria-label="Page tree">
         <ul className="structured-tree__list">
           {visible.map(({ page, depth }) => {
             const moveTargets = pageMoveTargets(props.workspace, page.id)
@@ -138,7 +138,7 @@ export const WorkspaceTree = (props: Props) => {
                 <button
                   type="button"
                   className="structured-tree__grip"
-                  aria-label={`${page.title} 끌어서 이동`}
+                  aria-label={`Drag ${page.title} to move`}
                   draggable
                   onDragStart={(event) => {
                     event.dataTransfer.effectAllowed = "move"
@@ -165,7 +165,7 @@ export const WorkspaceTree = (props: Props) => {
                 <span className="structured-tree__move-menu">
                   <CaretSortIcon aria-hidden="true" />
                   <select
-                    aria-label={`${page.title} 이동`}
+                    aria-label={`Move ${page.title}`}
                     value=""
                     onChange={(event) => {
                       const option = event.currentTarget.selectedOptions[0]
@@ -174,9 +174,9 @@ export const WorkspaceTree = (props: Props) => {
                       if (placement !== null) props.onMove(page.id, placement)
                     }}
                   >
-                    <option value="">이동</option>
+                    <option value="">Move</option>
                     <option value="root" data-kind="root">
-                      최상위 끝으로
+                      To end of top level
                     </option>
                     {moveTargets.flatMap((target) => [
                       <option
@@ -185,7 +185,7 @@ export const WorkspaceTree = (props: Props) => {
                         data-target={target.id}
                         key={`before:${target.id}`}
                       >
-                        {target.title} 앞
+                        Before {target.title}
                       </option>,
                       <option
                         value={`inside:${target.id}`}
@@ -193,7 +193,7 @@ export const WorkspaceTree = (props: Props) => {
                         data-target={target.id}
                         key={`inside:${target.id}`}
                       >
-                        {target.title} 안
+                        Inside {target.title}
                       </option>,
                       <option
                         value={`after:${target.id}`}
@@ -201,14 +201,14 @@ export const WorkspaceTree = (props: Props) => {
                         data-target={target.id}
                         key={`after:${target.id}`}
                       >
-                        {target.title} 뒤
+                        After {target.title}
                       </option>,
                     ])}
                   </select>
                 </span>
                 <button
                   type="button"
-                  aria-label={`${page.title} 즐겨찾기`}
+                  aria-label={`Favorite ${page.title}`}
                   aria-pressed={props.favorites.has(page.id)}
                   onClick={() => props.onFavorite(page.id)}
                 >
@@ -216,7 +216,7 @@ export const WorkspaceTree = (props: Props) => {
                 </button>
                 <button
                   type="button"
-                  aria-label={`${page.title} 보관`}
+                  aria-label={`Archive ${page.title}`}
                   onClick={() => props.onArchive(page.id)}
                 >
                   <ArchiveIcon />
@@ -243,7 +243,7 @@ export const WorkspaceTree = (props: Props) => {
             setDropTarget(null)
           }}
         >
-          최상위로 이동
+          Move to top level
         </button>
       </nav>
     </aside>

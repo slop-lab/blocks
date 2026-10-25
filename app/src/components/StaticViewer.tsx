@@ -11,7 +11,7 @@ export const StaticViewer = ({
   readonly tasks?: Readonly<Record<string, HostTask>>
   readonly onHostAction?: (taskId: string) => void
 }) => (
-  <section aria-label="정적 문서 미리보기">
+  <section aria-label="Static document preview">
     <BlockViewer
       content={document}
       renderBlock={(block) => {
@@ -23,14 +23,14 @@ export const StaticViewer = ({
             <span className="task-card__meta">
               {taskId} · {task?.status ?? "unavailable"}
             </span>
-            <strong>{task?.title ?? "호스트 데이터 없음"}</strong>
+            <strong>{task?.title ?? "Host data unavailable"}</strong>
             <button
               className="button button--secondary"
               type="button"
               disabled={task === undefined || onHostAction === undefined}
               onClick={() => onHostAction?.(taskId)}
             >
-              {task?.status === "done" ? "다시 열기" : "완료로 표시"}
+              {task?.status === "done" ? "Reopen" : "Mark complete"}
             </button>
           </section>
         )

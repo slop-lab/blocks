@@ -30,8 +30,8 @@ try {
     console.error("PAGEERROR", error.stack)
   })
   await first.goto(`${base}/?workspace=structured-workspace`, { waitUntil: "networkidle" })
-  const firstWorkspace = first.getByLabel("문서와 데이터베이스")
-  await firstWorkspace.getByRole("button", { name: "제품 출시", exact: true }).click()
+  const firstWorkspace = first.getByLabel("Documents and databases")
+  await firstWorkspace.getByRole("button", { name: "Product Launch", exact: true }).click()
   const occurrences = firstWorkspace.locator(".structured-sync")
   assert.equal(await occurrences.count(), 2)
   assert.equal(await occurrences.locator(".structured-sync__projection").count(), 2)
@@ -60,7 +60,7 @@ try {
   assert.equal(await occurrences.locator(".structured-sync__projection").count(), 1)
   assert.equal(
     await firstWorkspace
-      .getByLabel("구조화 문서 편집기")
+      .getByLabel("Structured document editor")
       .locator(".structured-sync__projection [data-block-id]")
       .count(),
     0,
@@ -68,9 +68,9 @@ try {
   await first.keyboard.press("ControlOrMeta+a")
   await first.keyboard.insertText("페이지 전환 뒤에도 남는 기록")
   assert.equal((await historySaved).status(), 200)
-  await first.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
-  await firstWorkspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
-  await firstWorkspace.getByRole("button", { name: "제품 출시", exact: true }).click()
+  await first.getByRole("status").filter({ hasText: "Saved all changes." }).waitFor()
+  await firstWorkspace.getByRole("button", { name: "User Research", exact: true }).click()
+  await firstWorkspace.getByRole("button", { name: "Product Launch", exact: true }).click()
   assert.equal(await occurrences.locator(".structured-sync__editor.ProseMirror").count(), 0)
   await occurrences.nth(1).locator("p").click()
   assert.equal(await occurrences.locator(".structured-sync__editor.ProseMirror").count(), 1)
@@ -83,7 +83,7 @@ try {
   assert.equal(await occurrences.nth(1).locator("p").textContent(), "페이지 전환 뒤에도 남는 기록")
 
   await first.reload({ waitUntil: "networkidle" })
-  await firstWorkspace.getByRole("button", { name: "제품 출시", exact: true }).click()
+  await firstWorkspace.getByRole("button", { name: "Product Launch", exact: true }).click()
 
   const second = await browser.newPage({ viewport: { width: 900, height: 900 } })
   second.on("pageerror", (error) => errors.push(error.message))
@@ -94,8 +94,8 @@ try {
     })
   })
   await second.goto(`${base}/?workspace=structured-workspace`, { waitUntil: "networkidle" })
-  const secondWorkspace = second.getByLabel("문서와 데이터베이스")
-  await secondWorkspace.getByRole("button", { name: "제품 출시", exact: true }).click()
+  const secondWorkspace = second.getByLabel("Documents and databases")
+  await secondWorkspace.getByRole("button", { name: "Product Launch", exact: true }).click()
   let delaySecondWrite = true
   let rejectConflictRefresh = false
   await second.route("**/api/workspace", async (route) => {
@@ -134,7 +134,7 @@ try {
   assert.equal(await secondOccurrences.first().locator("p").textContent(), "보존할 로컬 초안")
   const remote = await (await second.request.get(`${base}/api/workspace`)).json()
   assert.equal(remote.sources[0].content.section.children[0].text, "원격 승자")
-  const accept = secondOccurrences.first().getByRole("button", { name: "서버 변경 수락" })
+  const accept = secondOccurrences.first().getByRole("button", { name: "Accept server changes" })
   await accept.waitFor()
   await accept.click()
   assert.equal(await secondOccurrences.first().locator("p").textContent(), "원격 승자")

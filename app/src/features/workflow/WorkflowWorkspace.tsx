@@ -34,28 +34,28 @@ type Identity = "author" | "reviewer" | "viewer"
 type Workflow = z.infer<typeof workflowSchema>
 const client = ky.create({ timeout: 10_000, retry: 0 })
 const labels: Readonly<Record<Workflow["state"], string>> = {
-  draft: "초안",
-  submitted: "검토 요청됨",
-  approved: "승인됨",
+  draft: "Draft",
+  submitted: "Review requested",
+  approved: "Approved",
 }
 const identityLabels: Readonly<Record<string, string>> = {
-  author: "작성자",
-  reviewer: "검토자",
-  viewer: "열람자",
+  author: "Author",
+  reviewer: "Reviewer",
+  viewer: "Viewer",
 }
 const actionLabels: Readonly<Record<Workflow["audit"][number]["action"], string>> = {
-  created: "초안 생성",
-  submitted: "검토 요청",
-  approved: "승인",
+  created: "Draft created",
+  submitted: "Review requested",
+  approved: "Approved",
 }
-const initialText = "다음 주 회의는 목요일 오후 세 시에 진행합니다."
+const initialText = "Next week's meeting is scheduled for Thursday at 3:00 PM."
 
 export const WorkflowWorkspace = () => {
   const [identity, setIdentity] = useState<Identity>("author")
   const [workflow, setWorkflow] = useState<Workflow | null>(null)
   const [text, setText] = useState(initialText)
   const [documentRevision, setDocumentRevision] = useState<number | null>(null)
-  const [message, setMessage] = useState("서버 세션을 여는 중입니다.")
+  const [message, setMessage] = useState("Opening the server session.")
   const [busy, setBusy] = useState<"opening" | "saving" | "transition" | null>(null)
 
   const open = useCallback(async (nextIdentity: Identity): Promise<void> => {
@@ -73,15 +73,15 @@ export const WorkflowWorkspace = () => {
       )
         setText(document.content.text)
       setWorkflow(workflowSchema.parse(await client.get("api/workflows/team-minutes").json()))
-      setMessage(`${identityLabels[nextIdentity]} 권한을 서버에서 확인했습니다.`)
+      setMessage(`Verified ${identityLabels[nextIdentity]} permissions with the server.`)
     } catch (error) {
       if (!(error instanceof HTTPError) || error.response.status !== 404) {
-        setMessage(error instanceof Error ? error.message : "서버 상태를 불러오지 못했습니다.")
+        setMessage(error instanceof Error ? error.message : "Could not load server state.")
         return
       }
       if (nextIdentity !== "author") {
         setWorkflow(null)
-        setMessage("작성자가 아직 문서를 만들지 않았습니다.")
+        setMessage("The author has not created a document yet.")
         return
       }
       const document = documentSchema.parse(
@@ -96,7 +96,7 @@ export const WorkflowWorkspace = () => {
       )
       setDocumentRevision(document.revision)
       setWorkflow(workflowSchema.parse(await client.get("api/workflows/team-minutes").json()))
-      setMessage(`${identityLabels[nextIdentity]} 권한을 서버에서 확인했습니다.`)
+      setMessage(`Verified ${identityLabels[nextIdentity]} permissions with the server.`)
     } finally {
       setBusy(null)
     }
@@ -118,14 +118,14 @@ export const WorkflowWorkspace = () => {
           .json(),
       )
       setDocumentRevision(document.revision)
-      setMessage("초안을 durable 문서에 저장했습니다.")
+      setMessage("Saved the draft to the durable document.")
     } catch (error) {
       if (error instanceof HTTPError && error.response.status === 409) {
         await open(identity)
-        setMessage("다른 변경을 불러왔습니다. 내용을 확인한 뒤 다시 저장하세요.")
+        setMessage("Loaded newer changes. Review them before saving again.")
         return
       }
-      setMessage(error instanceof Error ? error.message : "초안을 저장하지 못했습니다.")
+      setMessage(error instanceof Error ? error.message : "Could not save the draft.")
     } finally {
       setBusy(null)
     }
@@ -143,7 +143,7 @@ export const WorkflowWorkspace = () => {
           .json(),
       )
       setWorkflow(next)
-      setMessage(action === "submit" ? "검토를 요청했습니다." : "문서를 승인했습니다.")
+      setMessage(action === "submit" ? "Requested a review." : "Approved the document.")
     } catch (error) {
       if (
         error instanceof HTTPError &&
@@ -151,11 +151,11 @@ export const WorkflowWorkspace = () => {
       ) {
         if (error.response.status === 409) {
           await open(identity)
-          setMessage("다른 변경을 불러왔습니다. 현재 상태에서 다시 시도하세요.")
-        } else setMessage("현재 역할에는 이 작업 권한이 없습니다.")
+          setMessage("Loaded newer changes. Try again from the current state.")
+        } else setMessage("The current role is not allowed to perform this action.")
         return
       }
-      setMessage(error instanceof Error ? error.message : "워크플로 작업을 완료하지 못했습니다.")
+      setMessage(error instanceof Error ? error.message : "Could not complete the workflow action.")
     } finally {
       setBusy(null)
     }
@@ -166,11 +166,11 @@ export const WorkflowWorkspace = () => {
     <section className="workflow-workspace" aria-labelledby="workflow-title">
       <header className="workflow-header">
         <div>
-          <span className="eyebrow">서버 권한 워크플로</span>
-          <h1 id="workflow-title">공유 회의록</h1>
+          <span className="eyebrow">Server-authorized workflow</span>
+          <h1 id="workflow-title">Shared meeting notes</h1>
         </div>
         <fieldset className="workflow-identities">
-          <legend>데모 역할</legend>
+          <legend>Demo role</legend>
           {(["author", "reviewer", "viewer"] as const).map((value) => (
             <button
               className={
@@ -189,9 +189,9 @@ export const WorkflowWorkspace = () => {
       <div className="workflow-grid">
         <article className="workflow-document">
           <span className="status-badge">
-            {workflow === null ? "없음" : labels[workflow.state]}
+            {workflow === null ? "None" : labels[workflow.state]}
           </span>
-          <label htmlFor="workflow-text">회의 내용</label>
+          <label htmlFor="workflow-text">Meeting notes</label>
           <textarea
             id="workflow-text"
             value={text}
@@ -205,7 +205,7 @@ export const WorkflowWorkspace = () => {
               disabled={!editable || busy !== null}
               onClick={() => void save()}
             >
-              {busy === "saving" ? "저장 중" : "초안 저장"}
+              {busy === "saving" ? "Saving" : "Save draft"}
             </button>
             <button
               className="button button--primary"
@@ -213,7 +213,7 @@ export const WorkflowWorkspace = () => {
               disabled={!editable || busy !== null}
               onClick={() => void transition("submit")}
             >
-              {busy === "transition" && identity === "author" ? "요청 중" : "검토 요청"}
+              {busy === "transition" && identity === "author" ? "Requesting" : "Request review"}
             </button>
             <button
               className="button button--primary"
@@ -221,19 +221,19 @@ export const WorkflowWorkspace = () => {
               disabled={identity !== "reviewer" || workflow?.state !== "submitted" || busy !== null}
               onClick={() => void transition("approve")}
             >
-              {busy === "transition" && identity === "reviewer" ? "승인 중" : "승인"}
+              {busy === "transition" && identity === "reviewer" ? "Approving" : "Approve"}
             </button>
           </div>
           <p role="status">{message}</p>
         </article>
-        <aside className="workflow-audit" aria-label="업무 이력">
-          <h2>업무 이력</h2>
+        <aside className="workflow-audit" aria-label="Workflow history">
+          <h2>Workflow history</h2>
           <ol>
             {workflow?.audit.map((entry) => (
               <li key={`${entry.action}-${entry.timestamp}`}>
                 <strong>{actionLabels[entry.action]}</strong>
                 <span>{identityLabels[entry.actorId] ?? entry.actorId}</span>
-                <time>{new Date(entry.timestamp).toLocaleString("ko-KR")}</time>
+                <time>{new Date(entry.timestamp).toLocaleString("en-US")}</time>
               </li>
             ))}
           </ol>

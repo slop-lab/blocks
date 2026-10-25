@@ -65,7 +65,7 @@ export const useWorkspace = () => {
   const hostDirty = JSON.stringify(hostState) !== JSON.stringify(hostBaseline)
   const preserveComposition = () => {
     if (engines.current.get(contentRoute)?.isComposing !== true) return false
-    setToast("조합 중인 입력을 먼저 확정해 주세요. 초안은 유지됩니다.")
+    setToast("Finish the current composition first. Your draft is preserved.")
     return true
   }
   const getSession = () => documents.get(contentRoute)
@@ -82,8 +82,8 @@ export const useWorkspace = () => {
       if (!next) {
         documents.afterComposition(contentRoute)
         const result = engines.current.get(contentRoute)?.flushExternal()
-        if (result?.kind === "conflict") setToast(`외부 업데이트 충돌 · ${result.reason}`)
-        if (result?.kind === "applied") setToast("최신 내용으로 갱신했습니다")
+        if (result?.kind === "conflict") setToast(`External update conflict · ${result.reason}`)
+        if (result?.kind === "applied") setToast("Updated to the latest content")
       }
     },
     [contentRoute, documents, engines],
@@ -93,7 +93,7 @@ export const useWorkspace = () => {
     if (!documents.save(contentRoute)) return
     saveHostState(localStorage, hostState)
     setHostBaseline(hostState)
-    setToast("콘텐츠와 호스트 상태를 브라우저에 저장했습니다")
+    setToast("Saved the content and host state in this browser")
   }
 
   const createReview = () => {
@@ -114,7 +114,7 @@ export const useWorkspace = () => {
     if (review === null) return false
     const current = sessions[review.route]
     if (route !== review.route || current.epoch !== review.epoch) {
-      setToast("검토 후보 거절 · route 또는 epoch가 변경되었습니다")
+      setToast("Review candidate rejected · route or epoch changed")
       return false
     }
     const result = acceptReview(
@@ -122,13 +122,13 @@ export const useWorkspace = () => {
       getSession().version,
     )
     if (result.kind === "base_mismatch") {
-      setToast(`검토 충돌 · 기준 v${result.expected}, 현재 v${result.received}`)
+      setToast(`Review conflict · base v${result.expected}, current v${result.received}`)
       return false
     }
     setView(null)
     updateSession(review.route, (value) => replaceSessionDocument(value, result.document))
     setReview(null)
-    setToast("수정안을 적용했습니다")
+    setToast("Applied the revision")
     return true
   }
 
@@ -139,7 +139,7 @@ export const useWorkspace = () => {
       replaceSessionDocument(current, resetDocument(contentRoute)),
     )
     setReview(null)
-    setToast("기본 문서로 되돌렸습니다")
+    setToast("Restored the default document")
   }
 
   const importDocument = (document: BlockDocument) => {
@@ -147,7 +147,7 @@ export const useWorkspace = () => {
     setView(null)
     updateSession(contentRoute, (current) => replaceSessionDocument(current, document))
     setExportOpen(false)
-    setToast("문서를 가져왔습니다")
+    setToast("Imported the document")
   }
 
   const saveHostDraft = (draft: Omit<ReleaseForm, "revision">, expectedRevision: number) => {
@@ -166,7 +166,7 @@ export const useWorkspace = () => {
     )
     if (resolution.kind === "stale") return false
     setHostState((current) => saveReleaseForm(current, draft))
-    setToast("브리핑 정보를 저장했습니다")
+    setToast("Saved the briefing details")
     return true
   }
 
@@ -213,7 +213,7 @@ export const useWorkspace = () => {
     closeHostForm: () => setHostFormOpen(false),
     rejectReview: () => {
       setReview(null)
-      setToast("검토 후보를 폐기했습니다")
+      setToast("Discarded the review candidate")
     },
     onReady: (next: EditorView | null) => setView(next),
     onCompositionChange,
@@ -225,7 +225,7 @@ export const useWorkspace = () => {
     saveHostDraft,
     toggleHostTask: (taskId: string) => {
       setHostState((current) => toggleTask(current, taskId))
-      setToast(`${taskId} 상태를 변경했습니다`)
+      setToast(`Changed the status of ${taskId}`)
     },
     selectBlock: (selectedBlockId: string | null) =>
       setViewData((current) =>
@@ -251,14 +251,17 @@ export const useWorkspace = () => {
             document: engine.snapshot,
             version: engine.version,
           }))
-          setToast("안내를 갱신했습니다. 이전 실행 취소 기록은 새 내용과 분리했습니다.")
-        } else if (result.kind === "deferred") setToast("IME 조합이 끝날 때까지 외부 업데이트 보류")
-        else setToast(`외부 업데이트 충돌 · ${result.reason}`)
+          setToast(
+            "Updated the guide. Previous undo history remains separate from the new content.",
+          )
+        } else if (result.kind === "deferred")
+          setToast("External update deferred until IME composition ends")
+        else setToast(`External update conflict · ${result.reason}`)
       } catch (error) {
         setToast(
           error instanceof Error
-            ? `안내를 가져오지 못했습니다: ${error.message}`
-            : "안내를 가져오지 못했습니다",
+            ? `Could not fetch the guide: ${error.message}`
+            : "Could not fetch the guide",
         )
       }
     },

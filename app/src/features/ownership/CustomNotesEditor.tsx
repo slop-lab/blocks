@@ -130,6 +130,6 @@ export const CustomNotesEditor = (props: {
     {...props}
     profile={notesProfile}
     modelId="ownership-notebook"
-    label="노트 블록 편집기"
+    label="Note block editor"
   />
 )

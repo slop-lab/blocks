@@ -101,7 +101,7 @@ it("does not delete a captured cut intent after its document changes", async () 
   await Promise.resolve()
 
   expect(view.state.doc.firstChild?.attrs["id"]).toBe("first")
-  expect(unavailable).toContain("문서가 변경되어 잘라내기를 취소했습니다.")
+  expect(unavailable).toContain("The document changed, so the cut was canceled.")
 })
 
 it("rejects delayed cut deletion when the host model version changes", async () => {
@@ -141,5 +141,5 @@ it("reports a rejected deferred-cut callback without deleting content", async ()
   await Promise.resolve()
 
   expect(view.state.doc.firstChild?.attrs["id"]).toBe("first")
-  expect(unavailable).toContain("호스트가 잘라내기 요청을 완료하지 못했습니다.")
+  expect(unavailable).toContain("The host could not complete the cut request.")
 })

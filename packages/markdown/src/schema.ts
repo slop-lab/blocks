@@ -100,12 +100,12 @@ const nodes: Readonly<Record<string, NodeSpec>> = {
     group: "block",
     atom: true,
     selectable: true,
-    attrs: { ...sourceAttrs, raw: { default: "" }, label: { default: "지원하지 않는 Markdown" } },
+    attrs: { ...sourceAttrs, raw: { default: "" }, label: { default: "Unsupported Markdown" } },
     toDOM: (node) => [
       "section",
       { "data-block-id": node.attrs["id"], "data-opaque": "true", contenteditable: "false" },
       ["strong", String(node.attrs["label"])],
-      ["small", "원문 보기에서 안전하게 편집할 수 있습니다."],
+      ["small", "You can safely edit this content in source view."],
     ],
   },
 }

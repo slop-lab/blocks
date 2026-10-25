@@ -17,7 +17,7 @@ import {
 
 export const useWorkspacePersistence = (sourceEvents: WorkspaceSourceEvents) => {
   const [payload, setPayload] = useState<WorkspacePayload | null>(null)
-  const [status, setStatus] = useState("작업 공간을 여는 중입니다.")
+  const [status, setStatus] = useState("Opening the workspace.")
   const stateRef = useRef(payload)
   const commit = useCallback(
     (update: (current: WorkspacePayload | null) => WorkspacePayload | null) => {
@@ -42,9 +42,9 @@ export const useWorkspacePersistence = (sourceEvents: WorkspaceSourceEvents) => 
             ? remote
             : mergeWorkspacePayload(current, remote, (target) => queue.isDirty(target)),
         )
-        if (announce) setStatus("서버 JSON 작업 공간을 열었습니다.")
+        if (announce) setStatus("Opened the server-backed JSON workspace.")
       } catch (error) {
-        setStatus(error instanceof Error ? error.message : "작업 공간을 열지 못했습니다.")
+        setStatus(error instanceof Error ? error.message : "Could not open the workspace.")
       }
     },
     [commit, queue, sourceEvents],
@@ -65,7 +65,7 @@ export const useWorkspacePersistence = (sourceEvents: WorkspaceSourceEvents) => 
 
   const stage = <T>(target: SaveTarget, record: EntityRecord<T>, content: T) => {
     queue.stage(target, record, content)
-    setStatus("저장 대기")
+    setStatus("Waiting to save")
   }
   const updateDocument = (document: PageDocument) =>
     commit((current) => {
@@ -102,7 +102,7 @@ export const useWorkspacePersistence = (sourceEvents: WorkspaceSourceEvents) => 
       if (record === undefined) return current
       if (record.revision !== request.baselineRevision) {
         sourceEvents.receiveRemote(record)
-        setStatus("다른 창의 변경과 충돌했습니다. 초안 복구 방식을 선택하세요.")
+        setStatus("Changes from another window conflict with this draft. Choose how to recover it.")
         return current
       }
       const content = request.content
@@ -111,7 +111,7 @@ export const useWorkspacePersistence = (sourceEvents: WorkspaceSourceEvents) => 
         causeId: request.causeId,
         baselineRevision: request.baselineRevision,
       })
-      setStatus("저장 대기")
+      setStatus("Waiting to save")
       return {
         ...current,
         sources: current.sources.map((item) =>
@@ -153,8 +153,8 @@ export const useWorkspacePersistence = (sourceEvents: WorkspaceSourceEvents) => 
     })
     setStatus(
       result.kind === "accept-remote"
-        ? "서버 변경을 수락했습니다."
-        : "로컬 초안을 최신 원본 위에 다시 저장합니다.",
+        ? "Accepted the server changes."
+        : "Saving the local draft over the latest source.",
     )
   }
 
@@ -175,7 +175,7 @@ export const useWorkspacePersistence = (sourceEvents: WorkspaceSourceEvents) => 
         ? value
         : { ...value, tree: created.tree, documents: [...value.documents, created.document] },
     )
-    setStatus("새 페이지와 문서를 저장했습니다.")
+    setStatus("Saved the new page and document.")
     return id
   }
 
@@ -185,7 +185,7 @@ export const useWorkspacePersistence = (sourceEvents: WorkspaceSourceEvents) => 
       commit((current) =>
         current === null ? current : { ...current, sources: [...current.sources, created] },
       )
-      setStatus("공유 원본을 저장했습니다.")
+      setStatus("Saved the shared source.")
       return created
     } catch (error) {
       if (!(error instanceof Error)) throw error

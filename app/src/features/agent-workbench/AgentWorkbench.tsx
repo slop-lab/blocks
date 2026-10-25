@@ -13,9 +13,17 @@ import {
 type Story = "markdown" | "workspace" | "mixed"
 
 const stories = {
-  markdown: { label: "Markdown", detail: "검색 · 범위 읽기 · 정확한 교체", icon: FileTextIcon },
-  workspace: { label: "데이터베이스", detail: "행 조회 · 상태 셀 패치", icon: RowsIcon },
-  mixed: { label: "혼합 백로그", detail: "작업 · 근거 · 실행 계획", icon: CheckCircledIcon },
+  markdown: {
+    label: "Markdown",
+    detail: "Search · ranged reads · exact replacements",
+    icon: FileTextIcon,
+  },
+  workspace: { label: "Database", detail: "Row queries · status cell patches", icon: RowsIcon },
+  mixed: {
+    label: "Mixed backlog",
+    detail: "Tasks · evidence · execution plans",
+    icon: CheckCircledIcon,
+  },
 } as const
 
 export const AgentWorkbench = () => {
@@ -24,7 +32,7 @@ export const AgentWorkbench = () => {
     null,
   )
   const [selected, setSelected] = useState("")
-  const [instruction, setInstruction] = useState("검토 근거를 명확한 다음 단계로 정리해 주세요.")
+  const [instruction, setInstruction] = useState("Turn the review evidence into clear next steps.")
   const [inferenceModel, setInferenceModel] = useState<string>()
   const [operation, setOperation] = useState<AgentOperation | null>(null)
   const [run, setRun] = useState<AgentRun | null>(null)
@@ -35,7 +43,7 @@ export const AgentWorkbench = () => {
     void loadAgentResources()
       .then(setResources)
       .catch((error: unknown) =>
-        setMessage(error instanceof Error ? error.message : "리소스를 불러오지 못했습니다"),
+        setMessage(error instanceof Error ? error.message : "Could not load resources"),
       )
   }, [])
   const choices = useMemo(() => {
@@ -72,7 +80,7 @@ export const AgentWorkbench = () => {
         window.setTimeout(() => void refresh(), 150)
     }
     void refresh().catch((error: unknown) =>
-      setMessage(error instanceof Error ? error.message : "실행 상태를 읽지 못했습니다"),
+      setMessage(error instanceof Error ? error.message : "Could not read run status"),
     )
     return () => {
       active = false
@@ -116,8 +124,8 @@ export const AgentWorkbench = () => {
     setRun(next)
     setMessage(
       next.application === "applied"
-        ? "검토한 변경을 원본에 저장했습니다."
-        : "원본이 바뀌어 적용하지 않았습니다.",
+        ? "Saved the reviewed changes to the source."
+        : "The source changed, so the changes were not applied.",
     )
     setResources(await loadAgentResources())
   }
@@ -127,15 +135,15 @@ export const AgentWorkbench = () => {
       <header className="agent-workbench__header">
         <div>
           <p className="eyebrow">PART-POWERED WORKBENCH</p>
-          <h1 id="agent-workbench-title">에이전트 도구 예제</h1>
+          <h1 id="agent-workbench-title">Agent tools examples</h1>
           <p>
-            원본을 읽는 도구와 변경을 제안하는 도구를 분리하고, 검토한 정확한 작업만 CAS로
-            적용합니다.
+            Separate tools that read the source from tools that propose changes, then apply only the
+            exact reviewed operation through CAS.
           </p>
         </div>
-        <span className="status-badge">{run?.providerLabel ?? "실행 모델 선택 대기"}</span>
+        <span className="status-badge">{run?.providerLabel ?? "Waiting for a run model"}</span>
       </header>
-      <div className="agent-story-tabs" role="tablist" aria-label="에이전트 워크플로">
+      <div className="agent-story-tabs" role="tablist" aria-label="Agent workflow">
         {(Object.entries(stories) as [Story, (typeof stories)[Story]][]).map(([id, item]) => (
           <button
             key={id}
@@ -160,22 +168,22 @@ export const AgentWorkbench = () => {
         ))}
       </div>
       <div className="agent-workbench__grid">
-        <section className="agent-control-panel" aria-label="실행 설정">
+        <section className="agent-control-panel" aria-label="Run settings">
           <AgentModelSelect
             value={inferenceModel}
             onChange={setInferenceModel}
             disabled={run?.status === "running"}
           />
           <label className="field">
-            <span>권한 있는 원본</span>
+            <span>Authorized source</span>
             <select
               value={resourceId}
               disabled={resources === null || resourceError !== undefined || choices.length === 0}
               onChange={(event) => setSelected(event.target.value)}
             >
-              {resources === null && <option>리소스 불러오는 중</option>}
+              {resources === null && <option>Loading resources</option>}
               {resources !== null && resourceError === undefined && choices.length === 0 && (
-                <option>사용 가능한 원본 없음</option>
+                <option>No sources available</option>
               )}
               {choices.map((choice) => (
                 <option key={choice.id} value={choice.id}>
@@ -186,11 +194,11 @@ export const AgentWorkbench = () => {
           </label>
           {resourceError !== undefined && (
             <p className="agent-message agent-message--warning" role="alert">
-              {stories[story].label} 리소스를 불러오지 못했습니다. {resourceError}
+              Could not load the {stories[story].label} resources. {resourceError}
             </p>
           )}
           <label className="field">
-            <span>요청</span>
+            <span>Request</span>
             <textarea
               rows={5}
               value={instruction}
@@ -209,7 +217,7 @@ export const AgentWorkbench = () => {
               }
               onClick={() => void begin()}
             >
-              실행 시작
+              Start run
             </button>
             <button
               className="button button--ghost"
@@ -217,7 +225,7 @@ export const AgentWorkbench = () => {
               disabled={operation === null || run?.status !== "running"}
               onClick={() => operation && void commandAgent(operation, "cancel")}
             >
-              취소
+              Cancel
             </button>
             <button
               className="button button--ghost"
@@ -225,44 +233,44 @@ export const AgentWorkbench = () => {
               disabled={operation === null}
               onClick={() => {
                 polling.current = false
-                setMessage("관찰만 분리했습니다. 서버 실행은 계속됩니다.")
+                setMessage("Detached the observer. The server run is still in progress.")
               }}
             >
-              관찰 분리
+              Detach observer
             </button>
           </div>
           {run && (
             <dl className="agent-run-meta">
               <div>
-                <dt>상태</dt>
+                <dt>Status</dt>
                 <dd>{run.status}</dd>
               </div>
               <div>
-                <dt>적용</dt>
+                <dt>Apply</dt>
                 <dd>{run.application}</dd>
               </div>
               <div>
-                <dt>실행 ID</dt>
+                <dt>Run ID</dt>
                 <dd>{run.id}</dd>
               </div>
             </dl>
           )}
         </section>
-        <section className="agent-review-panel" aria-label="검토 아티팩트">
+        <section className="agent-review-panel" aria-label="Review artifact">
           <div className="agent-panel-heading">
             <div>
               <p className="eyebrow">EXACT REVIEW</p>
-              <h2>변경 검토</h2>
+              <h2>Review changes</h2>
             </div>
             {run?.artifact && (
-              <span className="status-badge status-badge--success">fingerprint 고정</span>
+              <span className="status-badge status-badge--success">Fingerprint locked</span>
             )}
           </div>
           {run?.artifact ? (
             <>
               <dl className="agent-artifact">
                 <div>
-                  <dt>작업 종류</dt>
+                  <dt>Operation type</dt>
                   <dd>{run.artifact.kind}</dd>
                 </div>
                 <div>
@@ -291,7 +299,7 @@ export const AgentWorkbench = () => {
                   disabled={run.status !== "completed" || run.application !== "not-requested"}
                   onClick={() => void apply()}
                 >
-                  검토한 작업 적용
+                  Apply reviewed operation
                 </button>
                 <button
                   className="button button--ghost"
@@ -299,23 +307,24 @@ export const AgentWorkbench = () => {
                   onClick={() => {
                     setOperation(null)
                     setRun(null)
-                    setMessage("아티팩트를 폐기했습니다.")
+                    setMessage("Discarded the artifact.")
                   }}
                 >
-                  <Cross2Icon /> 거절
+                  <Cross2Icon /> Reject
                 </button>
               </div>
             </>
           ) : (
             <p className="agent-empty">
-              실행이 끝나면 정확한 before/after와 fingerprint가 여기에 표시됩니다.
+              The exact before and after values and fingerprint will appear here when the run
+              finishes.
             </p>
           )}
         </section>
       </div>
-      <section className="agent-timeline" aria-label="도구 타임라인">
+      <section className="agent-timeline" aria-label="Tool timeline">
         <div className="agent-panel-heading">
-          <h2>도구 타임라인</h2>
+          <h2>Tool timeline</h2>
           <small>{run?.events.length ?? 0} events</small>
         </div>
         <ol>

@@ -6,7 +6,7 @@ import MarkdownIt from "markdown-it"
 export const MAX_MARKDOWN_BYTES = 2_000_000
 const SAMPLE_NAME = "README.md"
 const SAMPLE_CONTENT =
-  "# Markdown 작업 공간\n\n왼쪽에서 파일을 선택하고 실제 Markdown 원문을 편집하세요.\n"
+  "# Markdown Workspace\n\nSelect a file on the left to edit its Markdown source.\n"
 const parser = new MarkdownIt({ html: true, linkify: true, typographer: false })
 const mappingCache = new Map()
 const mappingEpoch = randomUUID()

@@ -24,15 +24,17 @@ describe("composite active toolbar", () => {
     const root = createRoot(host)
     await act(async () => root.render(<CompositeWorkspace />))
     const toolbar = host.querySelector<HTMLElement>("[role='toolbar']")
-    const codeEditor = host.querySelector<HTMLElement>("[aria-label='여행 준비 코드 편집기']")
+    const codeEditor = host.querySelector<HTMLElement>(
+      "[aria-label='Travel preparation code editor']",
+    )
     if (toolbar === null || codeEditor === null)
       throw new TypeError("Composite editors did not mount")
 
-    expect(toolbar.textContent).toContain("문서 도구")
+    expect(toolbar.textContent).toContain("Document tools")
     await act(async () => codeEditor.focus())
 
-    expect(toolbar.textContent).toContain("코드 도구")
-    expect(host.querySelector("[aria-label='코드 전체 선택']")).not.toBeNull()
+    expect(toolbar.textContent).toContain("Code tools")
+    expect(host.querySelector("[aria-label='Select all code']")).not.toBeNull()
     await act(async () => root.unmount())
   })
 })

@@ -66,55 +66,57 @@ export const Toolbar = ({
     () => {
       if (view !== null) {
         const handled = command(view.state, view.dispatch, view)
-        setFeedback(handled ? "" : "선택한 위치에서 사용할 수 없거나 실행할 변경이 없습니다.")
+        setFeedback(
+          handled ? "" : "This action is unavailable here, or there is nothing to change.",
+        )
       }
       view?.focus()
     }
   return (
-    <div className="toolbar" role="toolbar" aria-label="문서 편집 도구">
-      <Tool label="실행 취소" action={run(undo)} disabled={readOnly || view === null}>
+    <div className="toolbar" role="toolbar" aria-label="Document editing tools">
+      <Tool label="Undo" action={run(undo)} disabled={readOnly || view === null}>
         <ResetIcon />
       </Tool>
-      <Tool label="다시 실행" action={run(redo)} disabled={readOnly || view === null}>
+      <Tool label="Redo" action={run(redo)} disabled={readOnly || view === null}>
         <ResetIcon className="flip" />
       </Tool>
       <span className="toolbar__divider" />
-      <Tool label="굵게" action={run(toggleFormat("strong"))} disabled={readOnly}>
+      <Tool label="Bold" action={run(toggleFormat("strong"))} disabled={readOnly}>
         <FontBoldIcon />
       </Tool>
-      <Tool label="기울임" action={run(toggleFormat("em"))} disabled={readOnly}>
+      <Tool label="Italic" action={run(toggleFormat("em"))} disabled={readOnly}>
         <FontItalicIcon />
       </Tool>
-      <Tool label="제목" action={run(setType("heading", { level: 2 }))} disabled={readOnly}>
+      <Tool label="Heading" action={run(setType("heading", { level: 2 }))} disabled={readOnly}>
         <HeadingIcon />
       </Tool>
-      <Tool label="인용" action={run(setType("blockquote"))} disabled={readOnly}>
+      <Tool label="Quote" action={run(setType("blockquote"))} disabled={readOnly}>
         <QuoteIcon />
       </Tool>
-      <Tool label="코드" action={run(setType("code_block"))} disabled={readOnly}>
+      <Tool label="Code" action={run(setType("code_block"))} disabled={readOnly}>
         <CodeIcon />
       </Tool>
       <span className="toolbar__divider" />
       <Tool
-        label="문단 추가"
+        label="Add paragraph"
         action={run(insertBlock(editorSchema.nodes["paragraph"]))}
         disabled={readOnly}
       >
         <PlusIcon />
       </Tool>
-      <Tool label="블록 복제" action={run(duplicateBlock)} disabled={readOnly}>
+      <Tool label="Duplicate block" action={run(duplicateBlock)} disabled={readOnly}>
         <CopyIcon />
       </Tool>
-      <Tool label="블록 위로 이동" action={run(moveBlock(-1))} disabled={readOnly}>
+      <Tool label="Move block up" action={run(moveBlock(-1))} disabled={readOnly}>
         <ArrowUpIcon />
       </Tool>
-      <Tool label="블록 아래로 이동" action={run(moveBlock(1))} disabled={readOnly}>
+      <Tool label="Move block down" action={run(moveBlock(1))} disabled={readOnly}>
         <ArrowDownIcon />
       </Tool>
-      <Tool label="블록 삭제" action={run(deleteBlock)} disabled={readOnly}>
+      <Tool label="Delete block" action={run(deleteBlock)} disabled={readOnly}>
         <TrashIcon />
       </Tool>
-      {readOnly && <span className="status-badge">읽기 전용</span>}
+      {readOnly && <span className="status-badge">Read-only</span>}
       {feedback && (
         <span role="status" className="muted">
           {feedback}

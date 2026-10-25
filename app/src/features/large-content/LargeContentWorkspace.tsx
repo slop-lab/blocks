@@ -41,7 +41,7 @@ export const LargeContentWorkspace = () => {
       try {
         cache.mergePage(await largeContentApi.page(pageStart, PAGE_SIZE))
       } catch {
-        setError("문단을 불러오지 못했습니다. 잠시 후 다시 시도하세요.")
+        setError("Could not load the paragraphs. Try again shortly.")
       }
     },
     [cache],
@@ -74,7 +74,7 @@ export const LargeContentWorkspace = () => {
         )
       } catch {
         if (openRequestRef.current === request)
-          setError("문단을 열지 못했습니다. 잠시 후 다시 시도하세요.")
+          setError("Could not open the paragraph. Try again shortly.")
       }
     },
     [cache, virtualizer],
@@ -102,23 +102,23 @@ export const LargeContentWorkspace = () => {
       }
     } catch {
       if (searchRequestRef.current === request)
-        setError("검색하지 못했습니다. 잠시 후 다시 시도하세요.")
+        setError("Could not complete the search. Try again shortly.")
     }
   }
 
   return (
-    <section className="large-workspace" aria-label="긴 문서 작업 공간">
+    <section className="large-workspace" aria-label="Long document workspace">
       <header className="large-workspace__header">
         <div>
-          <span className="eyebrow">문서 보관함</span>
-          <h1>긴 문서 탐색</h1>
-          <p>필요한 문단을 빠르게 찾고, 작성 중인 내용을 잃지 않고 수정하세요.</p>
+          <span className="eyebrow">Document archive</span>
+          <h1>Navigate long documents</h1>
+          <p>Find the paragraph you need quickly and edit it without losing your draft.</p>
         </div>
         <a className="button button--secondary" href={largeContentApi.exportUrl} download>
-          <DownloadIcon /> 전체 문서 내보내기
+          <DownloadIcon /> Export full document
         </a>
       </header>
-      <section className="large-tools" aria-label="긴 문서 도구">
+      <section className="large-tools" aria-label="Long document tools">
         <form
           onSubmit={(event) => {
             event.preventDefault()
@@ -126,28 +126,28 @@ export const LargeContentWorkspace = () => {
           }}
         >
           <label className="field">
-            <span>문서 검색</span>
+            <span>Search document</span>
             <div className="large-tools__cluster">
               <input value={query} onChange={(event) => setQuery(event.target.value)} />
               <button className="button button--secondary" type="submit">
-                <MagnifyingGlassIcon /> 검색
+                <MagnifyingGlassIcon /> Search
               </button>
             </div>
           </label>
         </form>
         <div className="field">
-          <span>문단 표시 또는 이동</span>
+          <span>Reveal or navigate to a paragraph</span>
           <div className="large-tools__cluster">
             <input
-              aria-label="문단 ID 또는 번호"
+              aria-label="Paragraph ID or number"
               value={annotationTarget}
               onChange={(event) => setAnnotationTarget(event.target.value)}
             />
             <button className="button button--ghost" type="button" onClick={() => reveal(false)}>
-              문단 보기
+              Reveal paragraph
             </button>
             <button className="button button--secondary" type="button" onClick={() => reveal(true)}>
-              열어서 편집
+              Open for editing
             </button>
           </div>
         </div>
@@ -162,11 +162,11 @@ export const LargeContentWorkspace = () => {
               void loadPage(Math.floor((virtualItems[0]?.index ?? 0) / PAGE_SIZE) * PAGE_SIZE, true)
             }
           >
-            <ReloadIcon /> 다시 시도
+            <ReloadIcon /> Try again
           </button>
         </div>
       )}
-      <section className="large-scroll" ref={scrollRef} aria-label="문서 문단 목록">
+      <section className="large-scroll" ref={scrollRef} aria-label="Document paragraph list">
         <div className="large-scroll__sizer" style={{ height: virtualizer.getTotalSize() }}>
           {virtualItems.map((item) => (
             <div
@@ -187,8 +187,8 @@ export const LargeContentWorkspace = () => {
         </div>
       </section>
       <footer className="large-workspace__status" aria-live="polite">
-        화면에 표시된 문단 {virtualItems.length}개 · 전체 {cache.count}개 · 표시 {annotations.size}
-        개
+        {virtualItems.length} visible paragraphs · {cache.count} total · {annotations.size}{" "}
+        highlighted
       </footer>
       {active !== null && (
         <BlockEditDialog

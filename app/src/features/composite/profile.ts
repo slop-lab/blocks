@@ -164,12 +164,12 @@ const documentJson = (title: string, caption: string): Readonly<Record<string, u
             {
               type: "table_header",
               attrs: { colspan: 1, rowspan: 1, colwidth: null },
-              content: [paragraph("항목")],
+              content: [paragraph("Item")],
             },
             {
               type: "table_header",
               attrs: { colspan: 1, rowspan: 1, colwidth: null },
-              content: [paragraph("결정")],
+              content: [paragraph("Decision")],
             },
           ],
         },
@@ -179,12 +179,12 @@ const documentJson = (title: string, caption: string): Readonly<Record<string, u
             {
               type: "table_cell",
               attrs: { colspan: 1, rowspan: 1, colwidth: null },
-              content: [paragraph("숙소 체크인")],
+              content: [paragraph("Hotel check-in")],
             },
             {
               type: "table_cell",
               attrs: { colspan: 1, rowspan: 1, colwidth: null },
-              content: [paragraph("금요일 16:00")],
+              content: [paragraph("Friday 16:00")],
             },
           ],
         },
@@ -208,10 +208,10 @@ const documentJson = (title: string, caption: string): Readonly<Record<string, u
 export const createCompositeSnapshot = (): CompositeSnapshot => ({
   schemaVersion: 2,
   document: documentJson(
-    "봄 여행 워크숍",
-    "일정 표에서 함께 정한 내용을 여행 준비 데이터와 맞춥니다.",
+    "Spring travel workshop",
+    "Keep the decisions in the itinerary table aligned with the travel preparation data.",
   ),
-  code: "const itinerary = { destination: '제주', nights: 3 }\n\nexport { itinerary }",
+  code: "const itinerary = { destination: 'Jeju', nights: 3 }\n\nexport { itinerary }",
 })
 
 export const migrateCompositeSnapshot = (

@@ -103,7 +103,7 @@ const scanSource = (source: string): SourceScan => {
       end,
       supported:
         supportedTokens.has(token.type) && !directive && compatible(tokens.slice(index, nextIndex)),
-      label: token.type.startsWith("table") ? "Markdown 표" : "지원하지 않는 Markdown",
+      label: token.type.startsWith("table") ? "Markdown table" : "Unsupported Markdown",
     })
   }
   return {
@@ -167,7 +167,7 @@ export const parseMarkdown = (source: string): ParsedMarkdown => {
     const gap = source.slice(cursor, range.start)
     if (gap.trim().length === 0) prefix += gap
     else {
-      content.push(opaque(gap, prefix, "보존된 참조 또는 확장 구문", content.length))
+      content.push(opaque(gap, prefix, "Preserved reference or extension syntax", content.length))
       prefix = ""
     }
     const raw = source.slice(range.start, range.end)
@@ -188,7 +188,7 @@ export const parseMarkdown = (source: string): ParsedMarkdown => {
   const tail = source.slice(cursor)
   if (tail.trim().length === 0) prefix += tail
   else {
-    content.push(opaque(tail, prefix, "보존된 참조 또는 확장 구문", content.length))
+    content.push(opaque(tail, prefix, "Preserved reference or extension syntax", content.length))
     prefix = ""
   }
   if (content.length === 0) {

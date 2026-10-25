@@ -39,7 +39,3 @@ checks:
     args: [test]
     timeoutMs: 300000
     message: "Fix the failing unit and integration tests."
-  - name: build
-    command: pnpm
-    args: [build]
-    message: "Fix the package and production application build."

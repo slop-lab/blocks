@@ -15,7 +15,7 @@ pnpm-lockfile, and Biome formatting rules. Public package names remain
 `@slop-lab/blocks` and `@slop-lab/blocks-*`; the demo and docs CLI stay private.
 
 ```sh
-pnpm check             # all working-tree files, then lint, types, tests, build
+pnpm check             # all working-tree files, then lint, types, build and tests
 pnpm check:staged      # staged paths and index contents, then the same checks
 pnpm check:hook        # reproduce the complete pre-commit hook
 pnpm hooks:install    # install the project-local hook explicitly
@@ -42,8 +42,11 @@ the caller's index or weakening the hook.
 
 The Biome adapter validates staged formatting. `pnpm lint` also checks full-tree
 lint and import organization because QG 0.1.0's Biome adapter supports reliable
-format-mode diagnostics, not full check-mode diagnostics. Vitest runs through a
-command check, not QG's Node-test runner. There is no synthetic coverage target.
+format-mode diagnostics, not full check-mode diagnostics. The test command first
+builds the application because HTTP boundary tests exercise its production assets.
+Vitest uses jsdom storage with Node's native Web Storage disabled so Node 24 and
+26 use the same browser test environment. It runs through a command check, not
+QG's Node-test runner. There is no synthetic coverage target.
 
 The optional JS collection is composed deliberately: `js-test-fixtures` plus
 the published package-name and package-manager rule collections in

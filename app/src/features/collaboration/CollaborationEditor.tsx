@@ -65,7 +65,7 @@ export const CollaborationEditor = ({ label, binding, onActive }: CollaborationE
           keymap(baseKeymap),
         ],
       }),
-      attributes: { class: "editor-content", "aria-label": `${label} 공동 편집기` },
+      attributes: { class: "editor-content", "aria-label": `${label} collaborative editor` },
       handleDOMEvents: {
         focus: () => {
           activeRef.current(view)

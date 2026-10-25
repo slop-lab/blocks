@@ -50,7 +50,9 @@ describe("collaboration workspace lifecycle", () => {
       ),
     )
     expect(host.querySelector("main")).toBeNull()
-    expect(host.querySelector("section[aria-label='실시간 공동 편집']")).not.toBeNull()
+    expect(
+      host.querySelector("section[aria-label='Real-time collaborative editing']"),
+    ).not.toBeNull()
     expect(host.textContent).not.toContain("OPTIONAL PROFILE")
     expect(host.textContent).not.toContain("INDEPENDENT SURFACE")
     expect(sockets).toHaveLength(4)

@@ -15,7 +15,7 @@ export type MarkdownMode = "source" | "visual"
 export type MarkdownSaveMode = "manual" | "auto"
 
 const errorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : "Markdown 작업 공간을 불러오지 못했습니다."
+  error instanceof Error ? error.message : "Could not load the Markdown workspace."
 
 export const useMarkdownWorkspace = (initialFile: string | null = null) => {
   const [files, setFiles] = useState<readonly string[]>([])
@@ -28,7 +28,7 @@ export const useMarkdownWorkspace = (initialFile: string | null = null) => {
   const [saveMode, setSaveMode] = useState<MarkdownSaveMode>("manual")
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [conflict, setConflict] = useState<MarkdownFile | null>(null)
-  const [status, setStatus] = useState("파일 목록을 불러오는 중입니다.")
+  const [status, setStatus] = useState("Loading the file list.")
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(false)
   const [composing, setComposing] = useState(false)
@@ -58,14 +58,14 @@ export const useMarkdownWorkspace = (initialFile: string | null = null) => {
     async (name: string, reload = false) => {
       if (name === diskRef.current?.name && !reload) return
       if (composingRef.current) {
-        setStatus("조합 중인 입력을 먼저 확정해 주세요.")
+        setStatus("Finish the current composition before continuing.")
         return
       }
       const generation = ++fileGenerationRef.current
       mappingRequestRef.current += 1
       setSaving(false)
       setLoading(true)
-      setStatus(`${name} 불러오는 중`)
+      setStatus(`Loading ${name}`)
       try {
         const loaded = await loadMarkdown(name)
         if (generation !== fileGenerationRef.current) return
@@ -76,7 +76,7 @@ export const useMarkdownWorkspace = (initialFile: string | null = null) => {
         setConflict(null)
         setSelectedId(null)
         setMode("visual")
-        setStatus("디스크 버전과 초안이 같습니다.")
+        setStatus("The draft matches the version on disk.")
       } catch (error) {
         if (generation === fileGenerationRef.current) setStatus(errorMessage(error))
       } finally {
@@ -97,7 +97,7 @@ export const useMarkdownWorkspace = (initialFile: string | null = null) => {
           initialFile !== null && inventory.files.includes(initialFile)
             ? initialFile
             : inventory.files[0]
-        if (first === undefined) setStatus("편집할 Markdown 파일이 없습니다.")
+        if (first === undefined) setStatus("There are no Markdown files to edit.")
         else void openFile(first)
       })
       .catch((error: unknown) => {
@@ -115,20 +115,20 @@ export const useMarkdownWorkspace = (initialFile: string | null = null) => {
     const generation = fileGenerationRef.current
     const submittedContent = draftRef.current
     setSaving(true)
-    setStatus("디스크에 저장하는 중입니다.")
+    setStatus("Saving to disk.")
     try {
       const result = await saveMarkdown({ ...disk, content: submittedContent })
       if (generation !== fileGenerationRef.current) return
       if (result.kind === "conflict") {
         setConflict(result.disk)
-        setStatus("디스크 파일이 바뀌어 초안을 저장하지 않았습니다.")
+        setStatus("The file on disk changed, so the draft was not saved.")
       } else {
         setDisk(result.file)
         setConflict(null)
         setStatus(
           draftRef.current === submittedContent
-            ? "디스크에 저장했습니다."
-            : "저장 중 추가된 변경은 초안에 남아 있습니다.",
+            ? "Saved to disk."
+            : "Changes made while saving remain in the draft.",
         )
       }
     } catch (error) {

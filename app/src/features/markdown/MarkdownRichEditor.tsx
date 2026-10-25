@@ -135,7 +135,7 @@ export const MarkdownRichEditor = forwardRef<MarkdownRichEditorHandle, MarkdownR
         ),
         attributes: {
           class: "markdown-prose",
-          "aria-label": "Markdown 문서 편집기",
+          "aria-label": "Markdown document editor",
         },
         dispatchTransaction: (transaction) => {
           const previous = view.state.doc

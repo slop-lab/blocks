@@ -26,25 +26,25 @@ try {
   const errors = []
   page.on("pageerror", (error) => errors.push(error.message))
   await page.goto(`http://127.0.0.1:${address.port}`, { waitUntil: "networkidle" })
-  await page.getByRole("button", { name: /공유 회의록/ }).click()
+  await page.getByRole("button", { name: /Shared meeting notes/ }).click()
   const workspace = page.locator(".workflow-workspace")
-  const text = workspace.getByLabel("회의 내용")
+  const text = workspace.getByLabel("Meeting notes")
   await text.waitFor()
   await text.fill("승인이 필요한 공유 회의록입니다.")
-  await workspace.getByRole("button", { name: "초안 저장" }).click()
-  await workspace.getByRole("button", { name: "검토 요청" }).click()
-  await workspace.getByRole("status").filter({ hasText: "검토를 요청했습니다" }).waitFor()
-  await workspace.getByRole("button", { name: "검토자", exact: true }).click()
-  await workspace.getByRole("button", { name: "승인" }).click()
-  await workspace.getByRole("status").filter({ hasText: "문서를 승인했습니다" }).waitFor()
+  await workspace.getByRole("button", { name: "Save draft" }).click()
+  await workspace.getByRole("button", { name: "Request review" }).click()
+  await workspace.getByRole("status").filter({ hasText: "Requested a review." }).waitFor()
+  await workspace.getByRole("button", { name: "Reviewer", exact: true }).click()
+  await workspace.getByRole("button", { name: "Approve" }).click()
+  await workspace.getByRole("status").filter({ hasText: "Approved the document." }).waitFor()
   assert.deepEqual(await workspace.locator(".workflow-audit strong").allTextContents(), [
-    "초안 생성",
-    "검토 요청",
-    "승인",
+    "Draft created",
+    "Review requested",
+    "Approved",
   ])
-  await workspace.getByRole("button", { name: "열람자", exact: true }).click()
+  await workspace.getByRole("button", { name: "Viewer", exact: true }).click()
   assert.equal(await text.isEditable(), false)
-  assert.equal(await workspace.getByRole("button", { name: "승인" }).isDisabled(), true)
+  assert.equal(await workspace.getByRole("button", { name: "Approve" }).isDisabled(), true)
 
   for (const width of [375, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 })
@@ -54,7 +54,7 @@ try {
       ),
       true,
     )
-    await workspace.getByRole("heading", { name: "공유 회의록" }).waitFor()
+    await workspace.getByRole("heading", { name: "Shared meeting notes" }).waitFor()
   }
   assert.deepEqual(errors, [])
   console.log(

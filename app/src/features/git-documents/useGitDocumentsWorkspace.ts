@@ -12,15 +12,15 @@ import {
 
 const message = (error: unknown) => {
   if (error instanceof HTTPError && error.response.status === 404)
-    return "Git 문서 서버가 연결되지 않았습니다. block-docs start로 저장소를 여세요."
-  return error instanceof Error ? error.message : "요청을 완료하지 못했습니다."
+    return "The Git document server is not connected. Open the repository with block-docs start."
+  return error instanceof Error ? error.message : "Could not complete the request."
 }
 
 export const useGitDocumentsWorkspace = () => {
   const [state, setState] = useState<GitDocumentsState | null>(null)
   const [file, setFile] = useState<GitDocumentFile | null>(null)
   const [draft, setDraft] = useState("")
-  const [status, setStatus] = useState("Git 문서 저장소를 여는 중입니다.")
+  const [status, setStatus] = useState("Opening the Git document repository.")
   const [diff, setDiff] = useState<GitDocumentDiff | null>(null)
   const [history, setHistory] = useState<readonly GitHistoryEntry[]>([])
   const [branches, setBranches] = useState<readonly GitBranch[]>([])
@@ -54,7 +54,7 @@ export const useGitDocumentsWorkspace = () => {
       setFile(next)
       setDraft(next.draft?.content ?? next.content)
       setStatus(
-        next.draft === null ? "작업 트리 버전을 열었습니다." : "자동 저장된 초안을 복구했습니다.",
+        next.draft === null ? "Opened the working-tree version." : "Recovered an autosaved draft.",
       )
       const [nextDiff, nextHistory] = await Promise.all([
         gitDocumentsApi.diff(path),
@@ -76,7 +76,7 @@ export const useGitDocumentsWorkspace = () => {
         setBranches(await gitDocumentsApi.branches())
         const first = flatten(next.tree)[0]
         if (first !== undefined) await open(first)
-        else setStatus("첫 Markdown 문서를 만들어 보세요.")
+        else setStatus("Create your first Markdown document.")
       })
       .catch((error: unknown) => setStatus(message(error)))
   }, [open, refresh])
@@ -87,8 +87,8 @@ export const useGitDocumentsWorkspace = () => {
       const content = draftRef.current
       draftQueue.current = draftQueue.current
         .then(() => gitDocumentsApi.draft(file, content))
-        .then(() => setStatus("복구 초안을 자동 저장했습니다."))
-        .catch((error: unknown) => setStatus(`초안을 저장하지 못했습니다: ${message(error)}`))
+        .then(() => setStatus("Autosaved the recovery draft."))
+        .catch((error: unknown) => setStatus(`Could not save the draft: ${message(error)}`))
     }, 500)
     return () => window.clearTimeout(timer)
   }, [draft, file])
@@ -141,7 +141,7 @@ export const useGitDocumentsWorkspace = () => {
         await gitDocumentsApi.clearDraft(saved.path)
         setDraft(saved.content)
         await reloadCurrent()
-        setStatus("작업 트리에 저장했습니다. 커밋은 검토 탭에서 별도로 만드세요.")
+        setStatus("Saved to the working tree. Create a commit separately from the Review tab.")
       }),
     discardDraft: () =>
       perform(async () => {
@@ -149,7 +149,7 @@ export const useGitDocumentsWorkspace = () => {
         await gitDocumentsApi.clearDraft(file.path)
         setDraft(file.content)
         setFile({ ...file, draft: null })
-        setStatus("복구 초안을 버렸습니다.")
+        setStatus("Discarded the recovery draft.")
       }),
     create: (path: string) =>
       perform(async () => {
@@ -190,14 +190,16 @@ export const useGitDocumentsWorkspace = () => {
         await gitDocumentsApi.commit(paths, commitMessage, expectedRevisions)
         setSelected(new Set())
         await reloadCurrent()
-        setStatus("선택한 문서 변경을 커밋했습니다.")
+        setStatus("Committed the selected document changes.")
       }),
     restore: (commit: string) =>
       perform(async () => {
         if (file === null) return
         await gitDocumentsApi.restore(file.path, commit)
         await reloadCurrent()
-        setStatus("선택한 기록을 작업 트리에 복원했습니다. 검토 후 커밋하세요.")
+        setStatus(
+          "Restored the selected revision to the working tree. Review it before committing.",
+        )
       }),
     search: (query: string) => perform(async () => setResults(await gitDocumentsApi.search(query))),
     backlinks: () =>
@@ -220,20 +222,20 @@ export const useGitDocumentsWorkspace = () => {
       perform(async () => {
         await gitDocumentsApi.remote(action)
         await reloadCurrent()
-        setStatus(`원격 ${action} 작업을 완료했습니다.`)
+        setStatus(`Completed the remote ${action} operation.`)
       }),
     resolve: () =>
       perform(async () => {
         if (file === null) return
         await gitDocumentsApi.resolve(file, draftRef.current)
         await reloadCurrent()
-        setStatus("충돌 해결 내용을 스테이징했습니다.")
+        setStatus("Staged the conflict resolution.")
       }),
     completeMerge: (commitMessage: string) =>
       perform(async () => {
         await gitDocumentsApi.completeMerge(commitMessage)
         await reloadCurrent()
-        setStatus("병합 커밋을 만들었습니다.")
+        setStatus("Created the merge commit.")
       }),
   }
 }

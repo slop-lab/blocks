@@ -121,18 +121,18 @@ export const BlockEditDialog = ({ block, onClose, onSaved, onMove }: BlockEditDi
       >
         <header>
           <div>
-            <span className="eyebrow">문단 편집</span>
-            <h2 id="large-edit-title">{block.index + 1}번째 문단</h2>
+            <span className="eyebrow">Edit paragraph</span>
+            <h2 id="large-edit-title">Paragraph {block.index + 1}</h2>
           </div>
-          <button className="icon-button" type="button" aria-label="편집기 닫기" onClick={onClose}>
+          <button className="icon-button" type="button" aria-label="Close editor" onClick={onClose}>
             <Cross2Icon />
           </button>
         </header>
         <p className="large-dialog__meta">
-          버전 {current.revision} · 저장하기 전까지 작성 중인 내용이 유지됩니다.
+          Version {current.revision} · Your draft is preserved until you save.
         </p>
         <label className="field">
-          <span>문단 내용</span>
+          <span>Paragraph content</span>
           <textarea
             ref={inputRef}
             rows={8}
@@ -148,23 +148,23 @@ export const BlockEditDialog = ({ block, onClose, onSaved, onMove }: BlockEditDi
         </label>
         {status === "conflict" && (
           <div className="large-conflict" role="alert">
-            <strong>다른 곳에서 이 문단을 먼저 수정했습니다.</strong>
-            <p>작성 중인 내용은 그대로 두었습니다. 최신 내용: {current.text}</p>
+            <strong>This paragraph was updated elsewhere.</strong>
+            <p>Your draft is unchanged. Latest content: {current.text}</p>
           </div>
         )}
         {status === "error" && (
           <p className="form-error" role="alert">
-            문단을 저장하지 못했습니다. 작성 중인 내용은 그대로 유지됩니다.
+            Could not save the paragraph. Your draft is preserved.
           </p>
         )}
         {moveWarning && (
           <p className="form-error" role="alert">
-            다른 문단으로 이동하려면 먼저 변경 내용을 저장하거나 편집을 취소하세요.
+            Save your changes or cancel editing before moving to another paragraph.
           </p>
         )}
         <footer>
           <button className="button button--ghost" type="button" onClick={onClose}>
-            편집 취소
+            Cancel editing
           </button>
           <button
             className="button button--ghost"
@@ -172,14 +172,14 @@ export const BlockEditDialog = ({ block, onClose, onSaved, onMove }: BlockEditDi
             onClick={() => requestMove(block.index - 1)}
             disabled={block.index === 0}
           >
-            이전 문단
+            Previous paragraph
           </button>
           <button
             className="button button--ghost"
             type="button"
             onClick={() => requestMove(block.index + 1)}
           >
-            다음 문단
+            Next paragraph
           </button>
           <button
             className="button button--primary"
@@ -187,7 +187,7 @@ export const BlockEditDialog = ({ block, onClose, onSaved, onMove }: BlockEditDi
             onClick={() => void save()}
             disabled={status === "saving" || draft.trim().length === 0}
           >
-            {status === "saving" ? "저장 중..." : "문단 저장"}
+            {status === "saving" ? "Saving..." : "Save paragraph"}
           </button>
         </footer>
       </section>

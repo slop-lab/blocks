@@ -113,7 +113,7 @@ const loadResource = async <T>(path: string, schema: z.ZodType<T>): Promise<Reso
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "알 수 없는 리소스 오류",
+      error: error instanceof Error ? error.message : "Unknown resource error",
     }
   }
 }

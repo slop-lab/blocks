@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useId, useState } from "react"
 import { type AgentModelCatalog, loadAgentModels } from "./agent-api"
 
 type AgentModelSelectProps = {
@@ -10,6 +10,8 @@ type AgentModelSelectProps = {
 export const AgentModelSelect = ({ value, onChange, disabled }: AgentModelSelectProps) => {
   const [catalog, setCatalog] = useState<AgentModelCatalog | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const id = useId()
+  const selected = catalog?.models.find((model) => model.id === value)
 
   useEffect(() => {
     let active = true
@@ -21,7 +23,7 @@ export const AgentModelSelect = ({ value, onChange, disabled }: AgentModelSelect
       })
       .catch((caught: unknown) => {
         if (!active) return
-        setError(caught instanceof Error ? caught.message : "모델 목록을 불러오지 못했습니다.")
+        setError(caught instanceof Error ? caught.message : "Could not load the model list.")
       })
     return () => {
       active = false
@@ -29,21 +31,29 @@ export const AgentModelSelect = ({ value, onChange, disabled }: AgentModelSelect
   }, [onChange])
 
   return (
-    <label className="field">
-      <span>실행 모델</span>
+    <div className="field">
+      <label htmlFor={id}>Run model</label>
       <select
+        id={id}
+        aria-describedby={selected === undefined ? undefined : `${id}-details`}
         value={value ?? ""}
         disabled={disabled || catalog === null || catalog.models.length === 0}
         onChange={(event) => onChange(event.target.value || undefined)}
       >
-        {catalog === null && <option value="">모델 목록 불러오는 중</option>}
+        {catalog === null && <option value="">Loading models</option>}
         {catalog?.models.map((model) => (
           <option key={model.id} value={model.id}>
-            {model.providerLabel} · {model.id}
+            {model.id}
           </option>
         ))}
       </select>
+      {selected !== undefined && (
+        <small className="agent-model-details" id={`${id}-details`}>
+          <span>{selected.providerLabel}</span>
+          <code>{selected.id}</code>
+        </small>
+      )}
       {error !== null && <small className="form-error">{error}</small>}
-    </label>
+    </div>
   )
 }

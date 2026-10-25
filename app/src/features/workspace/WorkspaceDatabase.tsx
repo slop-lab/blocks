@@ -16,44 +16,49 @@ export const WorkspaceDatabase = ({ database, onChange }: Props) => {
   const [descending, setDescending] = useState(false)
   const [layout, setLayout] = useState<"table" | "kanban">("table")
   const statusProperty = database.properties.find((property) => property.type === "status")
+  const selectedStatus = statusProperty?.options.includes(status) === true ? status : ""
   const rows = useMemo(
     () =>
       filterAndSortRows(database, {
         query,
-        ...(status === "" ? {} : { filter: { propertyId: "status", equals: status } }),
+        ...(statusProperty === undefined || selectedStatus === ""
+          ? {}
+          : { filter: { propertyId: statusProperty.id, equals: selectedStatus } }),
         sort: { propertyId: "name", direction: descending ? "desc" : "asc" },
       }),
-    [database, descending, query, status],
+    [database, descending, query, selectedStatus, statusProperty],
   )
   return (
     <section className="structured-database" aria-label={database.name}>
       <header>
         <div>
-          <span className="eyebrow">데이터베이스</span>
+          <span className="eyebrow">Database</span>
           <h2>{database.name}</h2>
         </div>
         <div className="structured-database__tools">
           <input
-            aria-label="행 검색"
+            aria-label="Search rows"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="작업 검색"
+            placeholder="Search tasks"
           />
-          <select
-            aria-label="상태 필터"
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-          >
-            <option value="">모든 상태</option>
-            <option>대기</option>
-            <option>진행</option>
-            <option>완료</option>
-          </select>
+          {statusProperty !== undefined && (
+            <select
+              aria-label={`Filter by ${statusProperty.name}`}
+              value={selectedStatus}
+              onChange={(event) => setStatus(event.target.value)}
+            >
+              <option value="">All {statusProperty.name} values</option>
+              {statusProperty.options.map((option) => (
+                <option key={option}>{option}</option>
+              ))}
+            </select>
+          )}
           <button type="button" onClick={() => setDescending((value) => !value)}>
-            이름 {descending ? "내림차순" : "오름차순"}
+            Name {descending ? "descending" : "ascending"}
           </button>
           <button type="button" onClick={() => setLayout(layout === "table" ? "kanban" : "table")}>
-            {layout === "table" ? "보드 보기" : "표 보기"}
+            {layout === "table" ? "Board view" : "Table view"}
           </button>
           <button
             type="button"
@@ -61,12 +66,12 @@ export const WorkspaceDatabase = ({ database, onChange }: Props) => {
               onChange(
                 addDatabaseRow(database, {
                   id: `row-${crypto.randomUUID()}`,
-                  values: { name: "새 작업" },
+                  values: { name: "New task" },
                 }),
               )
             }
           >
-            <PlusIcon /> 행 추가
+            <PlusIcon /> Add row
           </button>
         </div>
       </header>
@@ -79,11 +84,11 @@ export const WorkspaceDatabase = ({ database, onChange }: Props) => {
       ) : (
         <>
           <p className="structured-table-hint" id={`${database.id}-scroll-hint`}>
-            표를 좌우로 스크롤해 모든 속성을 확인하세요.
+            Scroll the table horizontally to view all properties.
           </p>
           <section
             className="structured-table-wrap"
-            aria-label={`${database.name} 표`}
+            aria-label={`${database.name} table`}
             aria-describedby={`${database.id}-scroll-hint`}
           >
             <table>

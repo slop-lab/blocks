@@ -8,7 +8,7 @@ type Props = {
 }
 
 export const WorkspaceFocusBreadcrumbs = ({ focus, onNavigate }: Props) => (
-  <nav className="workspace-focus" aria-label="집중 보기 경로">
+  <nav className="workspace-focus" aria-label="Focus view path">
     <ol>
       {focus.breadcrumbs.map((crumb, index) => {
         const current = index === focus.breadcrumbs.length - 1

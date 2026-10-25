@@ -16,11 +16,11 @@ export const WorkspaceDocumentTools = (props: ToolsProps) => {
   )
   return (
     <>
-      <section className="structured-document__tools" aria-label="문서 블록 도구">
+      <section className="structured-document__tools" aria-label="Document block tools">
         <label>
-          연결할 페이지
+          Page to link
           <select
-            aria-label="연결할 페이지"
+            aria-label="Page to link"
             value={referencePageId}
             onChange={(event) => setReferencePageId(event.currentTarget.value)}
           >
@@ -51,19 +51,19 @@ export const WorkspaceDocumentTools = (props: ToolsProps) => {
             })
           }
         >
-          페이지 연결 추가
+          Add page link
         </button>
       </section>
       <label className="structured-paste-policy">
-        붙여넣기 방식
+        Paste behavior
         <select
           value={props.pasteMode}
           onChange={(event) =>
             props.onPasteMode(event.currentTarget.value === "reference" ? "reference" : "clone")
           }
         >
-          <option value="clone">독립 복제</option>
-          <option value="reference">공유 원본 참조</option>
+          <option value="clone">Independent copy</option>
+          <option value="reference">Shared source reference</option>
         </select>
       </label>
     </>
@@ -80,10 +80,10 @@ type BacklinksProps = {
 }
 
 export const WorkspaceBacklinks = ({ backlinks, onOpenPage }: BacklinksProps) => (
-  <nav className="structured-backlinks" aria-label="백링크">
-    <h2>이 페이지를 연결한 문서</h2>
+  <nav className="structured-backlinks" aria-label="Backlinks">
+    <h2>Documents linking to this page</h2>
     {backlinks.length === 0 ? (
-      <p>아직 연결한 문서가 없습니다.</p>
+      <p>No documents link to this page yet.</p>
     ) : (
       <ul>
         {backlinks.map((backlink) => (

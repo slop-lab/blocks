@@ -32,14 +32,14 @@ export const WorkspaceTopbar = ({
   return (
     <header className="structured-topbar">
       <div>
-        <span className="eyebrow">문서와 데이터베이스</span>
+        <span className="eyebrow">Documents and databases</span>
         <h1>
           <span className="structured-topbar__title-text" aria-hidden="true">
             {draft}
           </span>
           <input
             ref={input}
-            aria-label="페이지 제목"
+            aria-label="Page title"
             maxLength={160}
             value={draft}
             onChange={(event) => setDraft(event.currentTarget.value)}
@@ -93,10 +93,10 @@ export const WorkspaceTrash = ({
 }) =>
   pages.length === 0 ? null : (
     <aside className="structured-trash">
-      <strong>보관함</strong>
+      <strong>Archive</strong>
       {pages.map((page) => (
         <button type="button" key={page.id} onClick={() => onRestore(page.id)}>
-          <ResetIcon /> {page.title} 복원
+          <ResetIcon /> Restore {page.title}
         </button>
       ))}
     </aside>

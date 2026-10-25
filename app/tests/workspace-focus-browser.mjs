@@ -61,8 +61,8 @@ try {
   })
   assert.equal(seeded.status(), 200)
   await page.reload({ waitUntil: "networkidle" })
-  const workspace = page.getByLabel("문서와 데이터베이스")
-  await workspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
+  const workspace = page.getByLabel("Documents and databases")
+  await workspace.getByRole("button", { name: "User Research", exact: true }).click()
   const openBlock = async (block) => {
     await block.click()
     await block.hover()
@@ -72,8 +72,8 @@ try {
     assert.notEqual(blockId, null)
     const rail = page.locator(`.block-controls[data-target-block-id="${blockId}"]`)
     await rail.waitFor({ state: "visible" })
-    await rail.getByRole("button", { name: "블록 메뉴 및 드래그", exact: true }).click()
-    const focusAction = page.getByRole("menuitem", { name: "집중 보기", exact: true })
+    await rail.getByRole("button", { name: "Block menu and drag handle", exact: true }).click()
+    const focusAction = page.getByRole("menuitem", { name: "Focus view", exact: true })
     assert.equal(
       await focusAction.count(),
       1,
@@ -108,7 +108,7 @@ try {
     assert.notEqual(blockId, null)
     const rail = page.locator(`.block-controls[data-target-block-id="${blockId}"]`)
     await rail.waitFor({ state: "visible" })
-    await rail.getByRole("button", { name: "블록 메뉴 및 드래그", exact: true }).click()
+    await rail.getByRole("button", { name: "Block menu and drag handle", exact: true }).click()
     await page.getByRole("menuitem", { name: action, exact: true }).click()
   }
   await openBlock(workspace.locator('[data-block-id="focus-leaf"]'))
@@ -116,8 +116,8 @@ try {
     await page.evaluate(() => window.location.hash),
     focusHash({ kind: "local", blockId: "focus-leaf" }),
   )
-  await page.getByRole("navigation", { name: "집중 보기 경로" }).waitFor()
-  let editor = workspace.getByLabel("구조화 문서 편집기").last()
+  await page.getByRole("navigation", { name: "Focus view path" }).waitFor()
+  let editor = workspace.getByLabel("Structured document editor").last()
   assert.equal(await editor.locator('[data-block-id="outside-before"]:visible').count(), 0)
   assert.equal(await editor.locator('[data-block-id="focus-leaf"]:visible').count(), 1)
   await editor.locator('[data-block-id="focus-leaf"]').click()
@@ -136,31 +136,35 @@ try {
     focusHash({ kind: "local", blockId: localSiblingId }),
   )
   assert.equal(await page.evaluate(() => window.history.length), localHistoryLength)
-  await removeThroughGrip(localSibling, "삭제")
+  await removeThroughGrip(localSibling, "Delete")
   assert.equal(
     await page.evaluate(() => window.location.hash),
     focusHash({ kind: "local", blockId: "focus-callout" }),
   )
-  await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
+  await page.getByRole("status").filter({ hasText: "Saved all changes." }).waitFor()
   await page.reload({ waitUntil: "networkidle" })
   assert.equal(
     await page.evaluate(() => window.location.hash),
     focusHash({ kind: "local", blockId: "focus-callout" }),
   )
   await workspace.locator('[data-block-id="focus-callout"]:visible').waitFor()
-  editor = workspace.getByLabel("구조화 문서 편집기").last()
-  await page.getByRole("navigation", { name: "집중 보기 경로" }).getByRole("button").first().click()
+  editor = workspace.getByLabel("Structured document editor").last()
+  await page
+    .getByRole("navigation", { name: "Focus view path" })
+    .getByRole("button")
+    .first()
+    .click()
   assert.equal(await editor.locator('[data-block-id="outside-before"]:visible').count(), 1)
 
   const section = editor.locator('[data-block-id="focus-section"]')
   await section.hover()
-  await section.getByRole("button", { name: "공유 섹션으로 전환", exact: true }).click()
+  await section.getByRole("button", { name: "Convert to shared section", exact: true }).click()
   let synced = editor.locator(".structured-sync").first()
   await synced.waitFor()
-  await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
+  await page.getByRole("status").filter({ hasText: "Saved all changes." }).waitFor()
   await page.reload({ waitUntil: "networkidle" })
-  await workspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
-  editor = workspace.getByLabel("구조화 문서 편집기").last()
+  await workspace.getByRole("button", { name: "User Research", exact: true }).click()
+  editor = workspace.getByLabel("Structured document editor").last()
   synced = editor.locator(".structured-sync").first()
   await synced.waitFor()
   const occurrenceId = await synced.getAttribute("data-occurrence-id")
@@ -187,7 +191,7 @@ try {
   await openBlock(
     synced.locator(`[data-block-id="${sharedLeafId}"], [data-source-block-id="${sharedLeafId}"]`),
   )
-  await page.getByRole("navigation", { name: "집중 보기 경로" }).waitFor()
+  await page.getByRole("navigation", { name: "Focus view path" }).waitFor()
   assert.equal(await editor.locator('[data-block-id="outside-before"]:visible').count(), 0)
   assert.equal(await editor.locator('[data-block-id="outside-after"]:visible').count(), 0)
   assert.equal(await synced.locator('[data-source-block-id="focus-sibling"]:visible').count(), 0)
@@ -212,26 +216,26 @@ try {
     focusHash({ kind: "shared", occurrenceId, blockId: sharedSiblingId }),
   )
   assert.equal(await page.evaluate(() => window.history.length), sharedHistoryLength)
-  await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
-  await removeThroughGrip(sharedSibling, "잘라내기")
+  await page.getByRole("status").filter({ hasText: "Saved all changes." }).waitFor()
+  await removeThroughGrip(sharedSibling, "Cut")
   const deletedSharedHash = focusHash({ kind: "shared", occurrenceId, blockId: sharedSiblingId })
   await sharedSibling.waitFor({ state: "detached" })
-  await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
+  await page.getByRole("status").filter({ hasText: "Saved all changes." }).waitFor()
   await page.waitForFunction((hash) => window.location.hash !== hash, deletedSharedHash)
   const sharedFallbackHash = await page.evaluate(() => window.location.hash)
   assert.notEqual(sharedFallbackHash, deletedSharedHash)
   assert.equal(await synced.locator('[data-block-id="focus-sibling"]:visible').count(), 1)
-  assert.equal(await workspace.getByLabel("연결할 페이지").count(), 0)
-  assert.equal(await workspace.getByRole("navigation", { name: "백링크" }).count(), 0)
+  assert.equal(await workspace.getByLabel("Page to link").count(), 0)
+  assert.equal(await workspace.getByRole("navigation", { name: "Backlinks" }).count(), 0)
 
   await page.reload({ waitUntil: "networkidle" })
   assert.equal(await page.evaluate(() => window.location.hash), sharedFallbackHash)
-  await workspace.getByRole("navigation", { name: "집중 보기 경로" }).waitFor()
+  await workspace.getByRole("navigation", { name: "Focus view path" }).waitFor()
   await page.goBack({ waitUntil: "networkidle" })
-  assert.equal(await workspace.getByRole("navigation", { name: "집중 보기 경로" }).count(), 0)
+  assert.equal(await workspace.getByRole("navigation", { name: "Focus view path" }).count(), 0)
   await page.goForward({ waitUntil: "networkidle" })
   assert.equal(await page.evaluate(() => window.location.hash), sharedFallbackHash)
-  await workspace.getByRole("navigation", { name: "집중 보기 경로" }).waitFor()
+  await workspace.getByRole("navigation", { name: "Focus view path" }).waitFor()
 
   for (const width of [375, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 })
@@ -244,9 +248,13 @@ try {
     await page.screenshot({ path: `/tmp/opencode/workspace-focus-${width}.png`, fullPage: true })
   }
 
-  await page.getByRole("navigation", { name: "집중 보기 경로" }).getByRole("button").first().click()
+  await page
+    .getByRole("navigation", { name: "Focus view path" })
+    .getByRole("button")
+    .first()
+    .click()
   await page.reload({ waitUntil: "networkidle" })
-  await workspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
+  await workspace.getByRole("button", { name: "User Research", exact: true }).click()
   const persisted = await (await page.request.get(`${base}/api/workspace`)).json()
   const persistedPage = persisted.documents.find(
     (record) => record.documentId === "research",

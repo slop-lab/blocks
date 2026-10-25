@@ -67,7 +67,7 @@ export class WorkspaceSourceAttachments {
     projection.contentEditable = "false"
     projection.dataset["sourceProjection"] = "true"
     projection.dataset["interactionContextBoundary"] = "true"
-    projection.setAttribute("aria-label", `동기화된 섹션 ${occurrenceId}`)
+    projection.setAttribute("aria-label", `Synced section ${occurrenceId}`)
     const occurrence: SourceOccurrence = {
       id: occurrenceId,
       host,
@@ -183,7 +183,7 @@ export class WorkspaceSourceAttachments {
       },
       attributes: {
         class: "structured-sync__editor",
-        "aria-label": `동기화된 섹션 ${occurrence.id}`,
+        "aria-label": `Synced section ${occurrence.id}`,
       },
       editable: () => entry.runtime.activeOccurrenceId !== null,
       handleDOMEvents: {

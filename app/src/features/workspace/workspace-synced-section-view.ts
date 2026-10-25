@@ -44,9 +44,9 @@ export const createSyncedSectionView = ({
   )
   iconPath.setAttribute("fill", "currentColor")
   icon.append(iconPath)
-  badge.append(icon, "동기화")
+  badge.append(icon, "Synced")
   const label = view.dom.ownerDocument.createElement("span")
-  const duplicate = nodeViewButton(view.dom.ownerDocument, "복제", () => {
+  const duplicate = nodeViewButton(view.dom.ownerDocument, "Duplicate", () => {
     const position = getPos()
     if (position === undefined) return
     view.dispatch(
@@ -63,7 +63,7 @@ export const createSyncedSectionView = ({
         .scrollIntoView(),
     )
   })
-  const unlink = nodeViewButton(view.dom.ownerDocument, "연결 해제", () => {
+  const unlink = nodeViewButton(view.dom.ownerDocument, "Unlink", () => {
     const position = getPos()
     const source = data.current.sources.find(
       (candidate) => candidate.documentId === sourceId,
@@ -84,10 +84,10 @@ export const createSyncedSectionView = ({
         .scrollIntoView(),
     )
   })
-  const acceptRemote = nodeViewButton(view.dom.ownerDocument, "서버 변경 수락", () =>
+  const acceptRemote = nodeViewButton(view.dom.ownerDocument, "Accept server changes", () =>
     data.current.onSourceConflictResolve(sourceId, "accept-remote"),
   )
-  const keepLocal = nodeViewButton(view.dom.ownerDocument, "로컬 초안 유지", () =>
+  const keepLocal = nodeViewButton(view.dom.ownerDocument, "Keep local draft", () =>
     data.current.onSourceConflictResolve(sourceId, "keep-local"),
   )
   acceptRemote.hidden = true
@@ -98,7 +98,7 @@ export const createSyncedSectionView = ({
   dom.append(header, host)
   const sourceRecord = data.current.sources.find((candidate) => candidate.documentId === sourceId)
   if (sourceRecord === undefined) {
-    label.textContent = `${sourceId} · 원본 없음`
+    label.textContent = `${sourceId} · Source unavailable`
     return { dom }
   }
   const attachment = sourceController.attach(sourceRecord, occurrenceId, host, data)
@@ -109,7 +109,7 @@ export const createSyncedSectionView = ({
     label.textContent =
       conflict === null
         ? `v${current?.revision ?? sourceRecord.revision}`
-        : `v${current?.revision ?? sourceRecord.revision} · 충돌`
+        : `v${current?.revision ?? sourceRecord.revision} · Conflict`
     acceptRemote.hidden = conflict === null
     keepLocal.hidden = conflict === null
     applySharedFocusVisibility(dom, data.current.focusTarget)

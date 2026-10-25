@@ -104,16 +104,16 @@ export const createWorkspaceSaveQueue = (
             return target.kind satisfies never
         }
       })
-      setStatus(settlement.clean ? "모든 변경을 저장했습니다." : "최신 변경을 이어서 저장합니다.")
+      setStatus(settlement.clean ? "Saved all changes." : "Continuing to save the latest changes.")
     },
     (request, error) => {
       const conflict = error instanceof HTTPError && error.response.status === 409
       setStatus(
         conflict
-          ? "다른 창의 변경이 먼저 저장되었습니다. 초안은 유지됩니다."
+          ? "Changes from another window were saved first. Your draft is preserved."
           : error instanceof Error
             ? error.message
-            : "저장하지 못했습니다. 초안은 유지됩니다.",
+            : "Could not save. Your draft is preserved.",
       )
       if (request.target.kind !== "sources" || !conflict) return conflict ? "pause" : undefined
       void loadWorkspace()
@@ -124,7 +124,7 @@ export const createWorkspaceSaveQueue = (
           setStatus(
             refreshError instanceof Error
               ? refreshError.message
-              : "충돌 원본을 다시 불러오지 못했습니다.",
+              : "Could not reload the conflicting source.",
           )
         })
       return "pause"

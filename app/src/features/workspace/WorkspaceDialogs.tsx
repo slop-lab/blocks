@@ -56,14 +56,14 @@ export const WorkspaceDialogs = (props: Props) => {
         ref={dialog}
       >
         <header>
-          <h2 id="create-page-title">하위 페이지 만들기</h2>
-          <button type="button" aria-label="닫기" onClick={props.onCloseCreate}>
+          <h2 id="create-page-title">Create child page</h2>
+          <button type="button" aria-label="Close" onClick={props.onCloseCreate}>
             <Cross2Icon />
           </button>
         </header>
-        <p id="create-page-description">현재 페이지 아래에 새 문서 페이지를 만듭니다.</p>
+        <p id="create-page-description">Create a new document page beneath the current page.</p>
         <label>
-          페이지 제목
+          Page title
           <input
             ref={createInput}
             value={props.newTitle}
@@ -71,7 +71,7 @@ export const WorkspaceDialogs = (props: Props) => {
           />
         </label>
         <button className="button button--primary" type="button" onClick={props.onCreate}>
-          <PlusIcon /> 만들기
+          <PlusIcon /> Create
         </button>
       </section>
     </div>

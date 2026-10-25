@@ -11,6 +11,7 @@ const roots: string[] = []
 const gitEnvironment = {
   ...process.env,
   GIT_MASTER: "1",
+  GIT_INDEX_FILE: undefined,
   GIT_CONFIG_NOSYSTEM: "1",
   GIT_TERMINAL_PROMPT: "0",
 }

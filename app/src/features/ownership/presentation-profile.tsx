@@ -9,15 +9,17 @@ const text = (block: Parameters<BlockRenderer>[0]) =>
   block.content.flatMap((inline) => (inline.kind === "text" ? [inline.text] : [])).join("")
 
 const statusLabels: Readonly<Record<string, string>> = {
-  running: "진행 중",
-  done: "완료",
+  running: "In progress",
+  done: "Done",
 }
 
 export const captionBlock: BlockRegistration = {
   type: "ownership.caption",
   nodeName: "ownership_caption",
   text: true,
-  insertMenu: [{ label: "본문", description: "표현 설명", keywords: ["문단", "text"] }],
+  insertMenu: [
+    { label: "Text", description: "Presentation description", keywords: ["paragraph", "text"] },
+  ],
   nodeSpec: {
     group: "block",
     content: "inline*",
@@ -42,8 +44,8 @@ export const taskCardBlock: BlockRegistration = {
     const task = typeof data === "object" && data !== null && "title" in data ? data : null
     return (
       <article className="ownership-card">
-        <small>연결 작업 · {String(block.attrs["taskId"] ?? "알 수 없음")}</small>
-        <h3>{task === null ? "삭제된 작업" : String(task.title)}</h3>
+        <small>Linked task · {String(block.attrs["taskId"] ?? "Unknown")}</small>
+        <h3>{task === null ? "Deleted task" : String(task.title)}</h3>
         <p>{text(block)}</p>
         {task !== null && "status" in task && (
           <span className="status-badge">

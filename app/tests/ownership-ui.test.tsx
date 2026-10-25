@@ -44,11 +44,11 @@ const render = async () => {
 it("renders the status projection itself without an editable surface", async () => {
   const view = await render()
   const tab = Array.from(view.host.querySelectorAll("button")).find(
-    (item) => item.textContent === "상태 보기",
+    (item) => item.textContent === "Status view",
   )
   await act(async () => tab?.click())
 
-  expect(view.host.textContent).toContain("출시 상태 보기")
+  expect(view.host.textContent).toContain("Release status view")
   const status = view.host.querySelector('[aria-labelledby="status-title"]')
   expect(status?.querySelector(".ProseMirror")).toBeNull()
   expect(status?.querySelector("[contenteditable]")).toBeNull()
@@ -58,25 +58,27 @@ it("renders the status projection itself without an editable surface", async () 
 it("duplicates one presentation occurrence without deleting its domain task", async () => {
   const view = await render()
   const tab = Array.from(view.host.querySelectorAll("button")).find(
-    (item) => item.textContent === "프로젝트 보드",
+    (item) => item.textContent === "Project board",
   )
   await act(async () => tab?.click())
   const duplicate = Array.from(view.host.querySelectorAll("button")).find(
-    (item) => item.textContent === "카드 복제",
+    (item) => item.textContent === "Duplicate card",
   )
   await act(async () => duplicate?.click())
 
   expect(
-    view.host.querySelectorAll('[aria-label="프로젝트 보드 표현 편집기"] .ownership-card'),
+    view.host.querySelectorAll('[aria-label="Project board presentation editor"] .ownership-card'),
   ).toHaveLength(3)
-  expect(view.host.textContent).toContain("도메인 작업 2개")
+  expect(view.host.textContent).toContain("2 domain tasks")
 
-  const editor = view.host.querySelector('[aria-label="프로젝트 보드 표현 편집기"] .ProseMirror')
+  const editor = view.host.querySelector(
+    '[aria-label="Project board presentation editor"] .ProseMirror',
+  )
   await act(async () => {
     editor?.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true }))
   })
   expect(
-    view.host.querySelectorAll('[aria-label="프로젝트 보드 표현 편집기"] .ownership-card'),
+    view.host.querySelectorAll('[aria-label="Project board presentation editor"] .ownership-card'),
   ).toHaveLength(2)
   await act(async () => view.root.unmount())
 })
@@ -85,12 +87,12 @@ it("falls back to the initial board when persisted JSON is malformed", async () 
   localStorage.setItem("ownership.project-board.presentation", "not-json")
   const view = await render()
   const tab = Array.from(view.host.querySelectorAll("button")).find(
-    (item) => item.textContent === "프로젝트 보드",
+    (item) => item.textContent === "Project board",
   )
   await act(async () => tab?.click())
 
   expect(
-    view.host.querySelectorAll('[aria-label="프로젝트 보드 표현 편집기"] .ownership-card'),
+    view.host.querySelectorAll('[aria-label="Project board presentation editor"] .ownership-card'),
   ).toHaveLength(2)
   await act(async () => view.root.unmount())
 })

@@ -23,16 +23,16 @@ export const MixedLowerLayer = ({
   onSave,
 }: Props) => (
   <aside className="mixed-lower-layer">
-    <h3>독립 하위 원본</h3>
+    <h3>Independent child source</h3>
     <button
       className="button button--secondary"
       type="button"
       onClick={() => onOpen("presentation")}
     >
-      표현 편집
+      Edit presentation
     </button>
     <button className="button button--secondary" type="button" onClick={() => onOpen("proposal")}>
-      제안 편집
+      Edit proposal
     </button>
     {draft !== null && (
       <>
@@ -43,7 +43,9 @@ export const MixedLowerLayer = ({
           profile={presentationProfile}
           modelId={`mixed-${draft.target.layer}-${draft.target.taskId}`}
           label={
-            draft.target.layer === "presentation" ? "혼합 표현 편집기" : "에이전트 제안 편집기"
+            draft.target.layer === "presentation"
+              ? "Mixed presentation editor"
+              : "Agent proposal editor"
           }
         />
         <div className="button-row">
@@ -53,7 +55,7 @@ export const MixedLowerLayer = ({
             type="button"
             onClick={onCancel}
           >
-            {draft.editVersion > 0 ? "변경 취소" : "편집 닫기"}
+            {draft.editVersion > 0 ? "Discard changes" : "Close editor"}
           </button>
           <button
             className="button button--primary"
@@ -61,7 +63,7 @@ export const MixedLowerLayer = ({
             type="button"
             onClick={onSave}
           >
-            {saving ? "저장 중" : "하위 문서 저장"}
+            {saving ? "Saving" : "Save child document"}
           </button>
         </div>
       </>

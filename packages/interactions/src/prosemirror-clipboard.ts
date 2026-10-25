@@ -86,7 +86,7 @@ export const attachProseMirrorClipboard = (
         currentContext.epoch === sourceContext.epoch &&
         currentContext.version === sourceContext.version)
     if (view.state.doc !== sourceDocument || !contextCurrent) {
-      options.onUnavailable?.("문서가 변경되어 잘라내기를 취소했습니다.")
+      options.onUnavailable?.("The document changed, so the cut was canceled.")
       return null
     }
     const selected = new Set(blockIds)
@@ -126,7 +126,7 @@ export const attachProseMirrorClipboard = (
     event.stopImmediatePropagation()
     if (!cut) {
       void writeClipboard(event, encoded.json, encoded.text).catch(() =>
-        options.onUnavailable?.("클립보드에 복사할 수 없습니다."),
+        options.onUnavailable?.("Unable to copy to the clipboard."),
       )
       return
     }
@@ -142,13 +142,13 @@ export const attachProseMirrorClipboard = (
       },
       markPending: () => {
         void Promise.resolve(options.onDeferredCut?.(blockIds, envelope, sourceContext)).catch(() =>
-          options.onUnavailable?.("호스트가 잘라내기 요청을 완료하지 못했습니다."),
+          options.onUnavailable?.("The host could not complete the cut request."),
         )
       },
     })
     void routed.completion.then((result) => {
       if (result.kind === "write-failed")
-        options.onUnavailable?.("클립보드 쓰기가 거부되어 원본을 유지했습니다.")
+        options.onUnavailable?.("Clipboard access was denied, so the original content was kept.")
     })
   }
 
@@ -159,7 +159,7 @@ export const attachProseMirrorClipboard = (
     const parsed: ProseMirrorNode[] = []
     for (const raw of decoded.envelope.blocks) {
       if (typeof raw !== "object" || raw === null) {
-        options.onUnavailable?.("클립보드 블록 형식이 올바르지 않습니다.")
+        options.onUnavailable?.("The clipboard block format is invalid.")
         return
       }
       try {
@@ -168,7 +168,7 @@ export const attachProseMirrorClipboard = (
         parsed.push(node)
       } catch (error) {
         if (error instanceof RangeError) {
-          options.onUnavailable?.("현재 문서 스키마에서 블록을 열 수 없습니다.")
+          options.onUnavailable?.("The block cannot be opened with the current document schema.")
           return
         }
         throw error
@@ -176,7 +176,7 @@ export const attachProseMirrorClipboard = (
     }
     if (parsed.length === 0) return
     if (!view.state.schema.topNodeType.validContent(Fragment.fromArray(parsed))) {
-      options.onUnavailable?.("클립보드 블록을 문서 루트에 삽입할 수 없습니다.")
+      options.onUnavailable?.("Clipboard blocks cannot be inserted at the document root.")
       return
     }
     const envelope: ClipboardEnvelope = {
@@ -196,12 +196,12 @@ export const attachProseMirrorClipboard = (
       external: envelope.namespace !== options.clipboard.namespace,
     })
     if (decision === "reject") {
-      options.onUnavailable?.("이 문서에서는 해당 블록 붙여넣기를 허용하지 않습니다.")
+      options.onUnavailable?.("This document does not allow those blocks to be pasted.")
       return
     }
     if (decision === "link") {
       if (options.onReferencePaste === undefined)
-        options.onUnavailable?.("이 편집기는 참조 붙여넣기를 지원하지 않습니다.")
+        options.onUnavailable?.("This editor does not support pasting by reference.")
       else options.onReferencePaste(envelope, { view, insertion })
       return
     }

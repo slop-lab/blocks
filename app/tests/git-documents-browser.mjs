@@ -8,10 +8,11 @@ import { promisify } from "node:util"
 import { GitDocuments } from "@slop-lab/blocks-git-documents"
 import { createGitDocumentsServer } from "@slop-lab/blocks-git-documents-host"
 import { chromium } from "playwright"
+import { gitFixtureEnvironment } from "./git-fixture-environment.ts"
 
 const execute = promisify(execFile)
 const root = await mkdtemp(join(tmpdir(), "block-docs-browser-"))
-const env = { ...process.env, GIT_MASTER: "1", GIT_CONFIG_NOSYSTEM: "1" }
+const env = gitFixtureEnvironment()
 const git = (...args) => execute("git", args, { cwd: root, env })
 await git("init", "-b", "main")
 await git("config", "user.name", "Browser Author")

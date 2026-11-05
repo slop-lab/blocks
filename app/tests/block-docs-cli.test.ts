@@ -4,12 +4,13 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { promisify } from "node:util"
 import { afterEach, describe, expect, it } from "vitest"
+import { gitFixtureEnvironment } from "./git-fixture-environment"
 
 const execute = promisify(execFile)
 const roots: string[] = []
 const processes: ChildProcess[] = []
 const cli = resolve("packages/block-docs/dist/cli.js")
-const env = { ...process.env, GIT_MASTER: "1", GIT_CONFIG_NOSYSTEM: "1" }
+const env = gitFixtureEnvironment()
 
 afterEach(async () => {
   for (const child of processes.splice(0)) child.kill("SIGINT")

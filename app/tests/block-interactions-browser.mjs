@@ -225,6 +225,18 @@ try {
   await page.keyboard.press("Escape")
   assert.equal(await movable.getAttribute("data-block-selected"), "true")
   assert.equal(await movable.getAttribute("aria-current"), "true")
+  assert.equal(
+    await grip.evaluate((element) => element.ownerDocument.activeElement === element),
+    true,
+    "Escape returns focus to the selected source grip",
+  )
+  assert.equal(
+    await grip.evaluate((element) =>
+      element.closest(".block-controls")?.getAttribute("data-target-block-id"),
+    ),
+    sourceId,
+    "A stale hover must not retarget the selected source grip",
+  )
   const idsBeforeSingleDrag = await editor
     .locator(":scope > [data-block-id]")
     .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-block-id")))

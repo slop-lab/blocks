@@ -32,10 +32,10 @@ try {
       treeWrites += 1
   })
   await page.goto(`${base}/?workspace=structured-workspace`, { waitUntil: "networkidle" })
-  const workspace = page.getByLabel("문서와 데이터베이스")
+  const workspace = page.getByLabel("Documents and databases")
   await workspace.waitFor()
 
-  const title = workspace.getByLabel("페이지 제목")
+  const title = workspace.getByLabel("Page title")
   await title.focus()
   await page.keyboard.press("ControlOrMeta+a")
   await title.dispatchEvent("compositionstart")
@@ -53,10 +53,10 @@ try {
   await title.dispatchEvent("compositionend")
   assert.equal((await titleSaved).status(), 200)
   await page.reload({ waitUntil: "networkidle" })
-  assert.equal(await workspace.getByLabel("페이지 제목").inputValue(), "팀 허브")
+  assert.equal(await workspace.getByLabel("Page title").inputValue(), "팀 허브")
 
   const titleBeforeCancel = treeWrites
-  const titleDraft = workspace.getByLabel("페이지 제목")
+  const titleDraft = workspace.getByLabel("Page title")
   await titleDraft.focus()
   await page.keyboard.press("ControlOrMeta+a")
   await page.keyboard.insertText("취소할 제목")
@@ -110,7 +110,9 @@ try {
       .locator(".structured-tree__row")
       .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-page-id")))
 
-  await savedMove(() => drag("research", workspace.getByRole("button", { name: "최상위로 이동" })))
+  await savedMove(() =>
+    drag("research", workspace.getByRole("button", { name: "Move to top level" })),
+  )
   await page.reload({ waitUntil: "networkidle" })
   assert.equal((await tree()).pages.find((item) => item.id === "research")?.parentId, null)
   assert.deepEqual(await preorder(), ["home", "project", "research"])
@@ -134,8 +136,8 @@ try {
   assert.equal(treeWrites, writesBeforeCycle)
   assert.equal(JSON.stringify((await tree()).pages), beforeCycle)
 
-  await workspace.getByLabel("사용자 조사 이동").selectOption("root")
-  await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
+  await workspace.getByLabel("Move User Research").selectOption("root")
+  await page.getByRole("status").filter({ hasText: "Saved all changes." }).waitFor()
   assert.equal((await tree()).pages.find((item) => item.id === "research")?.parentId, null)
   const writesBeforeSelfDrop = treeWrites
   await drag("research", row("research"))
@@ -147,7 +149,7 @@ try {
 
   await page.screenshot({ path: "/tmp/pages-editing-1280.png", fullPage: true })
   await page.setViewportSize({ width: 375, height: 900 })
-  await workspace.getByRole("button", { name: /페이지 탐색/ }).click()
+  await workspace.getByRole("button", { name: /Page navigation/ }).click()
   for (const control of await workspace.locator(".structured-tree__actions button").all()) {
     const bounds = await control.boundingBox()
     assert.ok(bounds !== null && bounds.width >= 44 && bounds.height >= 44)

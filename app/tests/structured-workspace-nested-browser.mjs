@@ -66,9 +66,9 @@ try {
       pagePuts.push(request.postDataJSON())
   })
 
-  const workspace = page.getByLabel("문서와 데이터베이스")
-  await workspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
-  const editor = workspace.getByLabel("구조화 문서 편집기").last()
+  const workspace = page.getByLabel("Documents and databases")
+  await workspace.getByRole("button", { name: "User Research", exact: true }).click()
+  const editor = workspace.getByLabel("Structured document editor").last()
   const leaf = editor.locator('[data-block-id="nested-leaf"]')
   await leaf.hover()
   const grip = page.locator(".block-control--grip:visible")
@@ -99,7 +99,7 @@ try {
     return { x: rect.right - 12, y: rect.bottom - 12 }
   })
   await page.mouse.click(parentBlankPoint.x, parentBlankPoint.y)
-  await workspace.getByRole("complementary", { name: "페이지 탐색", exact: true }).click({
+  await workspace.getByRole("complementary", { name: "Page navigation", exact: true }).click({
     position: { x: 4, y: 4 },
   })
   await workspace.locator(".structured-main").click({ position: { x: 4, y: 4 } })
@@ -143,7 +143,7 @@ try {
     leafId,
   )
   await grip.click()
-  const menu = page.getByRole("menu", { name: "블록 작업" })
+  const menu = page.getByRole("menu", { name: "Block actions" })
   await menu.waitFor()
   const retainedTextAfterMenuFocus = await page.evaluate(
     () => document.getSelection()?.toString() ?? "",
@@ -178,7 +178,7 @@ try {
   assert.equal(await leaf.getAttribute("data-block-selected"), "true")
   await grip.click()
   await menu.waitFor()
-  await menu.getByRole("menuitem", { name: "복제", exact: true }).click()
+  await menu.getByRole("menuitem", { name: "Duplicate", exact: true }).click()
   assert.equal(await editor.locator('[data-block-id="outer-quote"]').count(), 1)
   assert.equal(await editor.locator('[data-block-id="middle-callout"]').count(), 1)
   assert.equal(await editor.locator('[data-block-id="middle-callout"] p[data-block-id]').count(), 2)
@@ -194,10 +194,10 @@ try {
     .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-block-id")))
   assert.equal(paragraphIds.length, 3)
   assert.equal(new Set(paragraphIds).size, 3)
-  await page.getByRole("status").filter({ hasText: "모든 변경을 저장했습니다" }).waitFor()
+  await page.getByRole("status").filter({ hasText: "Saved all changes." }).waitFor()
 
   await page.reload({ waitUntil: "networkidle" })
-  await workspace.getByRole("button", { name: "사용자 조사", exact: true }).click()
+  await workspace.getByRole("button", { name: "User Research", exact: true }).click()
   assert.equal(await editor.locator('[data-block-id="outer-quote"]').count(), 1)
   const persistedIds = await editor
     .locator('[data-block-id="middle-callout"] p[data-block-id]')

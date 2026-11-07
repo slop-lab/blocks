@@ -30,7 +30,7 @@ export const attachSelectionToolbar = (
   const toolbar = ownerDocument.createElement("div")
   toolbar.className = "selection-toolbar"
   toolbar.role = "toolbar"
-  toolbar.ariaLabel = "선택한 글자 서식"
+  toolbar.ariaLabel = "Format selected text"
   toolbar.hidden = true
   ownerDocument.body.append(toolbar)
   options.onElement?.(toolbar)
@@ -42,9 +42,9 @@ export const attachSelectionToolbar = (
     update()
   }
   const marks = [
-    { type: view.state.schema.marks["strong"], label: "굵게", text: "B" },
-    { type: view.state.schema.marks["em"], label: "기울임", text: "I" },
-    { type: view.state.schema.marks["code"], label: "인라인 코드", text: "<>" },
+    { type: view.state.schema.marks["strong"], label: "Bold", text: "B" },
+    { type: view.state.schema.marks["em"], label: "Italic", text: "I" },
+    { type: view.state.schema.marks["code"], label: "Inline code", text: "<>" },
   ]
   for (const item of marks) {
     const mark = item.type
@@ -58,27 +58,27 @@ export const attachSelectionToolbar = (
   const linkMark = view.state.schema.marks["link"]
   let linkTarget: LinkTarget | null = null
   if (linkMark !== undefined) {
-    const linkButton = iconButton(ownerDocument, "링크 편집", "Link")
+    const linkButton = iconButton(ownerDocument, "Edit link", "Link")
     const form = ownerDocument.createElement("form")
     form.className = "selection-toolbar__link"
     form.hidden = true
     const input = ownerDocument.createElement("input")
     input.type = "text"
     input.inputMode = "url"
-    input.placeholder = "https:// 또는 /경로"
-    input.ariaLabel = "링크 주소"
+    input.placeholder = "https:// or /path"
+    input.ariaLabel = "Link address"
     const error = ownerDocument.createElement("span")
     error.className = "selection-toolbar__error"
     error.role = "alert"
     const apply = ownerDocument.createElement("button")
     apply.type = "submit"
-    apply.textContent = "적용"
+    apply.textContent = "Apply"
     const remove = ownerDocument.createElement("button")
     remove.type = "button"
-    remove.textContent = "링크 제거"
+    remove.textContent = "Remove link"
     const cancel = ownerDocument.createElement("button")
     cancel.type = "button"
-    cancel.textContent = "취소"
+    cancel.textContent = "Cancel"
     form.append(input, apply, remove, cancel, error)
     linkButton.addEventListener("pointerdown", (event) => event.preventDefault())
     const openLinkForm = () => {
@@ -107,7 +107,7 @@ export const attachSelectionToolbar = (
     detachLinkShortcut = () => view.dom.removeEventListener("keydown", onLinkShortcut)
     const applyTarget = (href: string | null) => {
       if (linkTarget === null || !isCurrentLinkTarget(view.state, linkTarget)) {
-        error.textContent = "선택한 글자가 변경되었습니다. 다시 선택해 주세요."
+        error.textContent = "The selected text changed. Select it again."
         return
       }
       const transaction =
@@ -133,7 +133,7 @@ export const attachSelectionToolbar = (
       }
       const href = safeLinkHref(input.value)
       if (href === null) {
-        error.textContent = "안전한 웹, 메일 또는 문서 내부 주소를 입력하세요."
+        error.textContent = "Enter a safe web, email, or internal document address."
         return
       }
       applyTarget(href)

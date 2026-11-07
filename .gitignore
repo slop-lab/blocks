@@ -5,6 +5,7 @@ dist/
 *.log
 .omo/
 .runtime/
+.local/
 playwright-report/
 test-results/
 .env

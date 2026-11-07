@@ -41,7 +41,7 @@ const ensureTaskFiles = async () => {
       try {
         await writeFile(
           join(root, "tasks", `${task.id}.md`),
-          `# ${task.id} ${task.title}\n\n상태: ${task.status}\n`,
+          `# ${task.id} ${task.title}\n\nStatus: ${task.status}\n`,
           { flag: "wx" },
         )
       } catch (error) {

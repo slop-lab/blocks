@@ -8,6 +8,7 @@ import { promisify } from "node:util"
 import { GitDocuments } from "@slop-lab/blocks-git-documents"
 import { createGitDocumentsServer } from "@slop-lab/blocks-git-documents-host"
 import { afterEach, describe, expect, it } from "vitest"
+import { gitFixtureEnvironment } from "./git-fixture-environment"
 
 const execute = promisify(execFile)
 const roots: string[] = []
@@ -16,7 +17,7 @@ const servers: Server[] = []
 const setup = async (serveAssets = false) => {
   const root = await mkdtemp(join(tmpdir(), "git-documents-host-"))
   roots.push(root)
-  const env = { ...process.env, GIT_MASTER: "1", GIT_CONFIG_NOSYSTEM: "1" }
+  const env = gitFixtureEnvironment()
   const git = (...args: readonly string[]) => execute("git", args, { cwd: root, env })
   await git("init", "-b", "main")
   await git("config", "user.name", "Host Test")

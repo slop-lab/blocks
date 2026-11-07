@@ -26,7 +26,7 @@ export const createLocalSectionView = ({
   const contentDOM = view.dom.ownerDocument.createElement("div")
   contentDOM.className = "structured-section__body"
   let currentNode = node
-  const title = nodeViewButton(view.dom.ownerDocument, "제목 추가", () => {
+  const title = nodeViewButton(view.dom.ownerDocument, "Add title", () => {
     const position = getPos()
     if (position === undefined) return
     const first = currentNode.firstChild
@@ -38,7 +38,7 @@ export const createLocalSectionView = ({
         view.dispatch(view.state.tr.insert(position + 1, titleType.create()))
     }
   })
-  const share = nodeViewButton(view.dom.ownerDocument, "공유 섹션으로 전환", () => {
+  const share = nodeViewButton(view.dom.ownerDocument, "Convert to shared section", () => {
     if (getPos() === undefined) return
     const document = currentNode.type.schema.topNodeType.create(null, [currentNode])
     const converted = snapshotToPageDocument(pmToSnapshot(document, data.current.profile), {
@@ -69,7 +69,7 @@ export const createLocalSectionView = ({
   })
   const renderControls = () => {
     title.textContent =
-      currentNode.firstChild?.type.name === "section_title" ? "제목 제거" : "제목 추가"
+      currentNode.firstChild?.type.name === "section_title" ? "Remove title" : "Add title"
   }
   renderControls()
   controls.append(title, share)

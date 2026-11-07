@@ -30,14 +30,14 @@ export type HostState = z.infer<typeof hostStateSchema>
 
 const initialHostState: HostState = {
   tasks: {
-    "TASK-142": { id: "TASK-142", title: "작업실 대관", status: "open" },
-    "TASK-153": { id: "TASK-153", title: "참가 안내 발송", status: "review" },
-    "TASK-201": { id: "TASK-201", title: "워크숍 일정 확정", status: "waiting" },
+    "TASK-142": { id: "TASK-142", title: "Reserve workshop space", status: "open" },
+    "TASK-153": { id: "TASK-153", title: "Send participant guide", status: "review" },
+    "TASK-201": { id: "TASK-201", title: "Confirm workshop schedule", status: "waiting" },
   },
   releaseForm: {
-    audience: "동네 창작자와 이웃",
-    window: "금요일 14:00–16:00",
-    notes: "장소를 확정한 뒤 참가자에게 안내합니다.",
+    audience: "Local makers and neighbors",
+    window: "Friday, 14:00–16:00",
+    notes: "Notify participants after the venue is confirmed.",
     revision: 1,
   },
 }

@@ -10,12 +10,25 @@ type GitOptions = {
 }
 
 const gitArgs = ["-c", "core.hooksPath=/dev/null", "-c", "core.quotePath=false"] as const
+const repositorySelectors = new Set([
+  "GIT_DIR",
+  "GIT_WORK_TREE",
+  "GIT_COMMON_DIR",
+  "GIT_INDEX_FILE",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_GRAFT_FILE",
+  "GIT_SHALLOW_FILE",
+  "GIT_PREFIX",
+])
 
 export const runGit = async (options: GitOptions): Promise<GitResult> => {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 30_000)
   const env = {
-    ...process.env,
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(([name]) => !repositorySelectors.has(name)),
+    ),
     GIT_TERMINAL_PROMPT: "0",
     GIT_OPTIONAL_LOCKS: "0",
     ...(options.author === undefined

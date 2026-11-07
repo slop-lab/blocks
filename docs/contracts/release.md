@@ -1,60 +1,61 @@
-# 패키지 배포와 실사용 전 계약
+# Package Publication and Production-Use Contract
 
-이 문서는 공개 패키지의 경계와 출시 승인 조건을 정의합니다. 이름 변경이나 로컬 테스트 통과가 npm 게시 또는 운영 준비 완료를 뜻하지 않습니다. 아래 미완료 항목은 실제 배포 전에 해결해야 합니다.
+This document defines the boundaries of the public packages and the approval conditions for release. Renaming packages or passing local tests does not mean that they have been published to npm or are production-ready. The incomplete items below must be resolved before an actual release.
 
-## 공개 / 로컬 경계
+## Public and Local Boundary
 
-공개 라이브러리 이름은 `@slop-lab/blocks`와 `@slop-lab/blocks-*`만 사용합니다. 로컬 애플리케이션·개발 도구는 `@this-project/*`이며 반드시 `private: true`를 유지합니다. 공개 패키지는 로컬 패키지에 runtime dependency를 가져서는 안 됩니다.
+Only `@slop-lab/blocks` and `@slop-lab/blocks-*` are public library names. Local applications and development tools use `@this-project/*` and must remain `private: true`. Public packages must not have runtime dependencies on local packages.
 
-| 디렉터리 | 패키지 이름 | 배포 대상 |
+| Directory | Package name | Publication target |
 | --- | --- | --- |
-| `packages/model` | `@slop-lab/blocks` | 공개 코어 |
-| `packages/bindings` | `@slop-lab/blocks-bindings` | 공개 |
-| `packages/containers` | `@slop-lab/blocks-containers` | 공개 |
-| `packages/interactions` | `@slop-lab/blocks-interactions` | 공개 |
-| `packages/prosemirror` | `@slop-lab/blocks-prosemirror` | 공개, 선택적 편집 엔진 |
-| `packages/markdown` | `@slop-lab/blocks-markdown` | 공개 |
-| `packages/workspace` | `@slop-lab/blocks-workspace` | 공개 |
-| `packages/server-bindings` | `@slop-lab/blocks-server-bindings` | 공개, Node 호스트 |
-| `packages/git-documents` | `@slop-lab/blocks-git-documents` | 공개, Node / Git |
-| `packages/git-documents-host` | `@slop-lab/blocks-git-documents-host` | 공개, Node HTTP 호스트 |
-| `packages/agent-tools` | `@slop-lab/blocks-agent-tools` | 공개, 실행 엔진 독립 |
-| `packages/agent-tools-part` | `@slop-lab/blocks-agent-tools-part` | 공개, 선택적 Part 연결 |
-| 저장소 루트 | `@this-project/demo` | 로컬 전용 |
-| `packages/block-docs` | `@this-project/block-docs` | 로컬 전용 |
+| `packages/model` | `@slop-lab/blocks` | Public core |
+| `packages/bindings` | `@slop-lab/blocks-bindings` | Public |
+| `packages/containers` | `@slop-lab/blocks-containers` | Public |
+| `packages/interactions` | `@slop-lab/blocks-interactions` | Public |
+| `packages/prosemirror` | `@slop-lab/blocks-prosemirror` | Public, optional editing engine |
+| `packages/markdown` | `@slop-lab/blocks-markdown` | Public |
+| `packages/workspace` | `@slop-lab/blocks-workspace` | Public |
+| `packages/server-bindings` | `@slop-lab/blocks-server-bindings` | Public, Node host |
+| `packages/git-documents` | `@slop-lab/blocks-git-documents` | Public, Node / Git |
+| `packages/git-documents-host` | `@slop-lab/blocks-git-documents-host` | Public, Node HTTP host |
+| `packages/agent-tools` | `@slop-lab/blocks-agent-tools` | Public, execution-engine independent |
+| `packages/agent-tools-part` | `@slop-lab/blocks-agent-tools-part` | Public, optional Part integration |
+| Repository root | `@this-project/demo` | Local only |
+| `packages/block-docs` | `@this-project/block-docs` | Local only |
 
-`block-docs` 실행 파일 이름과 기존 명령은 바꾸지 않습니다. 현재 CLI는 실행 위치의 `dist` 또는 저장소 상대 위치의 웹 빌드를 사용합니다. npm 단독 설치에 웹 자산이 포함되는 구조가 아니므로 공개 대상에서 제외합니다. 나중에 공개하려면 웹 자산의 포함·해결 경로·버전 결합과 저장소 밖에서의 실제 HTTP 화면 실행을 먼저 해결해야 합니다. HTTP 호스트 라이브러리 자체는 소비자가 자산 경로를 제공하는 별도 공개 모듈입니다.
+Do not change the `block-docs` executable name or existing commands. The current CLI uses the web build from its runtime `dist` location or a repository-relative location. A standalone npm installation does not include the web assets, so the CLI is excluded from publication.
+Publishing it later first requires resolving how web assets are included and located, how their version is coupled to the CLI, and proving the real HTTP interface outside the repository. The HTTP host library is a separate public module for consumers that provide an asset path.
 
-패키지 이름과 저장 형식은 별개입니다. `block-editor/v0.3`, `block-editor.agent` 프로토콜 식별자와 저장된 데이터는 이름 변경으로 마이그레이션하지 않습니다. 이전 패키지 이름의 alias는 제공하지 않습니다.
+Package names and storage formats are independent. Renaming does not migrate the `block-editor/v0.3` and `block-editor.agent` protocol identifiers or persisted data. No aliases are provided for former package names.
 
-## 1. npm 첫 배포 전 차단 항목
+## 1. Blockers Before the First npm Publication
 
-- [ ] **라이선스 결정**: 권리자가 라이선스를 정하고 각 공개 manifest의 `license`와 각 tarball의 LICENSE를 일치시킵니다. 현재 12개 공개 tarball 모두 LICENSE가 없습니다. 임의로 MIT 등으로 선언하지 않습니다. 외부 코드·자산의 라이선스도 확인합니다.
-- [ ] **소유권·권한 확인**: 실제 registry에서 `@slop-lab` scope 권한, 12개 이름의 사용 가능 여부, 이미 게시된 버전을 확인합니다. 로컬 이름 변경으로 확인된 사항이 아닙니다.
-- [ ] **배포 metadata**: 공개 패키지마다 `description`, 실제 공개 가능한 `repository`와 `directory`, 지원·이슈 경로를 정합니다. 현재 공개 manifest에는 `license`, `description`, `repository`, `publishConfig`가 없습니다. scoped public 배포 접근 설정을 명시하고 registry·tag를 검토합니다.
-- [ ] **패키지별 문서**: 설치, 최소 실행 예시, exports, peer dependencies, 브라우저/Node 경계, 안정성·지원 범위를 README에 넣습니다. 현재 공개 tarball 중 README는 containers에만 있습니다. 저장소 루트 README는 다른 패키지에 자동 포함되지 않습니다.
-- [ ] **지원 환경 명시**: ESM-only 공개 형태와 TypeScript module resolution, React·ProseMirror·Yjs·Zod의 지원 조합을 확정합니다. Node 전용 모듈에는 실제 최소 Node/Git 요구사항을 검증·명시합니다. 데모와 Part 연결은 Node `>=24.22.0`이며 이를 브라우저 코어 전체의 요구사항으로 혼동하지 않습니다.
-- [ ] **버전·API 정책**: 현재 공개 패키지 버전 `0.1.0`의 최초 게시 여부를 확인하고, 동시/독립 버전 정책과 changelog·breaking change·지원 중단 정책을 정합니다. `0.x` 호환성을 보장한다고 가정하지 않습니다.
-- [ ] **릴리즈 자동화**: 현재 저장소에 릴리즈 CI가 없습니다. 깨끗한 checkout, 고정 lockfile, 패키지 빌드, 검증, tarball 검사, 승인된 게시와 tag를 연결합니다. 게시 자격 증명은 소스나 tarball에 넣지 않고 최소 권한과 보호된 배포 환경을 사용합니다.
+- [ ] **License decision**: the rights holder selects a license and aligns each public manifest's `license` field with the LICENSE file in every tarball. All 12 public tarballs currently lack a LICENSE file. Do not declare MIT or another license without authorization. Also verify licenses for external code and assets.
+- [ ] **Ownership and permission verification**: verify permissions for the `@slop-lab` scope, availability of all 12 names, and any already-published versions in the actual registry. A local rename does not verify these facts.
+- [ ] **Publication metadata**: define a `description`, a genuinely public `repository` and `directory`, and support and issue URLs for every public package. The current public manifests have no `license`, `description`, `repository`, or `publishConfig`. Explicitly configure scoped public access and review the registry and tag.
+- [ ] **Per-package documentation**: add installation, a minimal working example, exports, peer dependencies, browser/Node boundaries, and stability and support scope to each README. Among the current public tarballs, only containers has a README. The repository root README is not automatically included in other packages.
+- [ ] **Supported environments**: finalize and document the ESM-only public form, TypeScript module resolution, and supported React, ProseMirror, Yjs, and Zod combinations. Verify and document actual minimum Node and Git requirements for Node-only modules. The demo and Part integration require Node `>=24.22.0`; do not present that as a requirement for the entire browser core.
+- [ ] **Version and API policy**: verify whether the current public package version `0.1.0` is available for first publication, then define coordinated or independent versioning, changelog, breaking-change, and deprecation policies. Do not assume `0.x` compatibility.
+- [ ] **Release automation**: the repository currently has no release CI. Connect a clean checkout, frozen lockfile, package build, validation, tarball inspection, approved publication, and tagging. Keep publication credentials out of source and tarballs, and use least privilege with a protected deployment environment.
 
-위 항목은 이번 이름 변경에서 임의 설정하지 않았습니다. 특히 라이선스, registry 소유권, 공개 repository 주소는 프로젝트 소유자의 결정이 필요합니다.
+These items were intentionally not guessed during the rename. In particular, the license, registry ownership, and public repository URL require decisions from the project owner.
 
-## 2. 소비자 기준 패키징 승인
+## 2. Consumer-Based Packaging Approval
 
-workspace의 symlink로 실행되는 것과 npm 소비자가 실행하는 것은 다릅니다. 릴리즈마다 다음을 확인합니다.
+Running through workspace symlinks differs from running as an npm consumer. Verify the following for every release.
 
-- [ ] 지원 Node와 고정된 pnpm 버전으로 `corepack pnpm install --frozen-lockfile` 후 빌드합니다.
-- [ ] 공개 12개만 pack하고, 각 tarball의 manifest·파일 목록을 검사합니다. exports의 JS / `.d.ts` 대상이 모두 존재하고 `workspace:`, 옛 scope, `@this-project/*`, 저장소 절대 경로가 남지 않아야 합니다.
-- [ ] tarball에 `.runtime`, 비밀값, 개발용 보고서, 소비자에게 필요 없는 앱 코드가 들어가지 않음을 확인합니다.
-- [ ] 저장소 밖 빈 소비자에 설치하고 공개 root 및 subpath exports, `.d.ts`, peer 조합과 실제 API 호출을 검증합니다. viewer-only 소비자에 ProseMirror·Node·Part가 끼어들지 않는지도 확인합니다.
-- [ ] 지원 OS와 브라우저 조합을 CI에서 실행합니다. Linux 검사 통과만으로 Windows/macOS 지원을 주장하지 않습니다.
-- [ ] 공개 의존 패키지가 먼저 존재하도록 의존 그래프 순서로 게시합니다. staging registry에서 전체 그래프를 먼저 설치해 보고, 실제 registry 게시 후에는 로컬 overrides 없이 다시 설치·실행합니다.
+- [ ] Build with supported Node and the pinned pnpm version after `corepack pnpm install --frozen-lockfile`.
+- [ ] Pack only the 12 public packages and inspect each tarball's manifest and file list. Every exported JS and `.d.ts` target must exist, with no remaining `workspace:`, former scope, `@this-project/*`, or absolute repository paths.
+- [ ] Verify that tarballs contain no `.runtime` data, secrets, development reports, or application code unnecessary to consumers.
+- [ ] Install into an empty consumer outside the repository and verify public root and subpath exports, `.d.ts` files, peer combinations, and real API calls. Also verify that a viewer-only consumer does not pull in ProseMirror, Node, or Part.
+- [ ] Run supported OS and browser combinations in CI. Passing Linux checks alone does not establish Windows or macOS support.
+- [ ] Publish in dependency-graph order so public dependencies exist first. Install the complete graph from a staging registry, then install and run it again without local overrides after publication to the actual registry.
 
-pnpm은 pack/publish 시 `workspace:*`를 해당 버전으로 바꿉니다. 현재 `0.1.0` 내부 의존성이므로 상위 패키지 tarball만 설치하면 아직 게시되지 않은 하위 패키지는 registry에서 404가 납니다. tarball 소비자 검증에서 사용한 로컬 overrides는 이 이름 해석을 임시 대체한 것이지, 실제 registry 게시가 검증됐다는 뜻이 아닙니다.
+During pack and publish, pnpm converts `workspace:*` to the corresponding version. Because internal dependencies are currently `0.1.0`, installing only an upper-level package tarball causes registry 404 errors for unpublished lower-level packages. Local overrides used during tarball consumer verification only substitute for name resolution; they do not prove actual registry publication.
 
-현재 이름 변경은 공개 12개 tarball의 root import, 코어 codec 실행, 외부 소비자 TypeScript 검사까지 확인했습니다. 모든 subpath·지원 OS·실제 registry 설치 검증을 대체하지는 않습니다.
+The current rename has verified root imports for the 12 public tarballs, execution of the core codec, and an external consumer TypeScript check. It does not replace verification of every subpath, supported OS, or installation from the actual registry.
 
-저장소 내 기본 회귀 검사는 다음과 같습니다.
+The baseline in-repository regression checks are:
 
 ```sh
 corepack pnpm install --frozen-lockfile
@@ -66,34 +67,34 @@ corepack pnpm test:browser
 corepack pnpm test:git-documents-browser
 ```
 
-브라우저 검사는 설치된 Playwright Chromium 또는 `CHROME_PATH`가 필요합니다. 두 로컬 패키지에는 게시 명령을 실행하지 않습니다. 이 문서의 체크리스트는 게시 실행 지시가 아닙니다.
+Browser checks require the installed Playwright Chromium or `CHROME_PATH`. Do not run publication commands for the two local packages. This checklist is not an instruction to publish.
 
-## 3. 실제 제품에 연결하기 전
+## 3. Before Integration into a Real Product
 
-### 인증과 호스트 책임
+### Authentication and Host Responsibilities
 
-- [ ] 데모 identity 선택·서명 cookie를 실제 로그인, tenant/resource 권한, session rotation 정책으로 교체합니다. 화면의 읽기 전용 표시를 권한 검사로 간주하지 않습니다.
-- [ ] HTTPS·trusted proxy·Secure cookie·origin 정책, 요청 크기·rate limit·실행 예산을 배포 환경에 맞게 설정합니다. 데모 서버를 그대로 공개 인터넷에 노출하지 않습니다.
-- [ ] 사용자 schema와 renderer, opaque 데이터 보존·외부 링크 정책, host mutation 계약을 정합니다. 편집기 코어가 업무 권한이나 workflow를 대신 소유하지 않게 합니다.
+- [ ] Replace the demo identity selector and signed cookie with real login, tenant and resource authorization, and session-rotation policies. Do not treat a read-only presentation in the UI as an authorization check.
+- [ ] Configure HTTPS, trusted proxies, Secure cookies, origin policy, request-size and rate limits, and execution budgets for the deployment environment. Do not expose the demo server directly to the public internet.
+- [ ] Define the user schema and renderer, opaque-data preservation and external-link policies, and host mutation contracts. Do not let the editor core become the owner of business authorization or workflows.
 
-### 저장과 복구
+### Persistence and Recovery
 
-- [ ] 기존 JSON과 Markdown의 백업·복원, 스키마 변경, CAS 충돌 UI와 실패 후 재시도를 실제 운영 데이터로 검증합니다. 기존 콘텐츠·history의 단일 소유권을 유지합니다.
-- [ ] 파일 저장소의 단일 프로세스 queue를 다중 worker·분산 transaction 보장으로 사용하지 않습니다. 여러 프로세스로 확장하려면 저장 adapter와 동시성 제어를 교체합니다.
-- [ ] 협업 연결 해제·재접속, 서버 종료·재시작, 디스크 오류와 저장 공간 부족, 백업 복구를 검증합니다. 보존 기간과 감사·관측·민감 정보 삭제 정책을 정합니다.
-- [ ] Git 호스트에는 실제 Git 실행 환경과 사용자 credential을 준비하고 worktree·branch·충돌 복구·원격 오류를 검증합니다. 자동 reset/force-push로 복구하지 않습니다.
+- [ ] Verify backup and restoration, schema changes, CAS conflict UI, and retry after failure for existing JSON and Markdown using real production data. Preserve single ownership of existing content and history.
+- [ ] Do not treat the file store's single-process queue as a multi-worker or distributed-transaction guarantee. Replace the storage adapter and concurrency control before scaling to multiple processes.
+- [ ] Verify collaborative disconnect and reconnect, server shutdown and restart, disk errors and exhausted storage, and backup recovery. Define retention, audit, observability, and sensitive-data deletion policies.
+- [ ] Provide a real Git execution environment and user credentials for Git hosts, and verify worktree, branch, conflict recovery, and remote errors. Do not recover through automatic reset or force-push.
 
-### Part 도구 / 모델
+### Part Tools and Models
 
-- [ ] 기본 `결정적 시나리오 / 모델미연결`은 실제 Part dispatcher 예시이지 외부 LLM 검증이 아닙니다. 사용할 provider/model/endpoint/credential로 별도 검증합니다.
-- [ ] 모델 자격 증명과 도구 권한은 서버에만 두고, 문서·도구 결과를 비신뢰 입력으로 취급합니다. 모델의 제안 생성과 사용자의 승인된 원본 적용을 분리합니다.
-- [ ] readset·hash·revision과 승인 대상의 정확한 일치, 취소 후 늦은 결과, 요청 중복·세션 격리·예산 초과·기록 redaction을 실제 호스트에서 확인합니다.
-- [ ] journal의 command receipts/events는 100개 보존 경계를 가집니다. 장기 감사와 영구 중복 방지가 필요하면 별도 durable store·보존 정책을 제공합니다.
-- [ ] `application-failed` / `application-incomplete`는 자동 재적용하지 않습니다. 원본 변경 뒤 장애가 났을 가능성을 확인할 복구·운영 절차를 마련합니다. 연결 Markdown 읽기와 백로그 변경의 cross-resource 원자성도 제공한다고 가정하지 않습니다.
+- [ ] The default `Deterministic fixture / No model connected` is an example using the real Part dispatcher, not evidence of an external LLM connection. Validate separately with the provider, model, endpoint, and credentials that will be used.
+- [ ] Keep model credentials and tool authorization on the server, and treat documents and tool results as untrusted input. Separate model proposal generation from user-approved application to canonical data.
+- [ ] Verify exact agreement between the read set, hashes, revisions, and approval target, as well as late results after cancellation, duplicate requests, session isolation, budget exhaustion, and record redaction in the real host.
+- [ ] The journal retains at most 100 command receipts and events. Provide a separate durable store and retention policy if long-term audit or permanent duplicate prevention is required.
+- [ ] Do not automatically reapply `application-failed` or `application-incomplete` operations. Establish recovery and operational procedures to determine whether canonical data may have changed before the failure. Do not assume cross-resource atomicity between linked Markdown reads and backlog mutations.
 
-## 참고
+## References
 
-- [pnpm workspace 의존성의 pack/publish 변환](https://pnpm.io/workspaces#publishing-workspace-packages)
-- 소유권·저장 계약: `source-runtime.md`, `interaction.md`
-- 도구·실행 계약: `agent-tools.md`
-- 검증 계층: `testing.md`
+- [pnpm workspace dependency conversion during pack/publish](https://pnpm.io/workspaces#publishing-workspace-packages)
+- Ownership and persistence contracts: `source-runtime.md`, `interaction.md`
+- Tool and execution contract: `agent-tools.md`
+- Validation layers: `testing.md`

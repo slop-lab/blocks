@@ -5,7 +5,7 @@ const MAX_PAGE = 100
 const MAX_BODY_BYTES = 256_000
 
 const syntheticText = (index) =>
-  `문서 보관함의 ${index + 1}번째 문단입니다. 긴 문서에서 필요한 내용을 찾고 안전하게 수정할 수 있습니다.`
+  `This is paragraph ${index + 1} in the document archive. You can find and safely edit the content you need in a long document.`
 
 export const createLargeContentRepository = (count = DEFAULT_COUNT) => {
   const revisions = new Map()

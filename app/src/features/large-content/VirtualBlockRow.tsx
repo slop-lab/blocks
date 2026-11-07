@@ -22,14 +22,14 @@ export const VirtualBlockRow = ({ cache, index, annotated, onEdit }: VirtualBloc
     >
       <span className="large-row__index">{String(index + 1).padStart(4, "0")}</span>
       {block === undefined ? (
-        <p className="large-row__loading">문단을 불러오는 중...</p>
+        <p className="large-row__loading">Loading paragraph...</p>
       ) : (
         <p>{block.text}</p>
       )}
       <button
         type="button"
         className="icon-button"
-        aria-label={`${index + 1}번째 문단 편집`}
+        aria-label={`Edit paragraph ${index + 1}`}
         disabled={block === undefined}
         onClick={() => onEdit(index)}
       >

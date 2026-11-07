@@ -93,7 +93,7 @@ export const createReviewDocument = (document: BlockDocument): BlockDocument => 
       content: [
         {
           kind: "text",
-          text: "다음 모임에서는 각자 추천하는 책을 한 권씩 소개하면 좋겠습니다.",
+          text: "At the next meeting, everyone could introduce one book they recommend.",
           marks: [],
         },
       ],

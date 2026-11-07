@@ -55,13 +55,13 @@ export const useDocumentSessions = (notify: (message: string) => void) => {
         version: engine?.version ?? value.version,
       }))
       markDirty(route, false)
-      notify("이 브라우저에 저장했습니다")
+      notify("Saved in this browser")
       return true
     } catch (error) {
       notify(
         error instanceof Error
-          ? `저장 실패: ${error.message}`
-          : "저장하지 못했습니다. 초안은 유지됩니다.",
+          ? `Save failed: ${error.message}`
+          : "Could not save. Your draft is preserved.",
       )
       return false
     }
@@ -131,8 +131,8 @@ export const useDocumentSessions = (notify: (message: string) => void) => {
     } catch (error) {
       notify(
         error instanceof Error
-          ? `저장 설정을 보관하지 못했습니다: ${error.message}`
-          : "저장 설정을 보관하지 못했습니다",
+          ? `Could not save the save settings: ${error.message}`
+          : "Could not save the save settings",
       )
     }
     deliveries.current

@@ -82,12 +82,18 @@ const text = (id, value) => ({
 export const initial = {
   schemaVersion: 2,
   tasks: [
-    { id: "TASK-104", title: "고객 인터뷰 요약", status: "running", version: 1 },
-    { id: "TASK-108", title: "검색 결과 정렬", status: "backlog", version: 1 },
+    { id: "TASK-104", title: "Summarize customer interviews", status: "running", version: 1 },
+    { id: "TASK-108", title: "Sort search results", status: "backlog", version: 1 },
   ],
   presentations: {
-    "TASK-104": { format: "block-editor/v0.3", blocks: [text("caption-104", "이번 주 실행 중")] },
-    "TASK-108": { format: "block-editor/v0.3", blocks: [text("caption-108", "다음 검토 대상")] },
+    "TASK-104": {
+      format: "block-editor/v0.3",
+      blocks: [text("caption-104", "In progress this week")],
+    },
+    "TASK-108": {
+      format: "block-editor/v0.3",
+      blocks: [text("caption-108", "Next up for review")],
+    },
   },
   proposals: [
     {
@@ -95,7 +101,7 @@ export const initial = {
       taskId: "TASK-104",
       document: {
         format: "block-editor/v0.3",
-        blocks: [text("proposal-text-1", "인터뷰 근거를 두 문단으로 정리")],
+        blocks: [text("proposal-text-1", "Summarize the interview findings in two paragraphs")],
       },
       dependencyVersion: 1,
     },

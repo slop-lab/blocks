@@ -81,6 +81,6 @@ export const saveMarkdown = async (file: MarkdownFile): Promise<SaveResult> => {
   })
   const payload: unknown = await response.json()
   if (response.status === 409) return { kind: "conflict", disk: conflictSchema.parse(payload) }
-  if (!response.ok) throw new Error("Markdown 파일을 저장하지 못했습니다.")
+  if (!response.ok) throw new Error("Could not save the Markdown file.")
   return { kind: "saved", file: fileSchema.parse(payload) }
 }

@@ -49,7 +49,7 @@ export const CompositeToolbar = ({
     if (proseView === null) return
     const handled = command(proseView.state, proseView.dispatch, proseView)
     onStatus(
-      handled ? `${label} 작업을 적용했습니다.` : "현재 선택에서는 이 작업을 사용할 수 없습니다.",
+      handled ? `${label} applied.` : "This action is unavailable for the current selection.",
     )
     proseView.focus()
   }
@@ -57,25 +57,27 @@ export const CompositeToolbar = ({
     if (codeView === null) return
     const handled = command(codeView)
     onStatus(
-      handled ? `${label} 작업을 코드에 적용했습니다.` : "코드 기록에 적용할 변경이 없습니다.",
+      handled
+        ? `${label} applied to the code.`
+        : "There are no changes to apply to the code history.",
     )
     codeView.focus()
   }
   const proseActive = activeContext === "prose"
   return (
-    <div className="toolbar composite-toolbar" role="toolbar" aria-label="활성 편집 영역 도구">
-      <span className="status-badge">{proseActive ? "문서 도구" : "코드 도구"}</span>
+    <div className="toolbar composite-toolbar" role="toolbar" aria-label="Active editor tools">
+      <span className="status-badge">{proseActive ? "Document tools" : "Code tools"}</span>
       <Tool
-        label="활성 영역 실행 취소"
+        label="Undo in active editor"
         disabled={proseActive ? proseView === null : codeView === null}
-        onRun={proseActive ? runProse(undo, "실행 취소") : runCode(codeUndo, "실행 취소")}
+        onRun={proseActive ? runProse(undo, "Undo") : runCode(codeUndo, "Undo")}
       >
         <ResetIcon />
       </Tool>
       <Tool
-        label="활성 영역 다시 실행"
+        label="Redo in active editor"
         disabled={proseActive ? proseView === null : codeView === null}
-        onRun={proseActive ? runProse(redo, "다시 실행") : runCode(codeRedo, "다시 실행")}
+        onRun={proseActive ? runProse(redo, "Redo") : runCode(codeRedo, "Redo")}
       >
         <ResetIcon className="flip" />
       </Tool>
@@ -83,44 +85,44 @@ export const CompositeToolbar = ({
         <>
           <span className="toolbar__divider" />
           <Tool
-            label="아래 행 추가"
+            label="Add row below"
             disabled={proseView === null}
-            onRun={runProse(tableCommands.addRowAfter, "행 추가")}
+            onRun={runProse(tableCommands.addRowAfter, "Add row")}
           >
             <RowsIcon />
           </Tool>
           <Tool
-            label="오른쪽 열 추가"
+            label="Add column to the right"
             disabled={proseView === null}
-            onRun={runProse(tableCommands.addColumnAfter, "열 추가")}
+            onRun={runProse(tableCommands.addColumnAfter, "Add column")}
           >
             <TableIcon />
           </Tool>
           <Tool
-            label="선택 셀 병합"
+            label="Merge selected cells"
             disabled={proseView === null}
-            onRun={runProse(tableCommands.mergeCells, "셀 병합")}
+            onRun={runProse(tableCommands.mergeCells, "Merge cells")}
           >
             <TableIcon />
           </Tool>
           <Tool
-            label="병합 셀 분할"
+            label="Split merged cell"
             disabled={proseView === null}
-            onRun={runProse(tableCommands.splitCell, "셀 분할")}
+            onRun={runProse(tableCommands.splitCell, "Split cell")}
           >
             <TableIcon />
           </Tool>
           <Tool
-            label="선택 행 삭제"
+            label="Delete selected row"
             disabled={proseView === null}
-            onRun={runProse(tableCommands.deleteRow, "행 삭제")}
+            onRun={runProse(tableCommands.deleteRow, "Delete row")}
           >
             <TrashIcon />
           </Tool>
           <Tool
-            label="선택 열 삭제"
+            label="Delete selected column"
             disabled={proseView === null}
-            onRun={runProse(tableCommands.deleteColumn, "열 삭제")}
+            onRun={runProse(tableCommands.deleteColumn, "Delete column")}
           >
             <TrashIcon />
           </Tool>
@@ -129,9 +131,9 @@ export const CompositeToolbar = ({
         <>
           <span className="toolbar__divider" />
           <Tool
-            label="코드 전체 선택"
+            label="Select all code"
             disabled={codeView === null}
-            onRun={runCode(selectAll, "전체 선택")}
+            onRun={runCode(selectAll, "Select all")}
           >
             <CodeIcon />
           </Tool>

@@ -71,7 +71,7 @@ it("Given a composing local section, When a React update carries a remote snapsh
 
   try {
     await act(async () => render(initial))
-    const editor = host.querySelector<HTMLElement>('[aria-label="구조화 문서 편집기"]')
+    const editor = host.querySelector<HTMLElement>('[aria-label="Structured document editor"]')
     const section = host.querySelector<HTMLElement>('[data-block-id="section"]')
     if (editor === null || section === null) throw new TypeError("Workspace editor did not mount")
 

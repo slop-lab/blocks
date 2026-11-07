@@ -1,44 +1,44 @@
-# 구조화 문서의 편집과 탐색
+# Structured Document Editing and Navigation
 
-이 계약은 `문서와 데이터베이스` 예제의 제목, 조합 입력, 페이지·블록 이동, 블록 단독 보기와 grip 잘라내기에 적용합니다. 호스트의 페이지 계층, 페이지 본문, 데이터베이스와 공유 원본은 서로 다른 저장 자원입니다.
+This contract applies to titles, composition input, page and block movement, focused block views, and grip-based cut operations in the `Documents and Databases` example. The host's page hierarchy, page bodies, databases, and shared sources are separate storage resources.
 
-## 제목과 조합 입력
+## Titles and Composition Input
 
-- 페이지 제목은 workspace tree의 metadata입니다. 제목 변경이 페이지 본문이나 공유 원본을 다시 생성하지 않습니다.
-- 제목은 저장 schema의 비어 있지 않은 문자열·길이 제한을 따릅니다. 한글 조합 중 Enter와 blur를 일반 입력 완료로 취급하지 않습니다.
-- 조합 중인 contenteditable의 DOM과 활성 ProseMirror 세션은 유지합니다. React 재렌더링, 자동 저장 acknowledgement와 외부 갱신이 조합 중인 텍스트를 이전 snapshot으로 교체해서는 안 됩니다.
-- 조합이 끝난 최종 transaction은 빠짐없이 저장 대상에 포함합니다. 조합 중 도착한 외부 변경으로 초안을 덮어쓰지 않고 기존 CAS·충돌 정책을 따릅니다.
+- A page title is metadata in the workspace tree. Changing a title does not recreate the page body or a shared source.
+- Titles follow the persisted schema's non-empty string and length constraints. Enter and blur during IME composition are not treated as normal input completion.
+- Preserve the DOM of the composing contenteditable and the active ProseMirror session. React rerenders, autosave acknowledgements, and external refreshes must not replace composing text with an earlier snapshot.
+- The final transaction after composition ends must be included in persistence without omission. External changes arriving during composition must not overwrite the draft; they follow the existing CAS and conflict policy.
 
-## 페이지 이동
+## Page Movement
 
-- 페이지 이동은 기존 page ID와 본문 entity를 유지하면서 tree의 부모·순서를 변경합니다. 페이지를 복제하거나 본문을 다른 entity로 저장하지 않습니다.
-- 자식 페이지로, 다른 페이지의 앞뒤로, 또는 최상위로 이동할 수 있어야 합니다. 보이는 들여쓰기와 탐색 순서는 저장된 계층과 일치해야 합니다.
-- 자신이나 자신의 자손을 부모로 지정하는 이동은 저장 전에 거부합니다. 드래그 취소나 대상 소멸이 뒤늦은 이동을 발생시키지 않습니다.
-- 포인터 이동 외의 접근 가능한 이동 경로도 제공합니다. 제목 수정과 이동이 겹치면 둘 다 보존되거나 명시적인 충돌이 나야 하며 마지막 업데이트가 다른 변경을 조용히 제거해서는 안 됩니다.
+- Moving a page changes its parent and order in the tree while preserving the existing page ID and body entity. It does not duplicate the page or save its body as another entity.
+- A page can move under another page, before or after another page, or to the top level. Visible indentation and navigation order must match the persisted hierarchy.
+- A move that makes the page itself or one of its descendants the parent is rejected before persistence. Cancelling a drag or losing its target must not trigger a delayed move.
+- Provide an accessible movement path that does not require pointer input. If a title edit and a move overlap, both changes must be preserved or an explicit conflict must be reported; a last update must not silently remove the other change.
 
-## 블록 이동
+## Block Movement
 
-- 이동은 블록의 ID와 완전한 하위 트리를 보존하는 하나의 undo 가능한 콘텐츠 변경입니다.
-- 같은 canonical 소유자 안에서 root와 중첩 컨테이너 사이를 이동합니다. drop 표시가 실제 삽입 깊이와 위치를 구분해야 합니다.
-- 자기 하위 트리 안으로의 이동, 유효한 자식을 가질 수 없는 대상, 잠긴 구조와 stale drop은 거부합니다. 취소된 드래그는 콘텐츠를 바꾸지 않습니다.
-- 공유 섹션의 occurrence shell은 canonical source의 본문이 아닙니다. 페이지 블록을 공유 원본 안으로, 또는 서로 다른 원본 사이로 옮기는 일을 단순 DOM 이동으로 처리하지 않습니다. 기존 소유권 정책이 허용하지 않는 이동을 암묵적인 복제·연결로 대체하지 않습니다.
+- A move is one undoable content change that preserves the block ID and its complete subtree.
+- Blocks move between the root and nested containers within the same canonical owner. The drop indicator must distinguish the actual insertion depth and position.
+- Reject moves into the block's own subtree, targets that cannot contain valid children, locked structures, and stale drops. A cancelled drag does not change content.
+- A shared section's occurrence shell is not part of the canonical source body. Do not treat moving a page block into a shared source, or between different sources, as a simple DOM move. Do not replace a move forbidden by the ownership policy with an implicit clone or link.
 
-## 블록 단독 보기
+## Focused Block View
 
-- 단독 보기는 탐색 범위의 변경이며 새 페이지 생성이 아닙니다. 상위 블록과 현재 페이지의 최상위로 돌아가는 경로를 제공합니다.
-- 보이지 않는 형제·조상은 canonical 문서에 남습니다. 편집기 입력을 잘라낸 부분 문서로 교체한 뒤 전체 페이지로 저장해서는 안 됩니다.
-- 보기 전환은 콘텐츠 history에 항목을 추가하거나 기존 history를 초기화하지 않습니다. 전환 전후의 편집은 동일한 소유자의 history에서 Undo/Redo합니다.
-- 공유 섹션은 같은 원본 runtime을 사용합니다. 다른 occurrence에서 열어도 내용과 원본 history가 이어지고, 한 원본에 여러 독립적인 활성 편집 세션을 만들지 않습니다.
-- 집중한 블록이 삭제되거나 이동해 현재 경로가 사라지면 유효한 상위 범위 또는 페이지로 돌아갑니다. 이 복귀가 숨겨진 콘텐츠를 삭제해서는 안 됩니다.
+- A focused block view changes navigation scope; it does not create a new page. It provides paths back to parent blocks and to the current page root.
+- Hidden siblings and ancestors remain in the canonical document. Do not replace the editor input with a truncated partial document and then save it as the full page.
+- Switching views does not add an entry to content history or reset existing history. Edits before and after the switch use Undo and Redo from the same owner's history.
+- Shared sections use the same source runtime. Content and source history continue when opened from another occurrence, and the system does not create multiple independent active editing sessions for one source.
+- If the focused block is deleted or moved so that the current path disappears, return to a valid parent scope or the page. This fallback must not delete hidden content.
 
-## Grip 잘라내기
+## Grip Cut
 
-- grip의 잘라내기는 기존 블록 선택·클립보드 namespace·참조 정책을 따릅니다. 사용자 지정 MIME과 일반 텍스트를 기록한 다음 삭제합니다.
-- 클립보드 기록 실패 시 원본을 삭제하지 않습니다. 복사는 어떤 경우에도 삭제하지 않습니다.
-- 비동기 기록이 완료될 때 원래의 모델, epoch, 콘텐츠 버전과 활성 interaction context가 여전히 유효한지 확인합니다. 이후의 선택이나 다른 페이지·공유 occurrence를 삭제해서는 안 됩니다.
-- 조상과 자손을 함께 선택한 경우 canonical 선택 root를 한 번만 잘라냅니다. 성공한 삭제는 하나의 undo 가능한 변경입니다.
-- 단독 보기에서도 실제 canonical 문서를 기준으로 잘라냅니다. 화면에 하나만 보인다는 이유로 숨겨진 형제를 제거하지 않습니다. 실제 마지막 블록을 자르는 경우에도 편집 schema가 유효한 문서를 유지해야 합니다.
+- Cutting from the grip follows the existing block-selection, clipboard-namespace, and reference policies. It writes the custom MIME type and plain text before deleting content.
+- If the clipboard write fails, do not delete the source. Copy never deletes content.
+- When the asynchronous write completes, verify that the original model, epoch, content version, and active interaction context are still valid. It must not delete a later selection or content from another page or shared occurrence.
+- If both an ancestor and descendant are selected, cut the canonical selection root only once. A successful deletion is one undoable change.
+- Even in a focused block view, cut against the actual canonical document. Do not remove hidden siblings merely because only one block is visible. When cutting the actual final block, the editing schema must still retain a valid document.
 
-## 검증 경계
+## Validation Boundary
 
-도메인 단위 테스트 외에 실제 브라우저에서 제목 수정·저장 후 재접속, 한글 composition, 포인터의 중첩 이동, 단독 보기·복귀와 grip 잘라내기·붙여넣기·Undo를 실행합니다. 공유 원본의 경우 다른 occurrence와 페이지에서도 결과를 확인합니다. CDP 조합 입력 검증과 실제 운영체제의 IME 입력 검증은 구분합니다.
+In addition to domain unit tests, exercise title editing, persistence, and reconnection; IME composition; nested pointer movement; focused view entry and return; and grip cut, paste, and Undo in a real browser. For shared sources, verify the result from other occurrences and pages as well. Distinguish CDP composition-input validation from validation with a real operating-system IME.

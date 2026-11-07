@@ -41,8 +41,8 @@ export const GitReviewPanel = ({
   const [tab, setTab] = useState<PanelTab>("changes")
   const [commitMessage, setCommitMessage] = useState("")
   return (
-    <aside className="git-docs-review" aria-label="변경 검토와 기록">
-      <div className="git-docs-review__tabs" role="tablist" aria-label="검토 패널">
+    <aside className="git-docs-review" aria-label="Change review and history">
+      <div className="git-docs-review__tabs" role="tablist" aria-label="Review panel">
         {(["changes", "history", "branches"] as const).map((id) => (
           <button
             key={id}
@@ -51,7 +51,7 @@ export const GitReviewPanel = ({
             aria-selected={tab === id}
             onClick={() => setTab(id)}
           >
-            {{ changes: "변경", history: "기록", branches: "브랜치" }[id]}
+            {{ changes: "Changes", history: "History", branches: "Branches" }[id]}
           </button>
         ))}
       </div>
@@ -66,14 +66,14 @@ export const GitReviewPanel = ({
             <div className="git-docs-action-row">
               <button type="button" disabled={busy} onClick={() => onRemote("fetch")}>
                 <ReloadIcon />
-                가져오기
+                Fetch
               </button>
               <button
                 type="button"
                 disabled={busy || state.remote.state !== "behind"}
                 onClick={() => onRemote("fast-forward")}
               >
-                빠른 반영
+                Fast-forward
               </button>
               <button
                 type="button"
@@ -81,7 +81,7 @@ export const GitReviewPanel = ({
                 onClick={() => onRemote("push")}
               >
                 <GitHubLogoIcon />
-                보내기
+                Push
               </button>
             </div>
             {state.remote.state === "diverged" && (
@@ -90,7 +90,7 @@ export const GitReviewPanel = ({
                 className="button button--secondary"
                 onClick={() => onRemote("merge")}
               >
-                명시적으로 병합 준비
+                Prepare explicit merge
               </button>
             )}
           </div>
@@ -109,25 +109,27 @@ export const GitReviewPanel = ({
                 />
                 <span>
                   <strong>{change.path}</strong>
-                  <small>{change.conflict ? "충돌" : `${change.staged} / ${change.working}`}</small>
+                  <small>
+                    {change.conflict ? "Conflict" : `${change.staged} / ${change.working}`}
+                  </small>
                 </span>
               </label>
             ))}
             {state.changes.length === 0 && (
-              <p className="git-docs-empty">커밋하지 않은 문서 변경이 없습니다.</p>
+              <p className="git-docs-empty">There are no uncommitted document changes.</p>
             )}
           </div>
           {diff !== null && (
             <details className="git-docs-diff" open>
-              <summary>{diff.path} · HEAD와 작업본</summary>
+              <summary>{diff.path} · HEAD and working copy</summary>
               <div>
-                <pre>{diff.head ?? "새 문서"}</pre>
-                <pre>{diff.working ?? "삭제됨"}</pre>
+                <pre>{diff.head ?? "New document"}</pre>
+                <pre>{diff.working ?? "Deleted"}</pre>
               </div>
             </details>
           )}
           <label className="git-docs-message">
-            커밋 메시지
+            Commit message
             <input
               value={commitMessage}
               onChange={(event) => setCommitMessage(event.target.value)}
@@ -139,7 +141,7 @@ export const GitReviewPanel = ({
             disabled={busy || selected.size === 0 || commitMessage.trim() === ""}
             onClick={() => onCommit(commitMessage)}
           >
-            선택한 문서 커밋
+            Commit selected documents
           </button>
           {state.changes.some((change) => change.conflict)
             ? null
@@ -150,7 +152,7 @@ export const GitReviewPanel = ({
                   disabled={commitMessage.trim() === ""}
                   onClick={() => onCompleteMerge(commitMessage)}
                 >
-                  병합 커밋 완료
+                  Complete merge commit
                 </button>
               )}
         </div>
@@ -164,12 +166,12 @@ export const GitReviewPanel = ({
                 {entry.author} · {new Date(entry.authoredAt).toLocaleString()}
               </small>
               <button type="button" onClick={() => onRestore(entry.commit)}>
-                작업본으로 복원
+                Restore to working copy
               </button>
             </article>
           ))}
           {history.length === 0 && (
-            <p className="git-docs-empty">이 문서의 커밋 기록이 없습니다.</p>
+            <p className="git-docs-empty">This document has no commit history.</p>
           )}
         </div>
       )}
@@ -180,14 +182,14 @@ export const GitReviewPanel = ({
               <strong>{branch.name}</strong>
               <small>
                 {branch.current
-                  ? "현재 브랜치"
+                  ? "Current branch"
                   : branch.managed
-                    ? "관리 작업 트리"
-                    : "저장소 브랜치"}
+                    ? "Managed worktree"
+                    : "Repository branch"}
               </small>
               {!branch.current && (
                 <button type="button" onClick={() => onSwitchBranch(branch.name)}>
-                  이 브랜치 열기
+                  Open this branch
                 </button>
               )}
             </article>
@@ -196,11 +198,11 @@ export const GitReviewPanel = ({
             type="button"
             className="button button--secondary"
             onClick={() => {
-              const branch = window.prompt("새 브랜치 이름", "notes/topic")
+              const branch = window.prompt("New branch name", "notes/topic")
               if (branch !== null) onCreateBranch(branch)
             }}
           >
-            새 브랜치
+            New branch
           </button>
         </div>
       )}

@@ -20,7 +20,7 @@ export const taskCardBlock: BlockRegistration = {
   },
   render: (block) => (
     <section>
-      <strong>{String(block.attrs["title"] ?? "작업")}</strong>
+      <strong>{String(block.attrs["title"] ?? "Task")}</strong>
       {renderInline(block)}
     </section>
   ),

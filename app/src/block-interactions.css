@@ -267,7 +267,7 @@
 
 .editor-content > p:empty::before,
 .composite-prose > p:empty::before {
-  content: "내용을 입력하거나 / 를 눌러 블록을 선택하세요";
+  content: "Start typing, or press / to choose a block";
   color: var(--ink-faint);
   pointer-events: none;
 }

@@ -24,7 +24,7 @@ try {
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: base })
   await page.goto(`${base}/?workspace=structured-workspace`, { waitUntil: "networkidle" })
   const editor = page.locator(
-    ".ProseMirror[contenteditable='true'][aria-label='구조화 문서 편집기']",
+    ".ProseMirror[contenteditable='true'][aria-label='Structured document editor']",
   )
   await editor.waitFor()
   const rootBlocks = editor.locator(":scope > [data-block-id]")
@@ -33,7 +33,7 @@ try {
   const sourceId = await section.locator("p[data-block-id]").first().getAttribute("data-block-id")
   if (sourceId == null) throw new TypeError("Missing nested drag source")
   const source = section.locator(`[data-block-id="${sourceId}"]`)
-  const grip = page.getByRole("button", { name: "블록 메뉴 및 드래그", exact: true })
+  const grip = page.getByRole("button", { name: "Block menu and drag handle", exact: true })
 
   await source.hover()
   const gripBox = await grip.boundingBox()
@@ -137,10 +137,13 @@ try {
   await cutTarget.hover()
   await grip.click()
   const countBeforeCut = await rootBlocks.count()
-  await page.getByRole("menuitem", { name: "잘라내기", exact: true }).click()
+  await page.getByRole("menuitem", { name: "Cut", exact: true }).click()
   await page.waitForFunction(
     ({ selector, count }) => document.querySelector(selector)?.children.length === count - 1,
-    { selector: "[aria-label='구조화 문서 편집기'] [contenteditable]", count: countBeforeCut },
+    {
+      selector: "[aria-label='Structured document editor'] [contenteditable]",
+      count: countBeforeCut,
+    },
   )
   await page.keyboard.press("Control+z")
   assert.equal(await editor.locator(`:scope > [data-block-id="${sourceId}"]`).count(), 1)
@@ -153,7 +156,7 @@ try {
       throw new DOMException("denied", "NotAllowedError")
     }
   })
-  await page.getByRole("menuitem", { name: "잘라내기", exact: true }).click()
+  await page.getByRole("menuitem", { name: "Cut", exact: true }).click()
   await page.waitForFunction(() => document.querySelector(".block-menu")?.hasAttribute("hidden"))
   assert.equal(await rootBlocks.count(), countBeforeFailure)
   await page.evaluate(() => {
@@ -163,7 +166,7 @@ try {
   await page.reload({ waitUntil: "networkidle" })
   assert.equal(
     await page
-      .locator(".ProseMirror[contenteditable='true'][aria-label='구조화 문서 편집기']")
+      .locator(".ProseMirror[contenteditable='true'][aria-label='Structured document editor']")
       .locator(`:scope > [data-block-id="${sourceId}"]`)
       .count(),
     1,

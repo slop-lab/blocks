@@ -31,21 +31,24 @@ try {
   const errors = []
   page.on("pageerror", (error) => errors.push(error.message))
   await page.goto(`http://127.0.0.1:${address.port}`, { waitUntil: "networkidle" })
-  await page.getByRole("button", { name: /에이전트 도구 예제/ }).click()
-  await page.getByRole("heading", { name: "에이전트 도구 예제" }).waitFor()
-  assert.equal(await page.getByLabel("실행 모델").inputValue(), "fixture/deterministic")
+  await page.getByRole("button", { name: /Agent tools example/ }).click()
+  await page.getByRole("heading", { name: "Agent tools examples" }).waitFor()
+  assert.equal(await page.getByLabel("Run model").inputValue(), "fixture/deterministic")
 
   const runStory = async (tab, instruction, artifactKind) => {
     await page.getByRole("tab", { name: new RegExp(tab) }).click()
-    await page.getByLabel("요청").fill(instruction)
-    await page.getByRole("button", { name: "실행 시작" }).click()
+    await page.getByLabel("Request").fill(instruction)
+    await page.getByRole("button", { name: "Start run" }).click()
     await page.getByText(artifactKind, { exact: true }).waitFor()
     await page.getByText("run.completed", { exact: true }).waitFor()
-    const apply = page.getByRole("button", { name: "검토한 작업 적용" })
+    const apply = page.getByRole("button", { name: "Apply reviewed operation" })
     await apply.waitFor()
     assert.equal(await apply.isEnabled(), true)
     await apply.click()
-    await page.getByRole("status").filter({ hasText: "원본에 저장했습니다" }).waitFor()
+    await page
+      .getByRole("status")
+      .filter({ hasText: "Saved the reviewed changes to the source." })
+      .waitFor()
   }
 
   await runStory("Markdown", "Browser Markdown proposal", "markdown-replacement")
@@ -57,17 +60,17 @@ try {
   assert.match(markdown.content, /<!-- preserve -->/)
   assert.match(markdown.content, /\r\n/)
 
-  await runStory("데이터베이스", "첫 작업을 완료 상태로 검토", "workspace-row-status")
+  await runStory("Database", "첫 작업을 완료 상태로 검토", "workspace-row-status")
   const workspaceState = await page.request.get(`http://127.0.0.1:${address.port}/api/workspace`)
-  assert.equal((await workspaceState.json()).databases[0].content.rows[0].values.status, "완료")
+  assert.equal((await workspaceState.json()).databases[0].content.rows[0].values.status, "Done")
 
-  await runStory("혼합 백로그", "Browser mixed proposal", "mixed-task-plan")
+  await runStory("Mixed backlog", "Browser mixed proposal", "mixed-task-plan")
   const mixedState = await page.request.get(`http://127.0.0.1:${address.port}/api/ownership/mixed`)
   assert.match(JSON.stringify((await mixedState.json()).proposals), /Browser mixed proposal/)
 
   await page.getByRole("tab", { name: /Markdown/ }).click()
-  await page.getByLabel("요청").fill("Stale browser proposal")
-  await page.getByRole("button", { name: "실행 시작" }).click()
+  await page.getByLabel("Request").fill("Stale browser proposal")
+  await page.getByRole("button", { name: "Start run" }).click()
   await page.getByText("markdown-replacement", { exact: true }).waitFor()
   const current = await (
     await page.request.get(`http://127.0.0.1:${address.port}/api/markdown/file?name=README.md`)
@@ -79,8 +82,8 @@ try {
       content: `${current.content}Concurrent edit\r\n`,
     },
   })
-  await page.getByRole("button", { name: "검토한 작업 적용" }).click()
-  await page.getByRole("status").filter({ hasText: "원본이 바뀌어" }).waitFor()
+  await page.getByRole("button", { name: "Apply reviewed operation" }).click()
+  await page.getByRole("status").filter({ hasText: "The source changed" }).waitFor()
   await page.screenshot({ path: "/tmp/opencode/agent-workbench-1280.png", fullPage: true })
   await page.locator(".agent-timeline").scrollIntoViewIfNeeded()
   await page.screenshot({
@@ -90,7 +93,7 @@ try {
 
   for (const width of [768, 375]) {
     await page.setViewportSize({ width, height: 900 })
-    const heading = page.getByRole("heading", { name: "에이전트 도구 예제" })
+    const heading = page.getByRole("heading", { name: "Agent tools examples" })
     assert.equal(await heading.isVisible(), true)
     const bounds = await heading.boundingBox()
     assert.ok(bounds !== null && bounds.x >= 0 && bounds.x + bounds.width <= width)
@@ -99,7 +102,7 @@ try {
       fullPage: true,
     })
     await page.locator(".agent-review-panel").scrollIntoViewIfNeeded()
-    await page.getByRole("button", { name: "검토한 작업 적용" }).focus()
+    await page.getByRole("button", { name: "Apply reviewed operation" }).focus()
     await page.screenshot({
       path: `/tmp/opencode/agent-workbench-${width}-review.png`,
       fullPage: true,

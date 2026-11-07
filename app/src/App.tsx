@@ -77,7 +77,7 @@ export const App = () => {
   return (
     <div className={shellClass}>
       <a className="skip-link" href="#main-content">
-        본문으로 건너뛰기
+        Skip to main content
       </a>
       {workspace.route !== "git-documents" && workspace.route !== "structured-workspace" && (
         <Sidebar route={workspace.route} onNavigate={navigate} />
@@ -143,7 +143,7 @@ export const App = () => {
         </>
       ) : null}
       <main className="feature-workspace" hidden={local} id={local ? undefined : "main-content"}>
-        <Suspense fallback={<p role="status">문서를 여는 중…</p>}>
+        <Suspense fallback={<p role="status">Opening document…</p>}>
           <div hidden={workspace.route !== "markdown"}>
             {visited.has("markdown") && <MarkdownWorkspace />}
           </div>

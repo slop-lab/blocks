@@ -46,7 +46,7 @@ export const createWorkspaceNodeViews = (
           const pageId = String(node.attrs["pageId"])
           const page = data.current.workspace.pages.find((candidate) => candidate.id === pageId)
           dom.replaceChildren(
-            nodeViewButton(view.dom.ownerDocument, `연결된 페이지 · ${page?.title ?? pageId}`, () =>
+            nodeViewButton(view.dom.ownerDocument, `Linked page · ${page?.title ?? pageId}`, () =>
               data.current.onOpenPage(pageId),
             ),
           )
@@ -61,7 +61,7 @@ export const createWorkspaceNodeViews = (
         (dom) => {
           const databaseId = String(node.attrs["databaseId"])
           const database = data.current.databases.find((candidate) => candidate.id === databaseId)
-          dom.textContent = `데이터베이스 · ${database?.name ?? databaseId}`
+          dom.textContent = `Database · ${database?.name ?? databaseId}`
         },
         renders,
         view.dom.ownerDocument,

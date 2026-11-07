@@ -6,8 +6,8 @@ import { CanonicalBlockEditor, type CanonicalBlockEditorHandle } from "./CustomN
 import { presentationProfile, presentationRenderers } from "./presentation-profile"
 
 const tasks = [
-  { id: "TASK-21", title: "온보딩 인터뷰", status: "running" },
-  { id: "TASK-22", title: "결과 문서 배포", status: "done" },
+  { id: "TASK-21", title: "Onboarding interviews", status: "running" },
+  { id: "TASK-22", title: "Publish findings", status: "done" },
 ] as const
 const initial: BlockDocument = {
   format: "block-editor/v0.3",
@@ -16,13 +16,13 @@ const initial: BlockDocument = {
       id: "card-1",
       type: "ownership.task-card",
       attrs: { taskId: "TASK-21" },
-      content: [{ kind: "text", text: "첫 번째 화면", marks: [] }],
+      content: [{ kind: "text", text: "First screen", marks: [] }],
     },
     {
       id: "card-2",
       type: "ownership.task-card",
       attrs: { taskId: "TASK-21" },
-      content: [{ kind: "text", text: "같은 작업의 요약 카드", marks: [] }],
+      content: [{ kind: "text", text: "Summary card for the same task", marks: [] }],
     },
   ],
 }
@@ -55,7 +55,7 @@ export const ProjectBoardScenario = () => {
     setSaved(draft)
   }
   const reload = () => {
-    if (dirty && !window.confirm("저장하지 않은 표현 변경을 버리시겠습니까?")) return
+    if (dirty && !window.confirm("Discard unsaved presentation changes?")) return
     setDraft(saved)
     editor.current?.reset(saved)
   }
@@ -72,7 +72,7 @@ export const ProjectBoardScenario = () => {
       <header className="ownership-scenario__header">
         <div>
           <span className="eyebrow">DOMAIN + PRESENTATION</span>
-          <h2 id="board-title">프로젝트 보드</h2>
+          <h2 id="board-title">Project board</h2>
         </div>
         <div className="button-row">
           <span
@@ -80,18 +80,19 @@ export const ProjectBoardScenario = () => {
               dirty ? "status-badge status-badge--warning" : "status-badge status-badge--success"
             }
           >
-            {dirty ? "저장 전 변경" : "표현 저장됨"}
+            {dirty ? "Unsaved changes" : "Presentation saved"}
           </span>
           <button className="button button--secondary" type="button" onClick={reload}>
-            저장본 다시 열기
+            Reopen saved version
           </button>
           <button className="button button--primary" type="button" onClick={save} disabled={!dirty}>
-            표현 저장
+            Save presentation
           </button>
         </div>
       </header>
       <p className="ownership-explainer">
-        외부 작업은 ViewData이고, 아래 카드 배치와 캡션만 BlockDocument 원본입니다.
+        External tasks are ViewData. Only the card layout and captions below belong to the
+        BlockDocument source.
       </p>
       <BlockViewer content={draft} renderers={presentationRenderers} viewData={viewData} />
       <CanonicalBlockEditor
@@ -100,18 +101,18 @@ export const ProjectBoardScenario = () => {
         onChange={changed}
         profile={presentationProfile}
         modelId="project-board-presentation"
-        label="프로젝트 보드 표현 편집기"
+        label="Project board presentation editor"
       />
       <div className="button-row">
         <button className="button button--secondary" type="button" onClick={duplicate}>
-          카드 복제
+          Duplicate card
         </button>
         <button className="button button--danger" type="button" onClick={remove}>
-          마지막 카드 삭제
+          Delete last card
         </button>
       </div>
       <footer role="status">
-        도메인 작업 {tasks.length}개 · 표현 블록 {draft.blocks.length}개
+        {tasks.length} domain tasks · {draft.blocks.length} presentation blocks
       </footer>
     </section>
   )

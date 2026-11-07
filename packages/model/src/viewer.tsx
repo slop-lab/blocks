@@ -25,7 +25,9 @@ class BlockBoundary extends Component<
   }
   render() {
     return this.state.failed ? (
-      <section role="status">표시 실패 · {this.props.blockId} · 원본 데이터는 유지됩니다.</section>
+      <section role="status">
+        Unable to display · {this.props.blockId} · Original data preserved.
+      </section>
     ) : (
       this.props.children
     )
@@ -58,7 +60,7 @@ export const BlockViewer = (props: ViewerProps) => {
         ?.filter((item) => !known.has(item.blockId))
         .map((item) => (
           <aside key={item.id} role="note">
-            위치 소실 · {item.message}
+            Location unavailable · {item.message}
           </aside>
         ))}
     </article>

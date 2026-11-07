@@ -45,7 +45,7 @@ export const CompositeWorkspace = ({
   }
   const [proseView, setProseView] = useState<EditorView | null>(null)
   const [codeView, setCodeView] = useState<CodeView | null>(null)
-  const [status, setStatus] = useState("일정 표를 편집할 수 있습니다.")
+  const [status, setStatus] = useState("The itinerary table is ready to edit.")
 
   const proseDocumentRef = useRef(proseDocument)
   const codeDraftRef = useRef(codeDraft)
@@ -80,16 +80,19 @@ export const CompositeWorkspace = ({
     savedCodeRef.current = codeDraftRef.current
     setWorkspaceDirty(false)
     onSave?.(snapshot)
-    setStatus("여행 워크숍 문서와 코드를 함께 저장했습니다.")
+    setStatus("Saved the travel workshop document and code together.")
   }
 
   return (
     <section className="composite-workspace" aria-labelledby="composite-title">
       <header className="composite-header">
         <div>
-          <span className="eyebrow">여행 워크숍</span>
-          <h1 id="composite-title">여행 워크숍 계획</h1>
-          <p>일정 표와 설명을 정리하고, 옆의 코드에서 여행 준비 데이터를 함께 다듬어 보세요.</p>
+          <span className="eyebrow">Travel workshop</span>
+          <h1 id="composite-title">Travel workshop plan</h1>
+          <p>
+            Organize the itinerary and notes, then refine the travel preparation data in the
+            adjacent code editor.
+          </p>
         </div>
         <span
           className={
@@ -98,7 +101,7 @@ export const CompositeWorkspace = ({
               : "status-badge status-badge--success"
           }
         >
-          {workspaceDirty ? "저장되지 않은 변경" : "모두 저장됨"}
+          {workspaceDirty ? "Unsaved changes" : "All changes saved"}
         </span>
       </header>
 
@@ -117,12 +120,12 @@ export const CompositeWorkspace = ({
         >
           <header className="composite-slot__header">
             <div>
-              <span className="eyebrow">표 문서</span>
+              <span className="eyebrow">Table document</span>
               <h2>
-                <FileTextIcon /> 일정과 결정
+                <FileTextIcon /> Itinerary and decisions
               </h2>
             </div>
-            <span className="status-badge">표와 캡션</span>
+            <span className="status-badge">Table and caption</span>
           </header>
           <ProseMirrorSurface
             document={proseDocument}
@@ -139,7 +142,7 @@ export const CompositeWorkspace = ({
             onReady={setProseView}
             onActivate={() => {
               claimContext("prose")
-              setStatus("일정 표를 편집하고 있습니다. Tab으로 다음 칸으로 이동할 수 있습니다.")
+              setStatus("Editing the itinerary table. Press Tab to move to the next cell.")
             }}
           />
         </article>
@@ -152,15 +155,15 @@ export const CompositeWorkspace = ({
         >
           <header className="composite-slot__header">
             <div>
-              <span className="eyebrow">여행 코드</span>
+              <span className="eyebrow">Travel code</span>
               <h2 id="nested-code-title">
-                <CodeIcon /> 준비 데이터
+                <CodeIcon /> Preparation data
               </h2>
             </div>
-            <span className="status-badge">코드</span>
+            <span className="status-badge">Code</span>
           </header>
           <p className="composite-slot__description">
-            Tab으로 들여쓰고, 실행 취소와 전체 선택은 이 코드 칸 안에서만 동작합니다.
+            Press Tab to indent. Undo and Select All apply only within this code editor.
           </p>
           <NestedCodeEditor
             initialCode={initial.draft.code}
@@ -176,12 +179,12 @@ export const CompositeWorkspace = ({
             onReady={setCodeView}
             onActivate={() => {
               claimContext("code")
-              setStatus("여행 준비 데이터를 편집하고 있습니다.")
+              setStatus("Editing the travel preparation data.")
             }}
           />
           <footer className="composite-code-actions">
             <span className="muted">
-              {workspaceDirty ? "일정 또는 코드가 변경되었습니다." : "저장된 여행 계획입니다."}
+              {workspaceDirty ? "The itinerary or code has changed." : "This travel plan is saved."}
             </span>
             <button
               className="button button--primary"
@@ -189,7 +192,7 @@ export const CompositeWorkspace = ({
               disabled={!workspaceDirty}
               onClick={saveWorkspace}
             >
-              <CheckIcon /> 문서와 코드 저장
+              <CheckIcon /> Save document and code
             </button>
           </footer>
         </aside>

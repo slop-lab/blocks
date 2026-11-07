@@ -17,7 +17,7 @@ it("renders a block array without model session or host services", () => {
     />,
   )
   expect(html).toContain("<strong>본문</strong>")
-  expect(html).toContain("위치 소실")
+  expect(html).toContain("Position unavailable")
 })
 
 it("renders safe link marks as escaped semantic anchors", () => {

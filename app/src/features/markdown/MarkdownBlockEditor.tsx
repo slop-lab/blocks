@@ -25,10 +25,10 @@ export const mappingRange = (content: string, mapping: MarkdownMapping) => {
 }
 
 const label: Readonly<Record<MarkdownMapping["type"], string>> = {
-  heading: "제목",
-  paragraph: "문단",
-  code: "코드",
-  raw: "원문 보존",
+  heading: "Heading",
+  paragraph: "Paragraph",
+  code: "Code",
+  raw: "Preserved source",
 }
 
 export const MarkdownBlockEditor = ({
@@ -39,9 +39,10 @@ export const MarkdownBlockEditor = ({
   onChange,
   onCompositionChange,
 }: BlockEditorProps) => (
-  <section className="markdown-blocks" aria-label="Markdown 블록 편집">
+  <section className="markdown-blocks" aria-label="Markdown block editor">
     <p className="muted">
-      블록 사이의 줄 경계는 유지됩니다. 블록을 합치거나 구조를 바꾸려면 원문 모드를 사용하세요.
+      Line boundaries between blocks are preserved. Use source mode to merge blocks or change their
+      structure.
     </p>
     {mappings.map((mapping) => {
       const range = mappingRange(content, mapping)
@@ -61,7 +62,7 @@ export const MarkdownBlockEditor = ({
             </code>
           </button>
           <textarea
-            aria-label={`${label[mapping.type]} ${mapping.startLine}행부터 ${mapping.endLine}행`}
+            aria-label={`${label[mapping.type]}, lines ${mapping.startLine} through ${mapping.endLine}`}
             readOnly={!editable}
             value={value}
             rows={Math.max(2, mapping.endLine - mapping.startLine + 1)}
@@ -70,7 +71,7 @@ export const MarkdownBlockEditor = ({
             onCompositionStart={() => onCompositionChange(true)}
             onCompositionEnd={() => onCompositionChange(false)}
           />
-          {!editable && <small>알 수 없는 구문은 원문 모드에서만 수정할 수 있습니다.</small>}
+          {!editable && <small>Unknown syntax can only be edited in source mode.</small>}
         </article>
       )
     })}

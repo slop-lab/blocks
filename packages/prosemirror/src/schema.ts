@@ -29,7 +29,7 @@ const opaque: NodeSpec = {
   toDOM: (node) => [
     "section",
     { "data-block-id": node.attrs["id"], "data-opaque": "true" },
-    ["strong", "읽기 전용 확장 블록"],
+    ["strong", "Read-only extension block"],
     ["span", ` ${String(node.attrs["originalType"])}`],
   ],
 }

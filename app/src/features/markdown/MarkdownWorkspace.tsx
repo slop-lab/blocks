@@ -40,7 +40,7 @@ export const MarkdownWorkspace = ({
   }
 
   return (
-    <section className="markdown-workspace" aria-label="Markdown 파일 작업 공간">
+    <section className="markdown-workspace" aria-label="Markdown file workspace">
       <MarkdownFileList
         tree={workspace.tree}
         activeName={workspace.disk?.name ?? null}
@@ -67,13 +67,13 @@ export const MarkdownWorkspace = ({
                 if (
                   workspace.disk !== null &&
                   (!workspace.dirty ||
-                    window.confirm("초안을 버리고 디스크 파일을 다시 읽으시겠습니까?"))
+                    window.confirm("Discard the draft and reload the file from disk?"))
                 )
                   void workspace.openFile(workspace.disk.name, true)
               }}
             >
               <ReloadIcon />
-              다시 읽기
+              Reload
             </button>
             <span
               className={
@@ -82,18 +82,18 @@ export const MarkdownWorkspace = ({
                   : "status-badge status-badge--success"
               }
             >
-              {workspace.dirty ? "저장하지 않은 초안" : "디스크와 동일"}
+              {workspace.dirty ? "Unsaved draft" : "Matches disk"}
             </span>
             <label className="markdown-save-mode">
-              저장 방식
+              Save mode
               <select
                 value={workspace.saveMode}
                 onChange={(event) =>
                   workspace.setSaveMode(event.target.value === "auto" ? "auto" : "manual")
                 }
               >
-                <option value="manual">수동</option>
-                <option value="auto">자동</option>
+                <option value="manual">Manual</option>
+                <option value="auto">Automatic</option>
               </select>
             </label>
             <button
@@ -109,11 +109,11 @@ export const MarkdownWorkspace = ({
               onClick={() => void workspace.persist()}
             >
               <CheckIcon />
-              {workspace.saving ? "저장 중" : "저장"}
+              {workspace.saving ? "Saving" : "Save"}
             </button>
           </div>
         </header>
-        <div className="markdown-tabs" role="tablist" aria-label="편집 모드">
+        <div className="markdown-tabs" role="tablist" aria-label="Editing mode">
           <button
             type="button"
             role="tab"
@@ -125,7 +125,7 @@ export const MarkdownWorkspace = ({
               workspace.setMode("visual")
             }}
           >
-            문서
+            Document
           </button>
           <button
             type="button"
@@ -134,12 +134,12 @@ export const MarkdownWorkspace = ({
             disabled={workspace.composing || workspace.loading}
             onClick={() => workspace.setMode("source")}
           >
-            Markdown 원문
+            Markdown source
           </button>
         </div>
         <div className="markdown-editor-pane">
           {workspace.loading || workspace.disk === null ? (
-            <p role="status">파일을 불러오는 중입니다.</p>
+            <p role="status">Loading the file.</p>
           ) : (
             <>
               <MarkdownRichEditor
@@ -154,11 +154,11 @@ export const MarkdownWorkspace = ({
               {workspace.mode === "source" && (
                 <label className="markdown-source">
                   <span>
-                    Markdown 원문
-                    <small> 지원하지 않는 구문도 이 보기에서 원문 그대로 편집할 수 있습니다.</small>
+                    Markdown source
+                    <small> Edit unsupported syntax directly in this view.</small>
                   </span>
                   <textarea
-                    aria-label="Markdown 원문"
+                    aria-label="Markdown source"
                     ref={sourceRef}
                     value={workspace.draft}
                     onChange={(event) => workspace.editSource(event.target.value)}
@@ -185,7 +185,7 @@ export const MarkdownWorkspace = ({
         </footer>
       </section>
       <details className="markdown-map">
-        <summary>문서 위치 정보</summary>
+        <summary>Document location details</summary>
         <MarkdownLineMap
           mappings={workspace.mappings}
           selectedId={workspace.selectedId}

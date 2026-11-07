@@ -50,7 +50,7 @@ export const createApplicationServer = (options = {}) => {
             JSON.stringify({
               id: "workshop-notice",
               revision: "1",
-              text: "모임 안내: 토요일 오후 두 시에 작업실에서 만납니다. 개인 컵과 함께 읽을 책을 가져와 주세요.",
+              text: "Meetup notice: We will meet at the studio at 2:00 PM on Saturday. Please bring a reusable cup and a book to read.",
             }),
           )
         return

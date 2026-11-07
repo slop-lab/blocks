@@ -25,31 +25,61 @@ export type RouteId =
   | "structured-workspace"
 
 const routes = [
-  { id: "note", label: "A · 로컬 노트", note: "편집 + 저장", icon: FileTextIcon },
-  { id: "presentation", label: "B · 작업 브리핑", note: "외부 카드 + 캡션", icon: ViewGridIcon },
-  { id: "readonly", label: "C · 읽기 전용", note: "호스트 액션", icon: ReaderIcon },
-  { id: "markdown", label: "Markdown 파일", note: "파일 열기 · 편집 · 저장", icon: FileIcon },
+  { id: "note", label: "A · Local note", note: "Edit + save", icon: FileTextIcon },
+  {
+    id: "presentation",
+    label: "B · Work briefing",
+    note: "External cards + captions",
+    icon: ViewGridIcon,
+  },
+  { id: "readonly", label: "C · Read-only", note: "Host actions", icon: ReaderIcon },
+  { id: "markdown", label: "Markdown files", note: "Open · edit · save", icon: FileIcon },
   {
     id: "git-documents",
-    label: "문서 라이브러리",
-    note: "Git 변경 · 기록 · 동기화",
+    label: "Document library",
+    note: "Git changes · history · sync",
     icon: FileIcon,
   },
-  { id: "collaboration", label: "함께 쓰기", note: "실시간 공동 편집", icon: PersonIcon },
-  { id: "composite", label: "표와 코드", note: "표 · 캡션 · 코드 편집", icon: TableIcon },
-  { id: "large-content", label: "문서 보관함", note: "긴 문서 · 필요한 부분 읽기", icon: RowsIcon },
-  { id: "workflow", label: "공유 회의록", note: "작성 · 검토 요청 · 승인", icon: CheckCircledIcon },
-  { id: "ownership", label: "소유권 예제", note: "다섯 가지 원본 경계", icon: ViewGridIcon },
+  {
+    id: "collaboration",
+    label: "Write together",
+    note: "Real-time collaboration",
+    icon: PersonIcon,
+  },
+  {
+    id: "composite",
+    label: "Tables and code",
+    note: "Edit tables · captions · code",
+    icon: TableIcon,
+  },
+  {
+    id: "large-content",
+    label: "Document archive",
+    note: "Long documents · load on demand",
+    icon: RowsIcon,
+  },
+  {
+    id: "workflow",
+    label: "Shared meeting notes",
+    note: "Write · request review · approve",
+    icon: CheckCircledIcon,
+  },
+  {
+    id: "ownership",
+    label: "Ownership examples",
+    note: "Five source boundaries",
+    icon: ViewGridIcon,
+  },
   {
     id: "agent-workbench",
-    label: "에이전트 도구 예제",
-    note: "세 가지 원본 · 검토 · 적용",
+    label: "Agent tools examples",
+    note: "Three sources · review · apply",
     icon: TokensIcon,
   },
   {
     id: "structured-workspace",
-    label: "문서와 데이터베이스",
-    note: "페이지 · 표 · 공유 블록",
+    label: "Documents and databases",
+    note: "Pages · tables · shared blocks",
     icon: TokensIcon,
   },
 ] as const
@@ -61,15 +91,15 @@ export const Sidebar = ({
   readonly route: RouteId
   readonly onNavigate: (route: RouteId) => void
 }) => (
-  <aside className="sidebar" aria-label="예제 탐색">
+  <aside className="sidebar" aria-label="Example navigation">
     <div className="brand">
       <span className="brand__mark">S</span>
       <div>
-        <strong>문서 작업실</strong>
-        <small>쓰고, 나누고, 정리하기</small>
+        <strong>Document Workshop</strong>
+        <small>Write, share, organize</small>
       </div>
     </div>
-    <p className="sidebar__eyebrow">문서</p>
+    <p className="sidebar__eyebrow">Documents</p>
     <nav className="nav-list">
       {routes.map(({ id, label, note, icon: Icon }) => (
         <button

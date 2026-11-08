@@ -1,54 +1,59 @@
-# 문서 작업실
+# Document Workshop
 
-선택·포커스·클립보드의 책임은 `docs/contracts/interaction.md`, 공유 원본의 상태·저장 책임은 `docs/contracts/source-runtime.md`, 검증 계층은 `docs/contracts/testing.md`에 정의합니다. 예제 UI의 편의 기능과 엔진/호스트 계약을 구분하며, 테스트 개수만으로 적합성을 주장하지 않습니다.
+Selection, focus, and clipboard ownership are defined in `docs/contracts/interaction.md`; shared-source state and persistence ownership in `docs/contracts/source-runtime.md`; and validation layers in `docs/contracts/testing.md`. The project distinguishes example-UI conveniences from engine and host contracts and does not claim fitness based on test counts alone.
 
-React와 ProseMirror를 사용하는 블록 편집기 및 선택 가능한 연결 모듈입니다. 기본 편집기는 저장소·도메인 서비스·협업 서버 없이 사용할 수 있습니다.
+This repository contains a block editor built with React and ProseMirror plus optional integration modules. The base editor can be used without a repository, domain service, or collaboration server.
 
-공개 라이브러리는 `@slop-lab/blocks`와 `@slop-lab/blocks-*`로 구분합니다. 데모 앱 `@this-project/demo`와 저장소 웹 빌드에 의존하는 CLI `@this-project/block-docs`는 `private: true`인 로컬 패키지입니다. 공개 패키지 목록, 아직 해결해야 할 배포 차단 항목과 실사용 조건은 [릴리즈 계약](docs/contracts/release.md)에 정리합니다. 패키지 이름 변경은 npm 게시를 의미하지 않습니다.
+Public libraries use `@slop-lab/blocks` and `@slop-lab/blocks-*`. The demo app `@this-project/demo` and the repository-web-build-dependent CLI `@this-project/block-docs` are local packages with `private: true`. The public package list, unresolved publication blockers, and production-use conditions are documented in the [release contract](docs/contracts/release.md). Renaming a package does not mean it has been published to npm.
 
-## 실행
+## Run
+
+See [`docs/development.md`](docs/development.md) for the full local development workflow and validation guidance.
 
 ```sh
-corepack pnpm install
-corepack pnpm build
-corepack pnpm start
+pnpm install
+pnpm build
+pnpm start
 ```
 
-`pnpm install`은 `prepare` 단계에서 내부 패키지를 빌드하여 `packages/*/dist`의 JavaScript와 타입 선언을 생성합니다. 설치 스크립트를 생략했다면 `pnpm build:packages`를 먼저 실행하세요. `pnpm build`와 `pnpm typecheck`도 내부 패키지를 먼저 빌드합니다.
+During `prepare`, `pnpm install` builds the internal packages and generates JavaScript and type declarations in `packages/*/dist`. If install scripts were skipped, run `pnpm build:packages` first. Both `pnpm build` and `pnpm typecheck` also build the internal packages first.
 
-기본 주소는 `http://localhost:3000`입니다. `PORT=4174 corepack pnpm start`로 포트를 바꿀 수 있습니다. 개발할 때는 서버와 `corepack pnpm dev`를 함께 실행합니다.
+The default address is `http://localhost:3000`. Change the port with `PORT=4174 pnpm start`. During development, run the server alongside `pnpm dev`.
 
-개발 서버는 `/api`와 협업 WebSocket을 기본적으로 3000 포트에 전달합니다. 백엔드 포트를 바꾸었다면 `BACKEND_URL=http://127.0.0.1:4174 corepack pnpm dev`를 사용합니다.
+The development server proxies `/api` and the collaboration WebSocket to port 3000 by default. If the backend port changes, use `BACKEND_URL=http://127.0.0.1:4174 pnpm dev`.
 
-### OpenAI-compatible 모델 연결
+### Connect an OpenAI-Compatible Model
 
-자격 증명은 브라우저나 `VITE_` 변수에 넣지 않고 서버의 로컬 파일에만 둡니다. 추적되는 예제를 복사하고 `.env.local`을 로컬에서 편집합니다. 실제 key를 issue, 채팅, 명령행 인자 또는 Git 추적 파일에 붙여 넣지 마세요.
+Keep credentials only in a local server-side file, never in the browser or `VITE_` variables. Copy the tracked example and edit `.env.local` locally. Never paste a real key into an issue, chat, command-line argument, or Git-tracked file.
 
 ```sh
 cp .env.example .env.local
-# .env.local에서 OPENAI_BASE_URL, OPENAI_API_KEY를 수정
-corepack pnpm agent:check
-corepack pnpm start
+# Edit OPENAI_BASE_URL and OPENAI_API_KEY in .env.local
+pnpm agent:check
+pnpm start
 ```
 
-`OPENAI_BASE_URL`은 `https://api.example.com/v1`처럼 API base를 받으며 앱이 `/chat/completions`를 한 번 붙입니다. 끝의 slash는 무시합니다. URL credential, query, fragment, 이미 붙은 `/chat/completions`는 거부하고, 평문 HTTP는 `localhost`, `127.0.0.1`, `::1`의 로컬 mock에만 허용합니다. `OPENAI_*` 중 하나라도 존재하면 이 표준 그룹이 우선하며 base URL과 API key가 필요합니다. `OPENAI_MODEL`은 기본 model을 고정할 때만 선택적으로 설정합니다. 일부 필수 값을 빠뜨리면 fixture로 숨겨서 전환하지 않고 서버와 check가 설명과 함께 실패합니다.
+`OPENAI_BASE_URL` accepts an API base such as `https://api.example.com/v1`; the app appends `/chat/completions` once. A trailing slash is ignored. URL credentials, queries, fragments, and an already-appended `/chat/completions` are rejected. Plain HTTP is allowed only for local mocks on `localhost`, `127.0.0.1`, or `::1`.
+If any `OPENAI_*` variable is present, this preferred group takes precedence and both the base URL and API key are required. Set `OPENAI_MODEL` only to pin the default model. If required values are missing, the server and check fail with an explanation rather than silently falling back to the fixture.
 
-기존 설정을 위해 `PART_API_BASE`, `PART_API_KEY`, `PART_MODEL_ID`도 유지합니다. 표준 `OPENAI_*`가 전혀 없을 때만 사용하며, 역사적 동작대로 `PART_API_BASE`는 base가 아니라 `/v1/chat/completions`까지 포함한 전체 endpoint입니다. 두 그룹을 섞지 마세요. 어떤 provider 변수도 없을 때만 서버는 결정적 fixture를 사용합니다.
+`PART_API_BASE`, `PART_API_KEY`, and `PART_MODEL_ID` remain available for legacy configuration. They are used only when no preferred `OPENAI_*` variable is present. As historically defined, `PART_API_BASE` is the complete endpoint through `/v1/chat/completions`, not a base URL. Do not mix the groups. The server uses the deterministic fixture only when no provider variables are configured.
 
-`agent:check`는 인증된 `/models` 목록에서 기본 model을 선택합니다. 특정 model은 `corepack pnpm agent:check -- --model model-id`로 검사합니다. 격리한 임시 client draft에서 실제 Part runtime으로 Chat Completions 요청, `candidate_patch` function-tool 호출, tool result 반환, 마지막 model turn을 실행한 뒤 파일을 지웁니다. canonical 문서 apply는 호출하지 않으며 model명, 성공 상태, tool turn 수만 출력합니다. provider 응답 본문과 key는 출력하지 않습니다. 기본 제한은 45초이고 필요하면 `corepack pnpm agent:check -- --timeout-ms 60000`처럼 최대 60초까지 바꿀 수 있습니다. 이 검사는 catalog 조회와 보통 model 요청 두 번을 사용하여 quota나 비용이 발생할 수 있고, 연결된 model이 요청한 function tool을 따르지 않으면 호환성 실패로 처리합니다.
+`agent:check` selects the default model from the authenticated `/models` list. Check a specific model with `pnpm agent:check -- --model model-id`. In an isolated temporary client draft, it runs a real Chat Completions request through the Part runtime, invokes the `candidate_patch` function tool, returns the tool result, executes the final model turn, and removes the file.
+It never calls canonical document apply and prints only the model name, success state, and tool-turn count. It does not print provider response bodies or keys.
+The default timeout is 45 seconds and can be raised to at most 60 seconds, for example with `pnpm agent:check -- --timeout-ms 60000`. The check uses the catalog lookup and usually two model requests, so it may consume quota or incur cost. A connected model that does not follow the requested function tool is treated as incompatible.
 
-## Git 문서 라이브러리 CLI
+## Git Document Library CLI
 
-`block-docs`는 기존 non-bare Git 저장소의 주 작업 트리를 건드리지 않고, `.runtime/git-documents` 아래에 브랜치별 관리 작업 트리를 만들거나 재사용합니다. 브라우저는 같은 origin의 고정된 문서 API만 호출하며 Git 명령이나 인자를 전달하는 endpoint는 없습니다.
+`block-docs` creates or reuses a managed worktree per branch under `.runtime/git-documents` without touching the primary worktree of an existing non-bare Git repository. The browser calls only fixed document APIs on the same origin; no endpoint accepts Git commands or arguments.
 
 ```sh
-corepack pnpm build
-corepack pnpm docs:start -- --repo /absolute/path/to/repository --docs docs --port 3000
+pnpm build
+pnpm docs:start -- --repo /absolute/path/to/repository --docs docs --port 3000
 ```
 
-기본 브랜치는 `block-docs`, 기본 listen 주소는 `127.0.0.1`입니다. 임시 포트는 `--port 0`, 별도 runtime 위치는 `--data /absolute/runtime/path`, 기존 관리 브랜치는 `--branch notes/topic`으로 선택합니다. container나 신뢰한 LAN에서만 `--host 0.0.0.0`을 명시하세요. 시작하면 출력된 `http://127.0.0.1:<port>/?workspace=git-documents`를 엽니다.
+The default branch is `block-docs` and the default listen address is `127.0.0.1`. Use `--port 0` for an ephemeral port, `--data /absolute/runtime/path` for a separate runtime location, or `--branch notes/topic` to select an existing managed branch. Specify `--host 0.0.0.0` only in a container or on a trusted LAN. After startup, open the printed `http://127.0.0.1:<port>/?workspace=git-documents` URL.
 
-새 전용 저장소가 필요하면 다음 고정 명령을 사용합니다. 디렉터리는 비어 있어야 하며 CLI는 `docs/welcome.md`, `.gitignore`, 초기 커밋만 만듭니다. 기존 repository/global Git config를 수정하지 않습니다.
+To create a dedicated repository, use the fixed command below. The directory must be empty. The CLI creates only `docs/welcome.md`, `.gitignore`, and the initial commit, and does not modify existing repository or global Git configuration.
 
 ```sh
 node packages/block-docs/dist/cli.js init \
@@ -59,79 +64,80 @@ node packages/block-docs/dist/cli.js init \
 node packages/block-docs/dist/cli.js --help
 ```
 
-Git identity는 명시한 author, CLI 환경, 저장소/사용자 설정 순으로 Git이 해석합니다. identity가 없으면 commit/init이 설명과 함께 실패합니다. CLI는 credential을 저장하지 않고 `origin`만 사용하며 terminal prompt를 끕니다. remote 인증은 사용자의 기존 Git credential helper 또는 SSH agent가 담당합니다.
+Git resolves identity in this order: the explicitly supplied author, the CLI environment, then repository or user configuration. Commit and init fail with an explanation if no identity is available. The CLI stores no credentials, uses only `origin`, and disables terminal prompts. Remote authentication is handled by the user's existing Git credential helper or SSH agent.
 
-문서 라이브러리에서 지원하는 흐름:
+Supported document-library workflows:
 
-- source-preserving WYSIWYG와 Markdown 원문 편집, 500ms 복구 초안 자동 저장, CAS 기반 작업 트리 저장
-- 폴더 경로를 포함한 Markdown 생성·이동·삭제, 전체 검색과 상대 문서명 기반 백링크 후보
-- HEAD/작업본 비교, 문서 경로 선택 커밋, 문서별 기록 열람과 작업본 복원
-- branch 생성·목록·전환. 각 branch는 별도 관리 작업 트리와 별도 draft scope를 사용
-- 수동 `origin` fetch, clean worktree의 fast-forward-only 반영, 현재 branch push
-- divergence 표시, 명시적 `--no-commit` merge 준비, 문서 conflict 원문 편집·resolve·merge commit 또는 abort
+- Source-preserving WYSIWYG and raw Markdown editing, a 500 ms recovery-draft autosave, and CAS-based managed-worktree persistence.
+- Create, move, and delete Markdown files including folder paths; full-text search; and backlink candidates based on relative document names.
+- Compare HEAD with the working copy, commit selected document paths, inspect per-document history, and restore a working copy.
+- Create, list, and switch branches. Every branch has a separate managed worktree and draft scope.
+- Manually fetch `origin`, apply fast-forward-only updates to a clean worktree, and push the current branch.
+- Display divergence; prepare an explicit `--no-commit` merge; edit and resolve raw document conflicts; and commit or abort the merge.
 
-안전 경계와 의도적인 제한:
+Safety boundaries and intentional limitations:
 
-- 문서는 구성한 repository-relative root 아래 `.md`만 허용합니다. 절대 경로, `..`, 역슬래시, option처럼 `-`로 시작하는 이름, `.git`, symlink를 거부합니다.
-- commit은 선택한 문서 root 경로만 stage합니다. 기존 staged change가 있거나 merge가 문서 root 밖 파일을 포함하면 거부합니다.
-- worktree를 자동 삭제하지 않습니다. 종료·재시작은 같은 등록 worktree와 branch별 draft를 재사용하므로 미커밋 변경을 잃지 않습니다.
-- reset, rebase, stash, force push, 임의 remote URL, 임의 shell/Git argv를 제공하지 않습니다. primary branch가 이미 다른 worktree에 checkout되어 있으면 그 branch를 관리 worktree로 중복 열지 않습니다.
-- Git hook은 subprocess별 `core.hooksPath=/dev/null`로 비활성화합니다. 이 도구는 신뢰한 개인 저장소의 문서 파일을 관리하며 repository의 application code나 package hook을 실행하지 않습니다.
-- 요청 본문은 6 MiB, Markdown 파일/초안은 5 MiB, search 결과는 100개, history는 최대 100개로 제한합니다. attachment upload는 현재 제공하지 않습니다.
-- mutation 요청은 browser Origin이 Host와 다르면 거부합니다. 기본 localhost는 개인용입니다. `0.0.0.0` 공개 시 reverse proxy 인증과 HTTPS는 host 운영자가 추가해야 합니다.
+- Only `.md` files below the configured repository-relative root are allowed. Absolute paths, `..`, backslashes, option-like names beginning with `-`, `.git`, and symlinks are rejected.
+- Commit stages only selected paths under the document root. It is rejected if existing staged changes are present or a merge includes files outside the document root.
+- Worktrees are never removed automatically. Shutdown and restart reuse the same registered worktree and per-branch drafts, so uncommitted changes are not lost.
+- Reset, rebase, stash, force-push, arbitrary remote URLs, and arbitrary shell or Git argv are not exposed. If the primary branch is already checked out in another worktree, it is not opened again as a managed worktree.
+- Git hooks are disabled per subprocess with `core.hooksPath=/dev/null`. This tool manages document files in a trusted personal repository and does not execute application code or package hooks from the repository.
+- Request bodies are limited to 6 MiB, Markdown files and drafts to 5 MiB, search results to 100, and history to 100 entries. Attachment upload is not currently provided.
+- Mutation requests are rejected when the browser Origin differs from Host. Default localhost operation is personal. When exposing `0.0.0.0`, the host operator must add reverse-proxy authentication and HTTPS.
 
-## 사용 예제
+## Examples
 
-- **로컬 노트**: 수동 저장, 입력 후 자동 저장, 주기적 자동 저장, 포커스 이탈 저장 중 선택합니다. 데이터는 localStorage에 저장됩니다.
-- **작업 브리핑 / 읽기 전용 안내**: 외부 일감 상태와 문서의 캡션·배치를 분리합니다. 일감 상태 변경은 콘텐츠 수정이 아닙니다.
-- **Markdown 파일**: 서버 파일을 읽고 편집합니다. `MARKDOWN_ROOT`로 폴더를 지정하며 기본 폴더는 `.runtime/markdown`입니다. 파일 해시를 기준으로 저장 충돌을 검사하고, 블록 ID와 1-based 원본 줄 범위는 서버 메모리에서 임시로 추적합니다. 파일에는 에디터 ID를 삽입하지 않습니다.
-- **함께 쓰기**: 두 편집 창 또는 여러 브라우저에서 같은 방을 편집합니다. Yjs의 선택적 Undo가 로컬 편집을 관리하고 WebSocket이 변경 및 presence를 전달합니다.
-- **표와 코드**: 셀 선택, 붙여넣기, 행·열 변경, 병합·분할과 독립 CodeMirror 입력 영역을 사용합니다. 공유 도구 모음은 활성 입력 영역에만 적용됩니다.
-- **문서 보관함**: 문서 일부를 서버에서 가져와 가상화하여 표시합니다. 저장은 개별 블록의 revision을 확인하는 durable patch이며 아직 읽지 않은 부분을 교체하지 않습니다.
-- **수정안 비교**: 원본과 분리된 후보를 비교하고 변경을 선택하여 수락합니다. 연결된 변경의 의존성과 원본 기준을 확인합니다. 스트림 제공자를 취소하거나 교체해도 이전 결과를 새 후보에 섞지 않습니다.
-- **문서와 데이터베이스**: `?workspace=structured-workspace`에서 JSON 문서, 중첩 페이지, typed database, 공유 블록을 편집합니다. 페이지 본문·데이터베이스·공유 원본은 서로 다른 CAS entity로 저장되며 600ms 자동 저장과 2초 외부 변경 갱신을 사용합니다.
+- **Local notes**: choose manual save, save after input, periodic autosave, or save on focus loss. Data is stored in localStorage.
+- **Work briefing / read-only guide**: separates external task state from document captions and layout. Changing task state is not a content edit.
+- **Markdown files**: reads and edits server files. Set the folder with `MARKDOWN_ROOT`; the default is `.runtime/markdown`. Saves use file hashes to detect conflicts. Block IDs and 1-based source line ranges are tracked temporarily in server memory; editor IDs are not inserted into files.
+- **Collaborative writing**: edit the same room from two editor panes or multiple browsers. Yjs selective Undo manages local edits, and WebSocket carries changes and presence.
+- **Tables and code**: provides cell selection, paste, row and column changes, merge and split, and an independent CodeMirror input area. The shared toolbar applies only to the active input context.
+- **Document archive**: loads portions of a document from the server and renders them with virtualization. A save is a durable patch guarded by each block's revision and does not replace unread portions.
+- **Proposal comparison**: compares a candidate separate from the original and accepts selected changes. It verifies dependencies and the original baseline for linked changes. Cancelling or replacing a stream provider never mixes an earlier result into a new candidate.
+- **Documents and databases**: at `?workspace=structured-workspace`, edits JSON documents, nested pages, a typed database, and shared blocks. Page bodies, databases, and shared sources are separate CAS entities with 600 ms autosave and 2-second external-change refresh.
 
-구조화 작업 공간에서는 상단 **페이지 제목**을 직접 수정하고 Enter 또는 포커스 이동으로 저장합니다. Escape는 제목 초안을 취소합니다. 페이지 grip을 다른 페이지의 위·가운데·아래에 놓으면 앞·하위·뒤로 이동하며 **최상위로 이동** 영역이나 페이지별 이동 선택 상자도 사용할 수 있습니다. 본문 grip은 블록의 중첩 깊이 간 이동과 **잘라내기**를 지원합니다. **집중 보기**를 선택하면 해당 블록만 표시하고, 위쪽 경로에서 상위 블록이나 페이지 전체로 돌아갑니다. 공유 섹션에서도 원본과 Undo 기록은 유지합니다. 소유권과 입력·이동의 검증 경계는 [구조화 편집 계약](docs/contracts/structured-editing.md)을 따릅니다.
+In the structured workspace, edit the top **Page title** directly and save with Enter or focus movement. Escape cancels the title draft. Dropping a page grip above, in the middle of, or below another page moves it before, under, or after that page; the **Move to top level** target and per-page move select are also available. Body grips support moving blocks across nesting depths and **Cut**.
+**Focus view** displays only the selected block; use the breadcrumb to return to a parent block or the full page. Shared sections preserve their source and Undo history. Ownership and validation boundaries for input and movement follow the [structured editing contract](docs/contracts/structured-editing.md).
 
-Markdown·협업·표·대용량 기능은 각각의 진입점을 가져오거나 해당 예제로 이동할 때 사용합니다. 기본 viewer에서 해당 런타임을 초기화할 필요는 없습니다.
+Markdown, collaboration, table, and large-content functionality is loaded through its own entry point or when navigating to its example. The default viewer does not need to initialize those runtimes.
 
-### Markdown 시각 편집 범위
+### Markdown Visual-Editing Scope
 
-시각 편집기는 제목, 문단, 인용, 순서/비순서 목록, 강조, 링크, 인라인 코드, 이미지, 구분선, 들여쓴 코드와 fenced code를 구조적으로 편집합니다. 참조 링크는 문서 전체의 정의를 기준으로 해석하며, 안전한 `http:`, `https:`, `mailto:`, 해시, 사이트 상대 주소와 일반 상대 이미지 경로만 활성화합니다. `//`로 시작하거나 역슬래시를 포함하는 모호한 경로는 활성화하지 않습니다.
+The visual editor structurally edits headings, paragraphs, quotes, ordered and unordered lists, emphasis, links, inline code, images, thematic breaks, indented code, and fenced code. Reference links resolve against definitions across the whole document. Only safe `http:`, `https:`, `mailto:`, hash, site-relative URLs, and ordinary relative image paths are activated. Ambiguous paths beginning with `//` or containing backslashes are not activated.
 
-표, directive, HTML이 섞인 블록과 그 밖의 지원하지 않는 확장 구문은 잠긴 원문 블록으로 표시합니다. 잠긴 블록은 시각 보기에서 수정하거나 구조 변경할 수 없지만 저장할 때 바이트를 그대로 보존합니다. 해당 구문을 편집하려면 **Markdown 원문** 탭을 사용합니다. 구조 블록을 추가, 분할, 삭제하거나 순서를 바꾸면 필요한 블록 경계만 새로 만들며, 손대지 않은 CRLF와 확장 구문 원문은 유지합니다.
+Tables, directives, mixed HTML blocks, and other unsupported extension syntax appear as locked source blocks. They cannot be edited or structurally changed in visual view, but their bytes are preserved exactly on save. Use the **Markdown source** tab to edit them. Adding, splitting, deleting, or reordering structural blocks regenerates only the necessary block boundaries; untouched CRLF and extension-syntax source is preserved.
 
-## 라이브러리 진입점
+## Library Entry Points
 
-| 모듈 | 역할 |
+| Module | Role |
 |---|---|
-| `app/src/model.ts` | JSON codec, 복제, 예산 기반 조회, 출력, 변경 통지, 제안 및 호스트 연결 계약 |
-| `app/src/Viewer.tsx` | 블록 배열을 받는 engine-free React viewer, 사용자 renderer와 overlay. 정적/읽기 전용 출력의 링크는 `http:`, `https:`, `mailto:`, 해시, 사이트 상대 주소만 활성화합니다. |
-| `app/src/editing.ts` | 로컬 ModelSession과 구조 명령 |
-| `app/src/features/markdown/` | Markdown 파일 연결 및 UI |
-| `app/src/features/collaboration/` | Yjs 연결 및 다중 편집 surface |
-| `app/src/features/composite/` | 선택적 table schema, 복합 입력 context와 migration |
-| `app/src/features/large-content/` | 부분 로딩, 블록 캐시, 가상화 및 reveal/focus |
-| `@slop-lab/blocks-bindings` | 엔진과 무관한 변경 전달, draft/ack 정책, 비동기 외부 액션 target guard, 엄격한 revision schema |
-| `@slop-lab/blocks-server-bindings` | Node 파일 CAS 저장소, Yjs room 저장소, 서명된 데모 세션과 scope 검사, versioned 승인 workflow |
-| `@slop-lab/blocks` | 엔진과 무관한 문서 계약, codec, 명시적 block registry와 React viewer |
-| `@slop-lab/blocks-interactions` | 엔진 독립 선택·clipboard·cut 정책. ProseMirror 연결은 opt-in `/prosemirror` 진입점 |
-| `@slop-lab/blocks-containers` | 엔진 독립 재귀 트리 이동·복제와 명시적 최소 연결 범위 감싸기 계획 |
-| `@slop-lab/blocks-prosemirror` | opt-in ProseMirror schema/snapshot adapter와 block별 leaf export |
-| `@slop-lab/blocks-workspace` | 엔진 독립 페이지/문서/database/synced-source Zod 계약, 계층 명령, typed row patch, filter/sort와 context heading projection |
-| `@slop-lab/blocks-agent-tools` | 엔진 독립 tool schema/effect/context/budget/result/provenance 계약. 모델 실행이나 저장소를 소유하지 않습니다. |
-| `@slop-lab/blocks-agent-tools-part` | 고정된 Part 0.1 `functionTool` 연결. 실행 lifecycle은 앱 서버가 소유합니다. |
+| `app/src/model.ts` | JSON codec, cloning, budgeted reads, output, change delivery, proposals, and host-integration contracts |
+| `app/src/Viewer.tsx` | Engine-free React viewer for block arrays, custom renderers, and overlays. Links in static and read-only output activate only `http:`, `https:`, `mailto:`, hash, and site-relative URLs. |
+| `app/src/editing.ts` | Local `ModelSession` and structural commands |
+| `app/src/features/markdown/` | Markdown file integration and UI |
+| `app/src/features/collaboration/` | Yjs integration and multi-editor surfaces |
+| `app/src/features/composite/` | Optional table schema, composite input context, and migration |
+| `app/src/features/large-content/` | Partial loading, block cache, virtualization, and reveal/focus |
+| `@slop-lab/blocks-bindings` | Engine-independent change delivery, draft/ack policy, asynchronous external-action target guard, and strict revision schema |
+| `@slop-lab/blocks-server-bindings` | Node file CAS repository, Yjs room repository, signed demo sessions and scope checks, and versioned approval workflow |
+| `@slop-lab/blocks` | Engine-independent document contract, codec, explicit block registry, and React viewer |
+| `@slop-lab/blocks-interactions` | Engine-independent selection, clipboard, and cut policy. ProseMirror integration is available through the opt-in `/prosemirror` entry point. |
+| `@slop-lab/blocks-containers` | Engine-independent recursive tree movement and cloning, plus explicit minimal-connected-range wrapping plans |
+| `@slop-lab/blocks-prosemirror` | Opt-in ProseMirror schema/snapshot adapter and per-block leaf exports |
+| `@slop-lab/blocks-workspace` | Engine-independent page/document/database/synced-source Zod contracts, hierarchy commands, typed row patches, filters and sorting, and contextual heading projection |
+| `@slop-lab/blocks-agent-tools` | Engine-independent tool schema, effect, context, budget, result, and provenance contracts. It owns neither model execution nor storage. |
+| `@slop-lab/blocks-agent-tools-part` | Fixed Part 0.1 `functionTool` integration. The application server owns the execution lifecycle. |
 
-두 패키지는 `corepack pnpm build:packages`로 ESM과 선언 파일을 `packages/*/dist`에 생성합니다. 앱은 로컬 노트의 저장 알림, 호스트 폼의 revision bookmark, 수정안의 비동기 target guard, 부분 문서 저장 acknowledgement를 `@slop-lab/blocks-bindings`에서 직접 사용합니다. 서버는 `.runtime` 아래 durable document/room/workflow 저장소와 권한 검사를 `@slop-lab/blocks-server-bindings`에서 사용합니다.
+`pnpm build:packages` generates ESM and declarations in `packages/*/dist`. The app directly uses `@slop-lab/blocks-bindings` for local-note save notifications, revision bookmarks in host forms, asynchronous proposal target guards, and partial-document save acknowledgements. The server uses `@slop-lab/blocks-server-bindings` for durable document, room, and workflow stores under `.runtime` and for permission checks.
 
 ```ts
 import { ChangeDelivery, PersistenceBaseline } from "@slop-lab/blocks-bindings"
 import { DemoSessionAuthority, FileCasRepository } from "@slop-lab/blocks-server-bindings"
 ```
 
-### 사용자 schema와 tree-shaking
+### Custom Schemas and Tree Shaking
 
-core 문서 계약에는 필수 paragraph가 없습니다. ProseMirror를 사용할 때 소비자가 필요한 block leaf만 가져와 schema를 조립합니다. 기존 편집기는 편의를 위해 `@slop-lab/blocks-prosemirror/preset`을 사용하므로 공개 동작이 유지됩니다.
+The core document contract has no required paragraph type. With ProseMirror, consumers import only the block leaves they need and assemble a schema. For convenience, the existing editor uses `@slop-lab/blocks-prosemirror/preset`, preserving its public behavior.
 
 ```tsx
 import { BlockViewer } from "@slop-lab/blocks/viewer"
@@ -150,9 +156,9 @@ const renderers = new Map([[notesText.type, notesText.render]])
 const view = <BlockViewer content={document} renderers={renderers} />
 ```
 
-독립 leaf는 `@slop-lab/blocks-prosemirror/paragraph`, `/heading`, `/quote`, `/code`, `/caption`, `/task-card`입니다. 공통 preset이 필요한 소비자만 `/preset`을 가져옵니다. 모든 package는 ESM과 선언 파일을 만들고 `sideEffects: false`를 선언합니다. `app/tests/tree-shaking.test.ts`는 실제 esbuild metafile의 입력 모듈을 검사하여 custom-text 소비자에 기본 block leaf가 없고 view-only 소비자에 ProseMirror가 없음을 증명합니다.
+Independent leaves are `@slop-lab/blocks-prosemirror/paragraph`, `/heading`, `/quote`, `/code`, `/caption`, and `/task-card`. Only consumers needing the common preset import `/preset`. Every package emits ESM and declarations and declares `sideEffects: false`. `app/tests/tree-shaking.test.ts` inspects actual esbuild metafile inputs to prove that a custom-text consumer contains no default block leaves and a view-only consumer contains no ProseMirror.
 
-구조화 도메인은 렌더링 엔진과 Node 저장소를 import하지 않습니다. 호스트는 schema로 경계를 파싱하고 명령 결과를 자체 CAS adapter에 전달합니다.
+The structured domain imports neither a rendering engine nor Node storage. Hosts parse boundaries through the schema and pass command results to their own CAS adapters.
 
 ```ts
 import {
@@ -165,67 +171,72 @@ import {
 
 const workspace = workspaceSchema.parse(payload)
 const moved = movePage(workspace, "research", "project")
-const htmlLevel = headingLevelAtDepth(2, 3) // 5; 저장된 2는 바뀌지 않음
+const htmlLevel = headingLevelAtDepth(2, 3) // 5; persisted 2 is unchanged
 ```
 
-## 소유권 예제
+## Ownership Examples
 
-사이드바의 **소유권 예제**는 하나의 작업 공간 안에서 다음 경계를 실제 mutation과 저장으로 비교합니다.
+The sidebar's **Ownership examples** compare the following boundaries through real mutations and persistence within one workspace:
 
-- `notebook`: `notes.text`가 기본인 custom schema. 블록 문서가 canonical이고 브라우저 저장 후 다시 불러옵니다.
-- `projectboard`: 작업 제목/상태는 분리된 domain data이고 카드 occurrence의 local ID와 캡션만 presentation이 소유합니다. 같은 task 참조를 복제해도 새 local ID를 받으며 카드 삭제는 task를 삭제하지 않습니다.
-- `statusview`: query projection과 server action만 사용하며 editor를 만들지 않는 명시적 renderer viewer입니다.
-- `filetree`: 허용된 Markdown root 아래의 재귀 파일 트리를 표시합니다. 서버는 절대 경로, traversal, 역슬래시, symlink를 거부하고 `.md` 원문에는 block ID를 기록하지 않습니다.
-- `mixedbacklog`: 검색/현재 실행 목록과 workflow 상태는 서버 domain이 소유합니다. 읽기 전용 root 아래의 캡션과 agent proposal만 하위 패널에서 수정하며 proposal은 task dependency version이 바뀌면 거절됩니다. 추가 작업 정보는 Markdown file-tree 서비스로 엽니다.
+- `notebook`: a custom schema with `notes.text` as the default. The block document is canonical and reloads after browser persistence.
+- `projectboard`: task title and status are separate domain data; only a card occurrence's local ID and caption belong to presentation. Duplicating a reference to the same task assigns a new local ID, and deleting a card does not delete the task.
+- `statusview`: an explicit renderer viewer using only query projection and server actions, without creating an editor.
+- `filetree`: displays a recursive file tree under an allowed Markdown root. The server rejects absolute paths, traversal, backslashes, and symlinks, and does not write block IDs into `.md` source.
+- `mixedbacklog`: the server domain owns search and current-run lists plus workflow state. Only captions and agent proposals under a read-only root are edited in the lower panel, and a proposal is rejected if the task dependency version changes. Additional task information opens through the Markdown file-tree service.
 
-이 예제의 demo identity cookie는 기존 서명 세션을 재사용합니다. 운영 로그인이나 여러 서비스 사이의 원자성을 주장하지 않습니다.
+The demo identity cookie in this example reuses the existing signed session. It does not claim production authentication or atomicity across multiple services.
 
-### 입력, 변경 통지, 저장
+### Input, Change Delivery, and Persistence
 
-엔진 transaction과 IME 처리는 즉시 실행합니다. 내부 로컬 버전은 충돌과 위치 추적에 쓰이며 파일/서버의 저장 revision과 다릅니다. `ChangeDelivery`는 `immediate`, `debounce`(maxWait 포함), `throttle`, `manual` 정책으로 호스트 통지를 묶습니다. `flush()`는 최신 변경을 전달하고 `dispose()`는 남은 타이머를 취소합니다.
+Engine transactions and IME handling execute immediately. The internal local version tracks conflicts and positions and differs from file or server persistence revisions. `ChangeDelivery` batches host notifications with `immediate`, `debounce` including `maxWait`, `throttle`, and `manual` policies. `flush()` delivers the latest change, and `dispose()` cancels remaining timers.
 
-로컬 세션은 ProseMirror 상태를 단독 소유합니다. UI용 snapshot은 필요할 때 파생하며, 일반 입력 때마다 전체 JSON을 생성하거나 저장하지 않습니다. 협업 연결은 별도의 Yjs history를 사용하므로 일반 snapshot history를 중복 장착하지 않습니다.
+A local session exclusively owns its ProseMirror state. UI snapshots are derived only when needed; normal input does not generate or persist full JSON on every change. Collaboration uses separate Yjs history and therefore does not also attach ordinary snapshot history.
 
-### 데이터 경계
+### Data Boundaries
 
-저장용 JSON은 미지원 구조를 보존합니다. 현재 엔진이 안전하게 해석할 수 없는 내용은 opaque로 유지합니다. Markdown/HTML 출력은 JSON 저장과 구별하며 손실 정보를 반환합니다. Markdown 파일 연결은 원래 source를 보존하고 변경한 범위만 반영합니다.
+Persistence JSON retains unsupported structures. Content the current engine cannot safely interpret remains opaque. Markdown and HTML output are distinct from JSON persistence and return loss information. Markdown file integration preserves the original source and applies only changed ranges.
 
-외부 콘텐츠 교체는 model/epoch/baseVersion을 검사하고 조합 중에는 유예합니다. 자동 재조정이 불가능하면 draft를 보존하고 충돌을 알립니다. 외부 액션, 렌더링, 본문 저장은 서로 다른 경로입니다.
+External content replacement checks model, epoch, and base version and is deferred during composition. If automatic reconciliation is impossible, the draft is preserved and a conflict is reported. External actions, rendering, and body persistence are separate paths.
 
-`@slop-lab/blocks-agent-tools`는 실행 엔진과 무관한 bounded tool 계약이고, 선택적인 `@slop-lab/blocks-agent-tools-part`가 고정된 Part 0.1 `functionTool`에만 연결합니다. command/query/watch lifecycle, 실행 journal, 모델 선택과 권한은 `app/server/agent/`의 예제 앱이 소유합니다. 브라우저는 같은 origin의 `/api/agent/commands`, `/api/agent/queries`, `/api/agent/events`만 사용하며 모델 자격 증명을 받지 않습니다. 기본 제공자는 `결정적 시나리오 / 모델미연결`로 표시되는 fixture이며 실제 Part model/tool loop를 실행하지만 외부 LLM 연결을 주장하지 않습니다.
+`@slop-lab/blocks-agent-tools` is an execution-engine-independent bounded-tool contract. The optional `@slop-lab/blocks-agent-tools-part` integrates only with the fixed Part 0.1 `functionTool`. The example app under `app/server/agent/` owns the command, query, and watch lifecycle, execution journal, model selection, and authorization.
+The browser uses only the same-origin `/api/agent/commands`, `/api/agent/queries`, and `/api/agent/events` routes and never receives model credentials. The default provider is the fixture labeled `Deterministic fixture / No model connected`. It runs the real Part model/tool loop but does not claim an external LLM connection.
 
-OpenAI-compatible 모델은 위의 서버 전용 `OPENAI_*` 설정으로 연결합니다. endpoint origin은 Part fetch transport의 allowlist에 고정되고 bearer key는 서버에만 남습니다. 저장소의 loopback 통합 검사는 실제 HTTP/SSE와 tool loop를 증명하지만 실제 외부 provider 연결은 로컬 `agent:check`로 별도 검증해야 합니다.
+Connect an OpenAI-compatible model through the server-only `OPENAI_*` configuration described above. The endpoint origin is fixed in the Part fetch transport allowlist and the bearer key remains on the server. Repository loopback integration tests prove real HTTP/SSE and the tool loop; a real external provider must be validated separately with the local `agent:check`.
 
-실행 journal은 `.runtime/agent/runs.json`에 원자적으로 저장됩니다. 명시적 실행 취소만 host task를 취소하며 dialog를 닫거나 event 관찰을 끊는 동작은 observer만 분리합니다. 서버 재시작 때 진행 중이던 실행은 `interrupted`로 남고 tool을 자동 재생하지 않습니다. 모델 tool은 canonical 문서를 직접 바꾸지 않고 review candidate만 갱신합니다. Markdown hash, workspace entity revision, mixed task dependency와 repository revision을 서버가 다시 확인한 뒤 사용자의 명시적 apply에서만 반영합니다. 상세 계약과 운영상 비주장은 `docs/contracts/agent-tools.md`에 정의합니다.
+The execution journal is atomically stored in `.runtime/agent/runs.json`. Only explicit execution cancellation cancels the host task; closing a dialog or stopping event observation only detaches that observer. Work active during a server restart remains `interrupted`, and tools are never replayed automatically. Model tools do not directly change canonical documents; they only update review candidates.
+The server rechecks the Markdown hash, workspace entity revision, mixed-task dependency, and repository revision and applies changes only after the user's explicit action. Detailed contracts and operational non-claims are defined in `docs/contracts/agent-tools.md`.
 
-## 서버와 저장 위치
+## Server Routes and Persistence Locations
 
-- `GET /api/markdown`, `GET/PUT /api/markdown/file`: 재귀 파일 트리, 읽기, 조건부 저장. root 밖 경로와 symlink는 노출하지 않습니다.
-- `GET /api/ownership/mixed`, `POST /api/ownership/mixed/task-status|presentation|proposal`: 혼합 백로그의 domain workflow, 하위 presentation, dependency-guarded 제안.
-- `/collaboration`: schema handshake, room scope 검사, Yjs 동기화 및 재시작 가능한 room snapshot.
-- `/api/large-content`: 페이지 읽기, 블록 조회·수정, 검색 및 전체 내보내기.
-- `POST /api/demo/session?identity=author|reviewer|viewer`: 서명된 opaque 데모 세션 cookie 발급.
-- `POST /api/agent/commands|queries|events`: 서명 세션과 same-origin 검사를 재사용하는 Part agent transport. author scope만 실행할 수 있습니다.
-- `GET/PUT /api/documents/:id`: room scope와 role을 검사하는 durable CAS 문서.
-- `POST /api/workflows/:id/submit|approve`: 제출한 콘텐츠 revision을 고정하는 versioned 제출/승인과 audit history. 제출·승인된 문서는 이 예제 API에서 수정할 수 없습니다.
-- `GET /api/workspace`: sample workspace와 별도 page/database/synced-source entity를 읽습니다.
-- `PUT /api/workspace/:kind/:id`: `trees|pages|databases|sources` entity를 Zod로 파싱한 뒤 `expectedRevision` CAS로 저장합니다. 새 page document와 synced source는 revision 없이 생성할 수 있습니다.
-- `.runtime/`은 실행 데이터이며 Git에서 제외합니다.
+- `GET /api/markdown`, `GET/PUT /api/markdown/file`: recursive file tree, reads, and conditional persistence. Paths and symlinks outside the root are not exposed.
+- `GET /api/ownership/mixed`, `POST /api/ownership/mixed/task-status|presentation|proposal`: mixed-backlog domain workflow, lower-layer presentation, and dependency-guarded proposals.
+- `/collaboration`: schema handshake, room-scope checks, Yjs synchronization, and restartable room snapshots.
+- `/api/large-content`: page reads, block reads and updates, search, and full export.
+- `POST /api/demo/session?identity=author|reviewer|viewer`: issues a signed opaque demo-session cookie.
+- `POST /api/agent/commands|queries|events`: Part agent transport reusing signed-session and same-origin checks. Only author scope can execute operations.
+- `GET/PUT /api/documents/:id`: durable CAS document guarded by room scope and role.
+- `POST /api/workflows/:id/submit|approve`: versioned submission and approval pinned to the submitted content revision, with audit history. Submitted and approved documents cannot be modified through this example API.
+- `GET /api/workspace`: reads the sample workspace and separate page, database, and synced-source entities.
+- `PUT /api/workspace/:kind/:id`: parses `trees|pages|databases|sources` entities with Zod, then persists with `expectedRevision` CAS. New page documents and synced sources can be created without a revision.
+- `.runtime/` contains runtime data and is excluded from Git.
 
-구조화 작업 공간은 기본 서버에서 `.runtime/workspace/{trees,pages,databases,sources}`에 entity별 JSON snapshot과 audit history를 저장합니다. `RUNTIME_ROOT`를 직접 받는 API는 없으며 테스트는 `createApplicationServer({ runtimeRoot })`로 임시 root를 격리합니다. 저장 직렬화는 한 Node process 안의 파일별 queue와 atomic rename을 사용합니다. 여러 process 또는 분산 transaction을 제공한다고 가정하지 않습니다.
+The default server stores per-entity JSON snapshots and audit history for the structured workspace under `.runtime/workspace/{trees,pages,databases,sources}`. No API accepts `RUNTIME_ROOT` directly; tests isolate a temporary root with `createApplicationServer({ runtimeRoot })`. Persistence serializes through a per-file queue within one Node process and atomic rename. It does not provide multi-process or distributed transactions.
 
-Markdown은 실제 파일에 저장되고 로컬 노트·표와 코드는 브라우저에 저장됩니다. 협업 방, 일반 문서, 문서 보관함의 수정 블록과 승인 workflow는 `.runtime`의 원자적 파일 교체를 사용합니다. 협업 클라이언트는 연결이 끊겨도 현재 replica를 유지하며 재연결 시 합치고, 서버는 종료 전에 마지막 Yjs snapshot을 저장하여 재시작 후 다시 엽니다. 보관함의 기본 1,600개 원문은 synthetic이며 수정본만 저장합니다.
+Markdown is stored in real files, while local notes and tables/code are stored in the browser. Collaboration rooms, ordinary documents, modified archive blocks, and approval workflows use atomic file replacement under `.runtime`. Collaboration clients retain their current replica while disconnected and merge on reconnection.
+Before shutdown, the server stores the last Yjs snapshot and reopens it after restart. The archive's default 1,600 source blocks are synthetic; only modifications are persisted.
 
-데모 세션은 화면에서 공개적으로 선택할 수 있는 예제 identity의 역할과 room scope만 확인하며 운영 인증이 아닙니다. `DEMO_SESSION_SECRET`을 지정하지 않으면 서버는 mode 0600의 random secret을 `.runtime/demo-session.secret`에 생성해 재시작 때 재사용합니다. HTTPS를 직접 사용하거나 신뢰한 proxy에서 HTTPS를 종료하는 호스트는 `createApplicationServer({ secureCookies: true })`로 Secure cookie를 설정해야 합니다. 공개 서비스에서는 실제 identity provider와 session rotation으로 교체해야 합니다. 표시용 사용자 이름이나 에디터의 입력 제한은 권한 증명이 아닙니다. 외부 AI 자격 증명과 여러 프로세스·서비스 간 원자성은 호스트가 소유합니다.
+Demo sessions verify only the role and room scope of publicly selectable example identities and are not production authentication. Without `DEMO_SESSION_SECRET`, the server creates a random mode-0600 secret at `.runtime/demo-session.secret` and reuses it after restart. A host serving HTTPS directly or terminating HTTPS at a trusted proxy must set Secure cookies with `createApplicationServer({ secureCookies: true })`.
+Public services must replace this with a real identity provider and session rotation. A displayed user name or editor input restriction is not authorization evidence. The host owns external AI credentials and atomicity across processes and services.
 
-## 검사 실행
+## Run Checks
 
 ```sh
-corepack pnpm test
-corepack pnpm typecheck
-corepack pnpm build
-corepack pnpm exec playwright install chromium
-QA_BASE_URL=http://localhost:3000 corepack pnpm test:browser
+pnpm test
+pnpm typecheck
+pnpm build
+pnpm exec playwright install chromium
+pnpm check
+pnpm test:browser
 ```
 
-기존 Chromium은 `CHROME_PATH`로 지정할 수 있습니다. 테스트 출력·브라우저 캡처·개발 진행 보고서는 저장소 산출물로 관리하지 않습니다.
+Set an existing Chromium executable with `CHROME_PATH`. The complete browser suite starts isolated local servers. To run only the core editing scenario against an existing server, use `QA_BASE_URL=http://localhost:3000 node app/tests/browser.mjs`. Test output, browser captures, and development progress reports are not maintained repository artifacts.

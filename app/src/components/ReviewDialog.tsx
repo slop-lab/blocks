@@ -31,7 +31,7 @@ export const ReviewDialog = ({
   const [editingJson, setEditingJson] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [instruction, setInstruction] = useState(
-    "다음 모임에서 이어서 나누고 싶은 주제를 적어 주세요.",
+    "Add a topic you would like to continue discussing at the next meeting.",
   )
   const [streaming, setStreaming] = useState(false)
   const [inferenceModel, setInferenceModel] = useState<string>()
@@ -55,7 +55,7 @@ export const ReviewDialog = ({
     } catch (caught) {
       return {
         document: null,
-        error: caught instanceof Error ? caught.message : "JSON을 확인해 주세요",
+        error: caught instanceof Error ? caught.message : "Check the JSON and try again",
       }
     }
   }, [candidateText])
@@ -76,11 +76,13 @@ export const ReviewDialog = ({
       currentVersion: 0,
     })
     if (result.kind !== "accepted") {
-      setError("연결된 구조 변경을 함께 선택해 주세요.")
+      setError("Select the related structural changes together.")
       return
     }
     if (onAccept(result.document) === false)
-      setError("원본이 바뀌었습니다. 수정안을 복사해 보관한 뒤 최신 원본에서 다시 검토해 주세요.")
+      setError(
+        "The source changed. Copy the revision for safekeeping, then review it again against the latest source.",
+      )
   }
   const generate = async () => {
     const generation = ++run.current
@@ -94,20 +96,26 @@ export const ReviewDialog = ({
       )
     } catch (caught) {
       if (generation === run.current)
-        setError(caught instanceof Error ? caught.message : "수정안 생성 실패")
+        setError(caught instanceof Error ? caught.message : "Failed to generate revision")
     } finally {
       if (generation === run.current) setStreaming(false)
     }
   }
   return (
-    <DialogFrame titleId="review-title" eyebrow="REVIEW" title="수정안 비교" onClose={onClose} wide>
+    <DialogFrame
+      titleId="review-title"
+      eyebrow="REVIEW"
+      title="Compare revision"
+      onClose={onClose}
+      wide
+    >
       <div className="button-row">
         <button
           className="button button--secondary"
           type="button"
           onClick={() => setEditingJson((value) => !value)}
         >
-          {editingJson ? "문서 보기" : "후보 JSON 편집"}
+          {editingJson ? "View documents" : "Edit candidate JSON"}
         </button>
         <button
           className="button button--ghost"
@@ -119,11 +127,11 @@ export const ReviewDialog = ({
           }}
           disabled={!streaming}
         >
-          생성 중지
+          Stop generating
         </button>
       </div>
       <label className="field">
-        <span>추가할 제안 문장</span>
+        <span>Revision instruction</span>
         <input value={instruction} onChange={(event) => setInstruction(event.target.value)} />
       </label>
       {provider === undefined && (
@@ -140,21 +148,21 @@ export const ReviewDialog = ({
           disabled={streaming || !instruction.trim()}
           onClick={() => void generate()}
         >
-          문장으로 수정안 만들기
+          Generate revision
         </button>
         <small>
-          서버의 Part 작업으로 후보를 만듭니다. 모델이 연결되지 않으면 결정적 시나리오 /
-          모델미연결로 명확히 표시됩니다.
+          A server-side Part task generates the candidate. If no model is connected, it is clearly
+          identified as a deterministic scenario / model unavailable.
         </small>
       </div>
       {editingJson ? (
         <div className="review-grid">
           <label className="field">
-            <span>Before · 원본</span>
+            <span>Before · Source</span>
             <textarea readOnly value={JSON.stringify(before, null, 2)} rows={12} />
           </label>
           <label className="field">
-            <span>After · 수정안</span>
+            <span>After · Revision</span>
             <textarea
               value={candidateText}
               rows={12}
@@ -172,17 +180,17 @@ export const ReviewDialog = ({
       ) : (
         <div className="review-grid review-documents">
           <section>
-            <h3>원본</h3>
+            <h3>Source</h3>
             <BlockViewer content={before} />
           </section>
           <section>
-            <h3>수정안</h3>
+            <h3>Revision</h3>
             {parsed.document && <BlockViewer content={parsed.document} />}
           </section>
         </div>
       )}
       <fieldset className="review-changes">
-        <legend>적용할 변경</legend>
+        <legend>Changes to apply</legend>
         {changes.map((change) => (
           <label key={change.id}>
             <input
@@ -196,9 +204,9 @@ export const ReviewDialog = ({
                 setSelected(next)
               }}
             />
-            {change.before === null ? "추가" : change.after === null ? "삭제" : "수정"} ·{" "}
+            {change.before === null ? "Add" : change.after === null ? "Delete" : "Edit"} ·{" "}
             {(change.after ?? change.before)?.content
-              .map((inline) => (inline.kind === "text" ? inline.text : "첨부 콘텐츠"))
+              .map((inline) => (inline.kind === "text" ? inline.text : "Attached content"))
               .join("")
               .slice(0, 70) || change.blockId}
           </label>
@@ -211,7 +219,7 @@ export const ReviewDialog = ({
       )}
       <footer>
         <button className="button button--ghost" type="button" onClick={onClose}>
-          후보 폐기
+          Discard candidate
         </button>
         <button
           className="button button--primary"
@@ -219,7 +227,7 @@ export const ReviewDialog = ({
           onClick={accept}
           disabled={streaming || selectedIds.size === 0}
         >
-          선택한 변경 수락
+          Accept selected changes
         </button>
       </footer>
     </DialogFrame>

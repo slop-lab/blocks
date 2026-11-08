@@ -73,8 +73,11 @@ or disaster recovery.
 
 ## Provider evidence
 
-The default provider label is `결정적 시나리오 / 모델미연결`. It executes real Part model and
-function-tool calls using Part's deterministic fake model; it does not claim an LLM connection.
+The default provider label is `Deterministic fixture / No model connected`. It executes real Part model and
+function-tool calls using Part's deterministic fake model, without external inference.
+The database fixture selects the first row
+with a status cell and the last configured status option from the authoritative
+database. It does not interpret the request or translate saved options or content.
 
 The preferred server-only configuration requires `OPENAI_BASE_URL` and `OPENAI_API_KEY`;
 `OPENAI_MODEL` optionally pins the startup default. The base URL ends at an API prefix such as `/v1`; the application normalizes

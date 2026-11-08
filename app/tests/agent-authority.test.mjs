@@ -124,11 +124,11 @@ it("runs Markdown, workspace, and mixed-backlog proposals against authoritative 
   expect(workspaceResult.completed.artifact).toMatchObject({
     kind: "workspace-row-status",
     rowId: "task-1",
-    before: "진행",
-    after: "완료",
+    before: "In progress",
+    after: "Done",
   })
   expect(workspaceResult.applied.kind).toBe("applied")
-  expect((await workspace.databases.read("tasks"))?.content.rows[0].values.status).toBe("완료")
+  expect((await workspace.databases.read("tasks"))?.content.rows[0].values.status).toBe("Done")
   expect(mixedResult.completed.authority).toMatchObject({
     kind: "mixed-backlog",
     dependencyVersion: 1,
@@ -143,6 +143,56 @@ it("runs Markdown, workspace, and mixed-backlog proposals against authoritative 
     expect.arrayContaining([expect.objectContaining({ id: "proposal-1", dependencyVersion: 1 })]),
   )
   await runtime.dispose()
+})
+
+it.each([
+  ["legacy-phase", ["대기", "진행", "완료"]],
+  ["custom-stage", ["Queued", "Active", "Released"]],
+])("preserves persisted status options when the fixture uses %s", async (propertyId, options) => {
+  // Given an existing database with user-defined IDs and untranslated options.
+  const root = await mkdtemp(join(tmpdir(), "agent-existing-status-"))
+  roots.push(root)
+  const workspace = await seedWorkspace(root)
+  const original = await workspace.databases.read("tasks")
+  const database = {
+    ...original.content,
+    properties: [
+      { id: "name", name: "Name", type: "text" },
+      { id: propertyId, name: "사용자 상태", type: "status", options },
+    ],
+    rows: [{ id: "existing-row", values: { name: "사용자 문서", [propertyId]: options[1] } }],
+  }
+  await workspace.databases.update("tasks", original.revision, database, { actorId: "user" })
+  const runtime = await createAgentRuntime({ root, model: createFixtureModel() })
+  try {
+    // When the real fixture tool loop proposes a status patch.
+    const started = await runtime.start(
+      input(
+        { modelId: "structured-workspace", resourceId: "tasks", epoch: 1, baseVersion: 1 },
+        "Review this existing database",
+      ),
+      { subject: "author", authority: "demo-session" },
+    )
+    const completed = await runtime.wait(started.id)
+
+    // Then the proposal uses authoritative values without changing persisted content.
+    expect(completed.status).toBe("completed")
+    expect(completed.artifact).toMatchObject({
+      kind: "workspace-row-status",
+      rowId: "existing-row",
+      propertyId,
+      before: options[1],
+      after: options[2],
+    })
+    expect((await workspace.databases.read("tasks")).content).toEqual(database)
+    const applied = await runtime.apply(completed.id, "author")
+    expect(applied.kind).toBe("applied")
+    const saved = (await workspace.databases.read("tasks")).content
+    expect(saved.properties).toEqual(database.properties)
+    expect(saved.rows[0].values).toEqual({ name: "사용자 문서", [propertyId]: options[2] })
+  } finally {
+    await runtime.dispose()
+  }
 })
 
 it("rejects a mixed-backlog apply after its authoritative task dependency changes", async () => {

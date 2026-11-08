@@ -47,8 +47,8 @@ const taskNodeView =
     const render = () => {
       const task = tasksRef.current[taskId]
       meta.textContent = `${taskId} · ${task?.status ?? "unavailable"}`
-      title.textContent = task?.title ?? "호스트 데이터 없음"
-      button.textContent = task?.status === "done" ? "다시 열기" : "완료로 표시"
+      title.textContent = task?.title ?? "Host data unavailable"
+      button.textContent = task?.status === "done" ? "Reopen" : "Mark complete"
       button.disabled = task === undefined
     }
     button.addEventListener("click", () => actionRef.current(taskId))
@@ -127,7 +127,7 @@ export const EditorSurface = ({
       editable: () => !readOnly,
       attributes: {
         class: "editor-content",
-        "aria-label": readOnly ? "읽기 전용 문서" : "블록 문서 편집기",
+        "aria-label": readOnly ? "Read-only document" : "Block document editor",
       },
       nodeViews: { task_card: taskNodeView(tasksRef, actionRef, taskViewsRef.current) },
       handleDOMEvents: {
@@ -153,7 +153,9 @@ export const EditorSurface = ({
       dispatchTransaction(transaction) {
         const applied = session.dispatch(transaction)
         if (!applied && transaction.docChanged)
-          unavailableRef.current?.("읽기 전용 또는 잠긴 블록을 포함한 변경을 전체 거절했습니다.")
+          unavailableRef.current?.(
+            "The change was rejected because it includes read-only or locked blocks.",
+          )
         const anchor = session.state.selection.$from
         const selected = anchor.depth > 0 ? anchor.node(1) : (anchor.nodeAfter ?? anchor.nodeBefore)
         selectionRef.current(

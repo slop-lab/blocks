@@ -56,12 +56,12 @@ export const GitDocumentTree = ({
   return (
     <aside
       className={navigationOpen ? "git-docs-library git-docs-library--open" : "git-docs-library"}
-      aria-label="문서 라이브러리"
+      aria-label="Document library"
     >
       <div className="git-docs-library__heading">
         <div>
           <span className="eyebrow">LIBRARY</span>
-          <h2>문서 라이브러리</h2>
+          <h2>Document library</h2>
         </div>
         <div className="git-docs-action-row">
           <button
@@ -70,14 +70,14 @@ export const GitDocumentTree = ({
             aria-expanded={navigationOpen}
             onClick={() => setNavigationOpen((open) => !open)}
           >
-            문서 목록
+            Document list
           </button>
           <button
             type="button"
             className="button button--ghost git-docs-icon"
-            aria-label="새 Markdown 문서"
+            aria-label="New Markdown document"
             onClick={() => {
-              const path = window.prompt("새 문서 경로", "notes/new-note.md")
+              const path = window.prompt("New document path", "notes/new-note.md")
               if (path !== null) onCreate(path)
             }}
           >
@@ -94,14 +94,14 @@ export const GitDocumentTree = ({
       >
         <MagnifyingGlassIcon />
         <input
-          aria-label="문서 검색"
+          aria-label="Search documents"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="전체 문서 검색"
+          placeholder="Search all documents"
         />
       </form>
       {results.length > 0 && (
-        <section className="git-docs-results" aria-label="검색 및 백링크 결과">
+        <section className="git-docs-results" aria-label="Search and backlink results">
           {results.map((result) => (
             <button
               key={`${result.path}:${result.line}`}
@@ -113,14 +113,14 @@ export const GitDocumentTree = ({
             >
               <strong>{result.path}</strong>
               <small>
-                {result.line}행 · {result.excerpt}
+                Line {result.line} · {result.excerpt}
               </small>
             </button>
           ))}
         </section>
       )}
       {tree.length === 0 ? (
-        <p className="git-docs-empty">아직 문서가 없습니다. 새 문서를 만들어 시작하세요.</p>
+        <p className="git-docs-empty">There are no documents yet. Create one to get started.</p>
       ) : (
         <Tree
           nodes={tree}

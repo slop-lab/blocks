@@ -18,22 +18,23 @@ export const HostFormDialog = ({ form, onClose, onSave }: HostFormDialogProps) =
     <DialogFrame
       titleId="host-form-title"
       eyebrow="HOST-BUFFERED DRAFT"
-      title="출시 브리핑 편집"
+      title="Edit release briefing"
       onClose={onClose}
     >
       <p className="dialog__description">
-        이 초안은 문서 밖의 호스트 상태입니다. 저장 전까지 작업 카드와 본문 버전은 바뀌지 않습니다.
+        This draft is host state outside the document. Task cards and the document version remain
+        unchanged until you save.
       </p>
       <label className="field">
-        <span>대상 사용자</span>
+        <span>Audience</span>
         <input value={audience} onChange={(event) => setAudience(event.target.value)} />
       </label>
       <label className="field">
-        <span>배포 창</span>
+        <span>Release window</span>
         <input value={window} onChange={(event) => setWindow(event.target.value)} />
       </label>
       <label className="field">
-        <span>호스트 메모</span>
+        <span>Host notes</span>
         <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={4} />
       </label>
       {error !== null && (
@@ -43,7 +44,7 @@ export const HostFormDialog = ({ form, onClose, onSave }: HostFormDialogProps) =
       )}
       <footer>
         <button className="button button--ghost" type="button" onClick={onClose}>
-          초안 취소
+          Discard draft
         </button>
         <button
           className="button button--primary"
@@ -54,11 +55,11 @@ export const HostFormDialog = ({ form, onClose, onSave }: HostFormDialogProps) =
             if (saved) onClose()
             else
               setError(
-                "호스트 데이터가 외부에서 갱신되었습니다. 창을 닫고 최신 값으로 다시 시도하세요.",
+                "Host data was updated elsewhere. Close this dialog and try again with the latest values.",
               )
           }}
         >
-          호스트에 저장
+          Save to host
         </button>
       </footer>
     </DialogFrame>

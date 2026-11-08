@@ -95,7 +95,7 @@ export const StructuredWorkspace = () => {
       </section>
     )
   return (
-    <section className="structured-workspace" aria-label="문서와 데이터베이스">
+    <section className="structured-workspace" aria-label="Documents and databases">
       <WorkspaceTree
         workspace={payload.tree.content}
         activeId={activeId}

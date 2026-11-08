@@ -20,20 +20,20 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
   const [query, setQuery] = useState("")
   const [draft, setDraft] = useState<LowerDraft | null>(null)
   const [pending, setPending] = useState<"domain" | "draft" | null>(null)
-  const [message, setMessage] = useState("서버 상태를 불러오는 중입니다.")
+  const [message, setMessage] = useState("Loading server state.")
   const generation = useRef(0)
   const refresh = useCallback(() => {
     const request = ++generation.current
-    setMessage("서버 상태를 불러오는 중입니다.")
+    setMessage("Loading server state.")
     void loadMixed()
       .then((next) => {
         if (request !== generation.current) return
         setState(next)
-        setMessage("서버 상태와 동기화되었습니다.")
+        setMessage("Synchronized with server state.")
       })
       .catch((error: unknown) => {
         if (request === generation.current)
-          setMessage(error instanceof Error ? error.message : "불러오지 못했습니다.")
+          setMessage(error instanceof Error ? error.message : "Could not load the data.")
       })
   }, [])
   useEffect(() => {
@@ -69,14 +69,14 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
         setMessage(success)
       })
       .catch((error: unknown) =>
-        setMessage(error instanceof Error ? error.message : "요청이 거절되었습니다."),
+        setMessage(error instanceof Error ? error.message : "The request was rejected."),
       )
       .finally(() => setPending(null))
   }
   const openLayer = (kind: "presentation" | "proposal") => {
     if (state === null || task === undefined) return
     if (draft !== null && draft.editVersion > 0) {
-      setMessage("현재 하위 문서를 저장하거나 취소한 뒤 다른 편집기를 여세요.")
+      setMessage("Save or cancel the current child document before opening another editor.")
       return
     }
     const document =
@@ -138,12 +138,12 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
         )
         setMessage(
           submitted.target.layer === "presentation"
-            ? "presentation BlockDocument를 저장했습니다."
-            : "의존 버전을 확인하고 proposal BlockDocument를 저장했습니다.",
+            ? "Saved the presentation BlockDocument."
+            : "Verified the dependency version and saved the proposal BlockDocument.",
         )
       })
       .catch((error: unknown) =>
-        setMessage(error instanceof Error ? error.message : "요청이 거절되었습니다."),
+        setMessage(error instanceof Error ? error.message : "The request was rejected."),
       )
       .finally(() => setPending(null))
   }
@@ -152,7 +152,7 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
       <div>
         <p role="status">{message}</p>
         <button type="button" onClick={refresh}>
-          다시 시도
+          Try again
         </button>
       </div>
     )
@@ -163,27 +163,27 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
       <header className="ownership-scenario__header">
         <div>
           <span className="eyebrow">MIXED OWNERSHIP</span>
-          <h2 id="mixed-title">실행 작업 백로그</h2>
+          <h2 id="mixed-title">Execution task backlog</h2>
         </div>
         <button
           className="button button--secondary"
           type="button"
           onClick={() => onOpenFiles(state.taskInfoFiles[task.id] ?? "")}
         >
-          작업 Markdown 열기
+          Open task Markdown
         </button>
       </header>
       <div className="mixed-layout">
         <aside className="mixed-search">
           <label>
-            작업 검색
+            Search tasks
             <input
               value={query}
-              placeholder="작업명 또는 TASK-104"
+              placeholder="Task name or TASK-104"
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
-          <h3>검색 결과</h3>
+          <h3>Search results</h3>
           {filtered.map((item) => (
             <button
               type="button"
@@ -194,7 +194,7 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
               {item.id} · {item.title}
             </button>
           ))}
-          <h3>현재 실행 목록</h3>
+          <h3>Current run list</h3>
           {state.tasks
             .filter((item) => item.status === "running")
             .map((item) => (
@@ -217,7 +217,7 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
             />
           )}
           {proposals.map((proposal) => (
-            <section key={proposal.id} aria-label={`제안 ${proposal.id}`}>
+            <section key={proposal.id} aria-label={`Proposal ${proposal.id}`}>
               <BlockViewer content={proposal.document} renderers={presentationRenderers} />
             </section>
           ))}
@@ -226,14 +226,14 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
             type="button"
             disabled={busy}
             onClick={() =>
-              runDomain(() => changeTaskStatus(state, task), "도메인 workflow 상태를 변경했습니다.")
+              runDomain(() => changeTaskStatus(state, task), "Updated the domain workflow state.")
             }
           >
-            {pending === "domain" ? "전환 중" : "서버 workflow 전환"}
+            {pending === "domain" ? "Transitioning" : "Transition server workflow"}
           </button>
           {agent.running ? (
             <button className="button button--ghost" type="button" onClick={agent.cancel}>
-              에이전트 실행 취소
+              Cancel agent run
             </button>
           ) : (
             <button
@@ -242,7 +242,7 @@ export const MixedBacklogScenario = ({ onOpenFiles }: Props) => {
               disabled={busy || (draft !== null && draft.editVersion > 0)}
               onClick={() => void agent.run()}
             >
-              에이전트 제안 실행
+              Run agent proposal
             </button>
           )}
         </div>

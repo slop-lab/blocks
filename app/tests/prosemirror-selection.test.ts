@@ -185,7 +185,7 @@ it("routes Mod-K to link editing when the active editor owns a text range", () =
     new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true, cancelable: true }),
   )
 
-  const input = document.querySelector<HTMLInputElement>("[aria-label='링크 주소']")
+  const input = document.querySelector<HTMLInputElement>("[aria-label='Link address']")
   expect(input?.closest("form")?.hidden).toBe(false)
   expect(document.activeElement).toBe(input)
 })

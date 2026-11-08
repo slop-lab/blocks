@@ -61,7 +61,7 @@ export const DialogFrame = ({
             <span className="eyebrow">{eyebrow}</span>
             <h2 id={titleId}>{title}</h2>
           </div>
-          <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
+          <button className="icon-button" type="button" aria-label="Close" onClick={onClose}>
             <Cross2Icon />
           </button>
         </header>

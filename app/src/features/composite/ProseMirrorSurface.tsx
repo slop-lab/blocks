@@ -28,7 +28,7 @@ export const proseMirrorAttachmentFactory = createAttachmentFactory<ProseMirrorA
       state: createCompositeEditorState(context.document),
       attributes: {
         class: "composite-prose",
-        "aria-label": "구조화 문서와 표 편집기",
+        "aria-label": "Structured document and table editor",
       },
       handleDOMEvents: {
         focus: () => {

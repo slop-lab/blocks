@@ -7,11 +7,11 @@ import { StatusViewScenario } from "./StatusViewScenario"
 import "./ownership.css"
 
 const tabs = [
-  { id: "notebook", label: "노트북" },
-  { id: "projectboard", label: "프로젝트 보드" },
-  { id: "statusview", label: "상태 보기" },
-  { id: "filetree", label: "파일 트리" },
-  { id: "mixedbacklog", label: "혼합 백로그" },
+  { id: "notebook", label: "Notebook" },
+  { id: "projectboard", label: "Project board" },
+  { id: "statusview", label: "Status view" },
+  { id: "filetree", label: "File tree" },
+  { id: "mixedbacklog", label: "Mixed backlog" },
 ] as const
 type Tab = (typeof tabs)[number]["id"]
 
@@ -23,10 +23,12 @@ export const OwnershipExamplesWorkspace = () => {
     <section className="ownership-workspace">
       <header className="ownership-workspace__header">
         <span className="eyebrow">OWNERSHIP EXAMPLES</span>
-        <h1>누가 원본을 소유하는가</h1>
-        <p>같은 블록 표면을 다섯 가지 소유권 경계로 구성한 실제 동작 예제입니다.</p>
+        <h1>Who owns the source?</h1>
+        <p>
+          A working example of the same block surface configured with five ownership boundaries.
+        </p>
       </header>
-      <nav className="ownership-tabs" aria-label="소유권 예제">
+      <nav className="ownership-tabs" aria-label="Ownership examples">
         {tabs.map((item) => (
           <button
             type="button"

@@ -5,15 +5,11 @@ import { join } from "node:path"
 import { promisify } from "node:util"
 import { GitDocuments, GitDocumentsError } from "@slop-lab/blocks-git-documents"
 import { afterEach, describe, expect, it } from "vitest"
+import { gitFixtureEnvironment } from "./git-fixture-environment"
 
 const execute = promisify(execFile)
 const roots: string[] = []
-const gitEnvironment = {
-  ...process.env,
-  GIT_MASTER: "1",
-  GIT_CONFIG_NOSYSTEM: "1",
-  GIT_TERMINAL_PROMPT: "0",
-}
+const gitEnvironment = gitFixtureEnvironment()
 
 const git = async (cwd: string, ...args: readonly string[]) =>
   execute("git", args, { cwd, env: gitEnvironment })

@@ -27,43 +27,43 @@ try {
   const editor = page.locator(".ProseMirror")
   const button = (name) => page.getByRole("button", { name, exact: true })
   const snapshot = async () => {
-    await button("가져오기와 내보내기").click()
+    await button("Import and export").click()
     const content = await page.getByRole("dialog").locator("textarea").first().inputValue()
-    await button("취소").click()
+    await button("Cancel").click()
     return JSON.parse(content)
   }
-  await page.getByLabel("저장 방식", { exact: true }).selectOption("manual")
+  await page.getByLabel("Save mode", { exact: true }).selectOption("manual")
 
   await editor.locator("p").first().click()
   await page.keyboard.press("Home")
   await page.keyboard.insertText("E2E 편집 ")
   assert.match(await editor.textContent(), /E2E 편집/)
-  await button("정적 미리보기").click()
+  await button("Static preview").click()
   assert.match(await page.locator(".static-viewer").textContent(), /E2E 편집/)
-  await button("편집기").click()
-  await button("실행 취소").click()
+  await button("Editor").click()
+  await button("Undo").click()
   assert.doesNotMatch(await editor.textContent(), /E2E 편집/)
-  await button("다시 실행").click()
-  await button("저장").click()
+  await button("Redo").click()
+  await button("Save").click()
   await page.reload({ waitUntil: "networkidle" })
   assert.match(await editor.textContent(), /E2E 편집/)
   console.log("PASS editing, preview lifetime, undo/redo, persistence")
 
-  await page.getByRole("button", { name: /B · 작업 브리핑/ }).click()
+  await page.getByRole("button", { name: /B · Work briefing/ }).click()
   const presentation = await snapshot()
-  await button("완료로 표시").first().click()
+  await button("Mark complete").first().click()
   assert.match(await page.locator(".task-card__meta").first().textContent(), /done/)
   assert.deepEqual(await snapshot(), presentation)
-  await page.getByRole("button", { name: /C · 읽기 전용/ }).click()
+  await page.getByRole("button", { name: /C · Read-only/ }).click()
   assert.equal(await editor.getAttribute("contenteditable"), "false")
   const readonly = await snapshot()
-  await button("완료로 표시").first().click()
+  await button("Mark complete").first().click()
   assert.deepEqual(await snapshot(), readonly)
   console.log("PASS task ViewData separation and readonly host actions")
 
-  await page.getByRole("button", { name: /A · 로컬 노트/ }).click()
-  await button("검토 후보 만들기").click()
-  await button("후보 JSON 편집").click()
+  await page.getByRole("button", { name: /A · Local note/ }).click()
+  await button("Create review candidate").click()
+  await button("Edit candidate JSON").click()
   const candidate = page.getByRole("dialog").locator("textarea").nth(1)
   const proposed = JSON.parse(await candidate.inputValue())
   proposed.blocks.push({
@@ -73,28 +73,28 @@ try {
     content: [{ kind: "text", text: "후보 수락 검증", marks: [] }],
   })
   await candidate.fill(JSON.stringify(proposed))
-  await button("선택한 변경 수락").click()
+  await button("Accept selected changes").click()
   assert.match(await editor.textContent(), /후보 수락 검증/)
-  await button("브리핑 정보 편집").click()
-  await button("초안 취소").click()
-  await button("가져오기와 내보내기").click()
+  await button("Edit briefing details").click()
+  await button("Discard draft").click()
+  await button("Import and export").click()
   await page.getByRole("dialog").locator("textarea").nth(1).fill("invalid json")
-  await button("검증 후 가져오기").click()
+  await button("Validate and import").click()
   assert.ok(await page.getByRole("alert").isVisible())
-  await button("취소").click()
-  await button("최신 안내 가져오기").click()
+  await button("Cancel").click()
+  await button("Fetch latest guide").click()
   await page.waitForFunction(() =>
-    document.querySelector(".ProseMirror")?.textContent?.includes("개인 컵"),
+    document.querySelector(".ProseMirror")?.textContent?.includes("reusable cup"),
   )
-  await button("실행 취소").click()
-  assert.match(await editor.textContent(), /개인 컵/)
+  await button("Undo").click()
+  assert.match(await editor.textContent(), /reusable cup/)
   console.log("PASS review, draft cancel, invalid import, external history reset")
 
   for (const width of [375, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 })
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth)
     assert.equal(scrollWidth, width)
-    assert.ok(await button("브리핑 정보 편집").isVisible())
+    assert.ok(await button("Edit briefing details").isVisible())
   }
   assert.deepEqual(errors, [])
   const inspectorScroll = await page.locator(".inspector__body").evaluate((element) => {
@@ -104,7 +104,7 @@ try {
   assert.ok(inspectorScroll.scroll <= inspectorScroll.height || inspectorScroll.top > 0)
   const touch = await browser.newPage({ viewport: { width: 375, height: 900 }, hasTouch: true })
   await touch.goto(baseUrl, { waitUntil: "networkidle" })
-  assert.ok(await touch.getByRole("button", { name: /Markdown 파일/ }).isVisible())
+  assert.ok(await touch.getByRole("button", { name: /Markdown files/ }).isVisible())
   const targets = await touch
     .locator(".tool, .tabs button, .mini-tabs button")
     .evaluateAll((elements) =>
@@ -133,16 +133,16 @@ try {
     localStorage.getItem("slate-foundation-document-note")?.includes("DEBOUNCE-BURST"),
   )
   assert.equal(await autosave.evaluate(() => globalThis.documentWrites), 1)
-  await autosave.getByLabel("저장 방식", { exact: true }).selectOption("manual")
+  await autosave.getByLabel("Save mode", { exact: true }).selectOption("manual")
   await autosave.locator(".ProseMirror p").first().click()
   await autosave.keyboard.insertText("SAVE-NOW")
-  await autosave.getByRole("button", { name: "저장", exact: true }).click()
+  await autosave.getByRole("button", { name: "Save", exact: true }).click()
   assert.ok(
     await autosave.evaluate(() =>
       localStorage.getItem("slate-foundation-document-note")?.includes("SAVE-NOW"),
     ),
   )
-  await autosave.getByLabel("저장 방식", { exact: true }).selectOption("blur")
+  await autosave.getByLabel("Save mode", { exact: true }).selectOption("blur")
   await autosave.locator(".ProseMirror p").first().click()
   await autosave.keyboard.insertText("SAVE-ON-BLUR")
   assert.equal(
@@ -151,12 +151,12 @@ try {
     ),
     false,
   )
-  await autosave.getByRole("button", { name: "가져오기와 내보내기", exact: true }).click()
+  await autosave.getByRole("button", { name: "Import and export", exact: true }).click()
   await autosave.waitForFunction(() =>
     localStorage.getItem("slate-foundation-document-note")?.includes("SAVE-ON-BLUR"),
   )
-  await autosave.getByRole("button", { name: "취소", exact: true }).click()
-  await autosave.getByLabel("저장 방식", { exact: true }).selectOption("throttle")
+  await autosave.getByRole("button", { name: "Cancel", exact: true }).click()
+  await autosave.getByLabel("Save mode", { exact: true }).selectOption("throttle")
   await autosave.evaluate(() => {
     globalThis.documentWrites = 0
   })

@@ -34,7 +34,7 @@ const TreeRows = ({
           aria-current={activeName === node.path ? "page" : undefined}
           onClick={() => {
             if (node.path === activeName) return
-            if (!dirty || window.confirm("저장하지 않은 초안을 버리고 다른 파일을 여시겠습니까?"))
+            if (!dirty || window.confirm("Discard the unsaved draft and open another file?"))
               onOpen(node.path)
           }}
         >
@@ -52,9 +52,9 @@ const TreeRows = ({
 export const MarkdownFileList = ({ tree, activeName, dirty, onOpen }: FileListProps) => (
   <aside className="markdown-files">
     <header>
-      <h2>파일</h2>
+      <h2>Files</h2>
     </header>
-    <nav aria-label="Markdown 파일 목록">
+    <nav aria-label="Markdown file list">
       <TreeRows nodes={tree} activeName={activeName} dirty={dirty} onOpen={onOpen} />
     </nav>
   </aside>
@@ -68,7 +68,7 @@ type LineMapProps = {
 }
 
 export const MarkdownLineMap = ({ mappings, selectedId, disabled, onSelect }: LineMapProps) => (
-  <section aria-label="줄과 객체 매핑">
+  <section aria-label="Line-to-object mapping">
     <div className="markdown-map__list">
       {mappings.map((mapping) => (
         <button
@@ -107,19 +107,19 @@ export const MarkdownConflict = ({ disk, onDownload, onReload }: ConflictProps) 
       aria-modal="true"
       aria-labelledby="markdown-conflict-title"
     >
-      <h2 id="markdown-conflict-title">디스크 버전과 충돌했습니다</h2>
+      <h2 id="markdown-conflict-title">Conflict with the version on disk</h2>
       <p>
-        초안은 그대로 보존했습니다. 최신 디스크 버전을 다시 열거나 초안을 파일로 내려받을 수
-        있습니다.
+        Your draft is preserved. Reopen the latest version from disk or download the draft as a
+        file.
       </p>
       <div className="button-row">
         <button className="button button--secondary" type="button" onClick={onDownload}>
           <DownloadIcon />
-          초안 다운로드
+          Download draft
         </button>
         <button className="button button--primary" type="button" onClick={() => onReload(disk)}>
           <ReloadIcon />
-          디스크 버전 다시 열기
+          Reopen disk version
         </button>
       </div>
     </section>

@@ -10,14 +10,14 @@ const initial: BlockDocument = {
       id: "note-1",
       type: "notes.text",
       attrs: {},
-      content: [{ kind: "text", text: "오늘의 관찰을 여기에 기록합니다.", marks: [] }],
+      content: [{ kind: "text", text: "Record today's observations here.", marks: [] }],
     },
     {
       id: "callout-1",
       type: "notes.callout",
       attrs: {},
       content: [
-        { kind: "text", text: "이 문서는 notes.text를 기본 블록으로 사용합니다.", marks: [] },
+        { kind: "text", text: "This document uses notes.text as its default block.", marks: [] },
       ],
     },
   ],
@@ -54,7 +54,7 @@ export const NotebookScenario = () => {
       <header className="ownership-scenario__header">
         <div>
           <span className="eyebrow">BLOCK CANONICAL</span>
-          <h2 id="notebook-title">개인 연구 노트</h2>
+          <h2 id="notebook-title">Personal research notes</h2>
         </div>
         <div className="button-row">
           <span
@@ -62,19 +62,19 @@ export const NotebookScenario = () => {
               dirty ? "status-badge status-badge--warning" : "status-badge status-badge--success"
             }
           >
-            {dirty ? "저장 전 변경" : "저장됨"}
+            {dirty ? "Unsaved changes" : "Saved"}
           </span>
           <button className="button button--secondary" type="button" onClick={reload}>
-            다시 불러오기
+            Reload
           </button>
           <button className="button button--primary" type="button" onClick={save} disabled={!dirty}>
-            저장
+            Save
           </button>
         </div>
       </header>
       <p className="ownership-explainer">
-        도메인 객체 없이 블록 문서가 원본입니다. 기본 paragraph는 등록하지 않고{" "}
-        <code>notes.text</code>와 callout만 사용합니다.
+        The block document is the source of truth without a domain object. It registers no default
+        paragraph and uses only <code>notes.text</code> and callouts.
       </p>
       <CustomNotesEditor key={editorKey} document={document} onChange={changed} onSave={save} />
     </section>

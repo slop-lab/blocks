@@ -13,7 +13,7 @@ export const createBlockSelectionStatus = (editor: HTMLElement): BlockSelectionS
   return {
     update: (blockIds) => {
       element.hidden = blockIds.length === 0
-      element.textContent = blockIds.length === 0 ? "" : `${blockIds.length}개 블록 선택됨`
+      element.textContent = blockIds.length === 0 ? "" : `${blockIds.length} blocks selected`
     },
     destroy: () => element.remove(),
   }

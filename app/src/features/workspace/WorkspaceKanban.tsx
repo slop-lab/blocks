@@ -9,7 +9,7 @@ type Props = {
 export const WorkspaceKanban = ({ database, statusPropertyId, onChange }: Props) => {
   const groups = groupDatabaseRows(database, statusPropertyId)
   return (
-    <section className="structured-kanban" aria-label={`${database.name} 보드`}>
+    <section className="structured-kanban" aria-label={`${database.name} board`}>
       {groups.map((group) => (
         <section className="structured-kanban__column" key={group.status}>
           <h3>
@@ -19,7 +19,7 @@ export const WorkspaceKanban = ({ database, statusPropertyId, onChange }: Props)
             <article className="structured-kanban__card" key={row.id}>
               <strong>{String(row.values["name"] ?? row.id)}</strong>
               <select
-                aria-label={`${row.id} 상태`}
+                aria-label={`${row.id} status`}
                 value={group.status}
                 onChange={(event) =>
                   onChange(

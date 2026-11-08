@@ -2,6 +2,7 @@ import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { App } from "./App"
 import "./styles.css"
+import "./agent-workbench.css"
 import "./block-interactions.css"
 import "prosemirror-view/style/prosemirror.css"
 

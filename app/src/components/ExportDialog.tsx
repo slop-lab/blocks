@@ -29,14 +29,14 @@ export const ExportDialog = ({
       onImport(parseDocumentText(importText))
       onClose()
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "알 수 없는 가져오기 오류")
+      setError(caught instanceof Error ? caught.message : "Unknown import error")
     }
   }
   return (
     <DialogFrame
       titleId="export-title"
       eyebrow="PORTABLE DOCUMENT"
-      title="가져오기 / 내보내기"
+      title="Import / Export"
       onClose={onClose}
     >
       <div className="segmented">
@@ -54,13 +54,13 @@ export const ExportDialog = ({
       <label className="field">
         <span>
           <DownloadIcon />
-          내보내기 결과
+          Export output
         </span>
         <textarea readOnly value={exported.output} rows={9} />
       </label>
       {exported.losses.length > 0 && (
         <div className="loss-report">
-          <strong>손실 보고 {exported.losses.length}건</strong>
+          <strong>Loss report: {exported.losses.length}</strong>
           {exported.losses.map((loss) => (
             <p key={loss.blockId}>
               {loss.blockId}: {loss.reason}
@@ -71,13 +71,13 @@ export const ExportDialog = ({
       <label className="field">
         <span>
           <UploadIcon />
-          JSON 가져오기 · 2MB 제한
+          Import JSON · 2 MB limit
         </span>
         <textarea
           value={importText}
           onChange={(event) => setImportText(event.target.value)}
           rows={4}
-          placeholder="검증할 block-editor/v0.3 JSON"
+          placeholder="block-editor/v0.3 JSON to validate"
         />
       </label>
       {error !== null && (
@@ -87,7 +87,7 @@ export const ExportDialog = ({
       )}
       <footer>
         <button className="button button--ghost" type="button" onClick={onClose}>
-          취소
+          Cancel
         </button>
         <button
           className="button button--primary"
@@ -95,7 +95,7 @@ export const ExportDialog = ({
           onClick={importDocument}
           disabled={importText.length === 0}
         >
-          검증 후 가져오기
+          Validate and import
         </button>
       </footer>
     </DialogFrame>

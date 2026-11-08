@@ -42,7 +42,9 @@ export const attachRailPointerIntent = (
 ): (() => void) => {
   const ownerWindow = view.dom.ownerDocument.defaultView
   let dwellTimer = 0
+  const cancelDwell = () => ownerWindow?.clearTimeout(dwellTimer)
   const onPointerOver = (event: PointerEvent) => {
+    cancelDwell()
     const block = blockElement(event.target)
     if (block === null || !options.ownsBlock(block)) return
     const candidateId = block.dataset["blockId"]
@@ -52,7 +54,6 @@ export const attachRailPointerIntent = (
       return
     }
     if (candidateId === undefined || candidateId === targetId) {
-      ownerWindow?.clearTimeout(dwellTimer)
       if (candidateId !== undefined) options.show(block)
       return
     }
@@ -65,7 +66,6 @@ export const attachRailPointerIntent = (
       )
     )
       return
-    ownerWindow?.clearTimeout(dwellTimer)
     dwellTimer =
       ownerWindow?.setTimeout(() => {
         const current = blockElement(
@@ -80,8 +80,10 @@ export const attachRailPointerIntent = (
       }, 160) ?? 0
   }
   view.dom.addEventListener("pointerover", onPointerOver)
+  view.dom.addEventListener("pointerleave", cancelDwell)
   return () => {
     view.dom.removeEventListener("pointerover", onPointerOver)
-    ownerWindow?.clearTimeout(dwellTimer)
+    view.dom.removeEventListener("pointerleave", cancelDwell)
+    cancelDwell()
   }
 }
